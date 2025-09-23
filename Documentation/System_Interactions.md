@@ -74,6 +74,24 @@ iOS App ← WebSocket Connection ← Django Channels ← Database Changes ← Us
 5. **Local Updates**: iOS app updates local `CalendarManager.events` array
 6. **UI Refresh**: SwiftUI views automatically refresh with new data
 
+### 4. Automatic Data Refresh Flow
+```
+Multiple Refresh Mechanisms → Data Synchronization → UI Updates
+    │
+    ├── WebSocket Real-time Updates (Primary)
+    ├── Periodic Auto-Refresh Timer (60s backup)
+    ├── App Lifecycle Refresh (on activation)
+    └── Manual Refresh (user-initiated)
+```
+
+**Detailed Flow:**
+1. **WebSocket Updates**: Real-time notifications for immediate data updates
+2. **Periodic Timer**: 60-second backup refresh to ensure data freshness
+3. **App Activation**: Full refresh when user returns to app from background
+4. **Manual Refresh**: User-triggered immediate data fetch
+5. **Smart Logic**: Prevents unnecessary API calls and manages battery usage
+6. **Error Handling**: Graceful fallback mechanisms for network issues
+
 ## 🗄️ Database Interaction Patterns
 
 ### 1. User Registration & Profile Creation

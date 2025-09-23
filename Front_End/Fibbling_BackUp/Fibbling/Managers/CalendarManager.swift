@@ -61,6 +61,10 @@ class CalendarManager: ObservableObject {
     private var cancellable: AnyCancellable?
     private var webSocketManager: EventsWebSocketManager?
     
+    // Automatic refresh timer
+    private var autoRefreshTimer: Timer?
+    private let autoRefreshInterval: TimeInterval = 60.0 // Refresh every 60 seconds
+    
     /// Dependency Injection initializer. You can pass in your account manager.
     init(accountManager: UserAccountManager) {
         print("📱 [CalendarManager] Initializing with accountManager")
@@ -75,6 +79,12 @@ class CalendarManager: ObservableObject {
         NotificationCenter.default.addObserver(self,
                                               selector: #selector(handleWebSocketRefresh),
                                               name: NSNotification.Name("RefreshWebSocketConnection"),
+                                              object: nil)
+        
+        // Listen for app becoming active to refresh data
+        NotificationCenter.default.addObserver(self,
+                                              selector: #selector(handleAppBecameActive),
+                                              name: UIApplication.didBecomeActiveNotification,
                                               object: nil)
         
         cancellable = accountManager.$currentUser.sink { [weak self] (newUser: String?) in
@@ -112,6 +122,7 @@ class CalendarManager: ObservableObject {
     
     deinit {
         // Clean up resources
+        stopAutoRefresh()
         disconnectWebSocket()
         cancellable?.cancel()
         
@@ -124,6 +135,7 @@ class CalendarManager: ObservableObject {
     // Handler for user logout notification
     @objc private func handleUserWillLogout() {
         print("👋 [CalendarManager] Received logout notification, cleaning up resources")
+        stopAutoRefresh()
         disconnectWebSocket()
         DispatchQueue.main.async {
              self.events = [] // Clear events
@@ -153,6 +165,17 @@ class CalendarManager: ObservableObject {
         }
     }
     
+    // Handler for app becoming active
+    @objc private func handleAppBecameActive() {
+        print("📱 [CalendarManager] App became active, refreshing data")
+        
+        // If we have a username and we're not already loading, refresh events
+        if !username.isEmpty && !isLoading {
+            print("🔄 [CalendarManager] Refreshing events due to app becoming active")
+            fetchEvents()
+        }
+    }
+    
     // MARK: - Refresh Mechanisms - Simplified to just WebSocket setup
     
     /// Setup WebSocket for real-time updates
@@ -169,10 +192,16 @@ class CalendarManager: ObservableObject {
         webSocketManager = EventsWebSocketManager(username: username)
         webSocketManager?.delegate = self
         webSocketManager?.connect()
+        
+        // Start automatic refresh timer as backup
+        startAutoRefresh()
     }
     
     /// Disconnect WebSocket
     private func disconnectWebSocket() {
+        // Stop auto-refresh when disconnecting
+        stopAutoRefresh()
+        
         // Check if manager exists before trying to disconnect
         if webSocketManager != nil {
              print("🔌 [CalendarManager] Disconnecting WebSocket")
@@ -182,6 +211,37 @@ class CalendarManager: ObservableObject {
         } else {
              print("🔌 [CalendarManager] WebSocket already disconnected or not initialized.")
         }
+    }
+    
+    // MARK: - Automatic Refresh Timer
+    
+    /// Start automatic refresh timer
+    private func startAutoRefresh() {
+        // Stop any existing timer first
+        stopAutoRefresh()
+        
+        guard !username.isEmpty else {
+            print("⏰ [CalendarManager] Cannot start auto-refresh without username")
+            return
+        }
+        
+        print("⏰ [CalendarManager] Starting automatic refresh timer (every \(autoRefreshInterval)s)")
+        autoRefreshTimer = Timer.scheduledTimer(withTimeInterval: autoRefreshInterval, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            
+            // Only refresh if we have a username and we're not already loading
+            if !self.username.isEmpty && !self.isLoading {
+                print("⏰ [CalendarManager] Auto-refresh triggered")
+                self.fetchEvents()
+            }
+        }
+    }
+    
+    /// Stop automatic refresh timer
+    private func stopAutoRefresh() {
+        autoRefreshTimer?.invalidate()
+        autoRefreshTimer = nil
+        print("⏰ [CalendarManager] Stopped automatic refresh timer")
     }
     
     /// Fetch initial events for the current user. Should only be called once on login.

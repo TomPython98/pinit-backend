@@ -21,6 +21,7 @@
 - **Event Management**: Create, join, and manage study groups and social events
 - **Smart Matching**: AI-powered algorithm to suggest relevant events and connections
 - **Real-time Communication**: WebSocket-based chat and live updates
+- **Automatic Data Refresh**: Multi-layered refresh system ensures data stays current
 - **Social Features**: Friend requests, ratings, reputation system
 - **Geographic Integration**: Map-based event discovery with clustering
 - **Cross-platform**: iOS native app with Django REST API backend
@@ -226,6 +227,113 @@ class UserRating(models.Model):
 
 ### WebSocket Endpoints
 - `ws://localhost:8000/ws/events/<username>/` - Real-time event updates
+- `ws://localhost:8000/ws/group_chat/<event_id>/` - Group chat for events
+- `ws://localhost:8000/ws/chat/<sender>/<receiver>/` - Private messaging
+
+## 🔄 Automatic Data Refresh System
+
+### Overview
+StudyCon implements a comprehensive multi-layered automatic refresh system that ensures users always see the most current data without requiring manual refresh or login/logout cycles.
+
+### Refresh Mechanisms
+
+#### 1. Real-time WebSocket Updates
+- **Primary Method**: WebSocket connections provide instant updates
+- **Trigger**: When events are created, updated, or deleted
+- **Coverage**: All connected users receive relevant updates immediately
+- **Fallback**: If WebSocket fails, periodic refresh ensures data freshness
+
+#### 2. Periodic Auto-Refresh Timer
+- **Frequency**: Every 60 seconds
+- **Scope**: Fetches all user events and invitations
+- **Conditions**: Only runs when user is logged in and not already loading
+- **Purpose**: Backup mechanism for WebSocket failures
+
+#### 3. App Lifecycle Refresh
+- **Trigger**: When app becomes active (user returns from background)
+- **Scope**: Full data refresh to catch any missed updates
+- **Conditions**: Only if user is logged in and not currently loading
+- **Purpose**: Ensures fresh data when user returns to app
+
+#### 4. Manual Refresh
+- **Trigger**: User taps refresh button
+- **Scope**: Immediate data fetch
+- **Debouncing**: Prevents multiple simultaneous refresh calls
+- **Purpose**: User-initiated immediate updates
+
+### Implementation Details
+
+#### Frontend (iOS)
+```swift
+// Automatic refresh timer
+private var autoRefreshTimer: Timer?
+private let autoRefreshInterval: TimeInterval = 60.0
+
+// App lifecycle refresh
+NotificationCenter.default.addObserver(
+    self,
+    selector: #selector(handleAppBecameActive),
+    name: UIApplication.didBecomeActiveNotification,
+    object: nil
+)
+
+// WebSocket real-time updates
+class EventsWebSocketManager: ObservableObject {
+    func connect() {
+        // Connect to WebSocket for real-time updates
+    }
+    
+    func handleMessage(_ message: EventChangeMessage) {
+        // Process real-time event updates
+    }
+}
+```
+
+#### Backend (Django)
+```python
+# WebSocket consumer for real-time updates
+class EventsConsumer(AsyncWebsocketConsumer):
+    async def event_create(self, event):
+        # Send event creation notification
+        await self.send(text_data=json.dumps({
+            "type": "create",
+            "event_id": str(event_id)
+        }))
+
+# Broadcast utility functions
+def broadcast_event_created(event_id, host_username, invited_friends=[]):
+    # Notify all relevant users of new events
+    users_to_notify = [host_username] + invited_friends
+    broadcast_event_update(event_id, 'create', users_to_notify)
+```
+
+### Data Flow
+
+1. **Event Creation**: User creates event → Backend processes → WebSocket broadcast → Frontend updates
+2. **Periodic Refresh**: Timer triggers → API call → Data update → UI refresh
+3. **App Activation**: App becomes active → Immediate refresh → Fresh data display
+4. **Manual Refresh**: User action → Immediate API call → Data update
+
+### Benefits
+
+- **No Manual Refresh Needed**: Data updates automatically
+- **Real-time Updates**: See changes immediately via WebSocket
+- **Reliable Fallback**: Periodic refresh ensures data freshness even if WebSocket fails
+- **Battery Efficient**: Smart refresh logic prevents unnecessary API calls
+- **User-friendly**: Seamless experience without user intervention
+
+### Configuration
+
+#### Refresh Intervals
+- **WebSocket**: Real-time (immediate)
+- **Periodic Timer**: 60 seconds
+- **App Lifecycle**: On activation
+- **Manual**: On demand
+
+#### Error Handling
+- **WebSocket Disconnection**: Automatic reconnection with exponential backoff
+- **API Failures**: Graceful error handling with retry logic
+- **Network Issues**: Fallback to cached data when possible
 
 ## 🐍 Virtual Environment Setup
 
@@ -348,6 +456,26 @@ For technical support or questions:
 ---
 
 **Last Updated**: January 2025
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Maintainer**: Development Team
+
+## 🆕 Version 1.1.0 - Auto-Refresh System
+
+### New Features
+- **Automatic Data Refresh**: Multi-layered refresh system ensures data stays current
+- **Real-time WebSocket Updates**: Instant updates when events are created/modified
+- **Periodic Auto-Refresh**: 60-second timer as backup for WebSocket failures
+- **App Lifecycle Refresh**: Automatic refresh when app becomes active
+- **Enhanced User Experience**: No more need to log out/in to see new data
+
+### Technical Improvements
+- **WebSocket Integration**: Real-time event notifications
+- **Smart Refresh Logic**: Prevents unnecessary API calls
+- **Error Handling**: Graceful fallback mechanisms
+- **Memory Management**: Proper cleanup of timers and connections
+
+### Bug Fixes
+- **Data Synchronization**: Fixed issue where users had to log out/in to see updates
+- **WebSocket Stability**: Improved connection handling and reconnection logic
+- **Performance**: Optimized refresh mechanisms for better battery life
 

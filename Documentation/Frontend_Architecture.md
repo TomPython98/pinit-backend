@@ -242,20 +242,44 @@ class CalendarManager: ObservableObject {
     @Published var events: [StudyEvent] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var lastRefreshTime: Date? = nil
     
     private let accountManager: UserAccountManager
-    private var webSocketTask: URLSessionWebSocketTask?
+    private var webSocketManager: EventsWebSocketManager?
+    private var autoRefreshTimer: Timer?
+    private let autoRefreshInterval: TimeInterval = 60.0
     
     init(accountManager: UserAccountManager) {
         self.accountManager = accountManager
+        setupNotificationObservers()
     }
     
     func fetchEvents() {
         // Fetch events from API
     }
     
-    func connectWebSocket() {
+    func setupWebSocket() {
         // Real-time updates via WebSocket
+        webSocketManager = EventsWebSocketManager(username: username)
+        webSocketManager?.delegate = self
+        webSocketManager?.connect()
+        startAutoRefresh()
+    }
+    
+    private func startAutoRefresh() {
+        // Start 60-second periodic refresh timer
+        autoRefreshTimer = Timer.scheduledTimer(withTimeInterval: autoRefreshInterval, repeats: true) { _ in
+            if !self.username.isEmpty && !self.isLoading {
+                self.fetchEvents()
+            }
+        }
+    }
+    
+    @objc private func handleAppBecameActive() {
+        // Refresh when app becomes active
+        if !username.isEmpty && !isLoading {
+            fetchEvents()
+        }
     }
     
     func addEvent(_ event: StudyEvent) {
