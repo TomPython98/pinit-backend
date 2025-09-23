@@ -299,7 +299,12 @@ struct RatingRowView: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        return formatter.string(from: rating.createdAt)
+        return formatter.string(from: parseDate(from: rating.createdAt))
+    }
+    
+    private func parseDate(from dateString: String) -> Date {
+        let formatter = ISO8601DateFormatter()
+        return formatter.date(from: dateString) ?? Date()
     }
 }
 

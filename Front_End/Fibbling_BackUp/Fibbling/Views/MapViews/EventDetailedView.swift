@@ -374,6 +374,16 @@ struct EventDetailView: View {
                 defaultTags.append(contentsOf: ["party", "social", "fun"])
             case .business:
                 defaultTags.append(contentsOf: ["business", "networking", "professional"])
+            case .cultural:
+                defaultTags.append(contentsOf: ["cultural", "arts", "heritage"])
+            case .academic:
+                defaultTags.append(contentsOf: ["academic", "research", "scholarship"])
+            case .networking:
+                defaultTags.append(contentsOf: ["networking", "professional", "connections"])
+            case .social:
+                defaultTags.append(contentsOf: ["social", "friends", "community"])
+            case .language_exchange:
+                defaultTags.append(contentsOf: ["language", "exchange", "learning"])
             case .other:
                 defaultTags.append(contentsOf: ["meeting", "gathering", "event"])
             }
@@ -2441,7 +2451,7 @@ struct EventDetailAndInteractions_Previews: PreviewProvider {
         let dummyEvent = StudyEvent(
             id: UUID(),
             title: "Swift Programming Workshop",
-            coordinate: CLLocationCoordinate2D(latitude: 48.2082, longitude: 16.3738),
+            coordinate: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816),
             time: Date(),
             endTime: Date().addingTimeInterval(3600 * 2),
             description: "Join us for a hands-on workshop where you'll learn advanced Swift techniques and best practices for building modern iOS apps.",

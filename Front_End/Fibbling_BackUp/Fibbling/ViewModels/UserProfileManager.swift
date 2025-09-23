@@ -442,16 +442,16 @@ class UserProfileManager: ObservableObject {
     
     func getSuggestedUniversities() -> [String] {
         return [
-            "Vienna University of Technology",
-            "University of Vienna",
-            "Medical University of Vienna",
-            "University of Natural Resources and Life Sciences",
-            "Vienna University of Economics and Business",
-            "Academy of Fine Arts Vienna",
-            "University of Applied Arts Vienna",
-            "University of Music and Performing Arts Vienna",
-            "Central European University",
-            "Webster University Vienna"
+            "University of Buenos Aires",
+            "National University of La Plata",
+            "University of San Andrés",
+            "Torcuato Di Tella University",
+            "University of Belgrano",
+            "University of Palermo",
+            "University of Salvador",
+            "National University of Córdoba",
+            "National University of Rosario",
+            "University of San Martín"
         ]
     }
     

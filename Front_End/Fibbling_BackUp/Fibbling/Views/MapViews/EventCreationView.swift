@@ -842,6 +842,16 @@ struct EventCreationView: View {
             return Color.brandAccent
         case .business:
             return Color.brandSecondary
+        case .cultural:
+            return Color.orange
+        case .academic:
+            return Color.green
+        case .networking:
+            return Color.pink
+        case .social:
+            return Color.red
+        case .language_exchange:
+            return Color.teal
         case .other:
             return Color.textSecondary
         }
@@ -954,6 +964,16 @@ struct EventCreationView: View {
                     defaultTags.append(contentsOf: ["party", "social", "fun"])
                 case .business:
                     defaultTags.append(contentsOf: ["business", "meeting", "networking"])
+                case .cultural:
+                    defaultTags.append(contentsOf: ["cultural", "arts", "heritage"])
+                case .academic:
+                    defaultTags.append(contentsOf: ["academic", "research", "scholarship"])
+                case .networking:
+                    defaultTags.append(contentsOf: ["networking", "professional", "connections"])
+                case .social:
+                    defaultTags.append(contentsOf: ["social", "friends", "community"])
+                case .language_exchange:
+                    defaultTags.append(contentsOf: ["language", "exchange", "learning"])
                 case .other:
                     defaultTags.append(contentsOf: ["meetup", "gathering"])
                 }

@@ -12,7 +12,7 @@ struct CustomCalendarView: View {
     @State private var showEventCreation = false
     
     // Add view mode filtering (same as map)
-    @State private var eventViewMode: EventViewMode = .rsvpedOnly  // Default to "My Events" as requested
+    @State private var eventViewMode: EventViewMode = .all  // Default to "All Events" to show all available events
     @State private var showViewModeSelector: Bool = false
     
     private let todayDate = Date()
@@ -372,7 +372,7 @@ struct CustomCalendarView: View {
     private var todayEventsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Today's Events")
+                Text(sectionTitle)
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                 Spacer()
@@ -384,17 +384,15 @@ struct CustomCalendarView: View {
             }
             .padding(.bottom, 8)
             
-            if let todayEvents = eventsFor(date: Date()), !todayEvents.isEmpty {
-                ForEach(todayEvents) { event in
-                    EventRow(event: event)
-                        .transition(.scale.combined(with: .opacity))
-                }
+            if !displayedEvents.isEmpty {
+                SimpleEventsList(events: displayedEvents)
+                    .transition(.scale.combined(with: .opacity))
             } else {
                 VStack(spacing: 12) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 40))
                         .foregroundColor(.secondary.opacity(0.7))
-                    Text("No events today")
+                    Text(emptyStateMessage)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -408,6 +406,53 @@ struct CustomCalendarView: View {
                 .fill(Color(.systemBackground))
                 .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
         )
+    }
+    
+    // MARK: - Computed Properties for Events Section
+    private var sectionTitle: String {
+        switch eventViewMode {
+        case .all:
+            let totalCount = calendarManager.events.count
+            return "All Events (\(totalCount))"
+        case .autoMatched:
+            let autoCount = calendarManager.events.filter { event in
+                guard let isAutoMatched = event.isAutoMatched, isAutoMatched else { return false }
+                return !event.attendees.contains(calendarManager.username)
+            }.count
+            return "Auto-Matched (\(autoCount))"
+        case .rsvpedOnly:
+            let rsvpCount = calendarManager.events.filter { event in
+                event.attendees.contains(calendarManager.username) || event.host == calendarManager.username
+            }.count
+            return "My Events (\(rsvpCount))"
+        }
+    }
+    
+    private var displayedEvents: [StudyEvent] {
+        switch eventViewMode {
+        case .all:
+            return calendarManager.events
+        case .autoMatched:
+            return calendarManager.events.filter { event in
+                guard let isAutoMatched = event.isAutoMatched, isAutoMatched else { return false }
+                return !event.attendees.contains(calendarManager.username)
+            }
+        case .rsvpedOnly:
+            return calendarManager.events.filter { event in
+                event.attendees.contains(calendarManager.username) || event.host == calendarManager.username
+            }
+        }
+    }
+    
+    private var emptyStateMessage: String {
+        switch eventViewMode {
+        case .all:
+            return "No events available"
+        case .autoMatched:
+            return "No auto-matched events"
+        case .rsvpedOnly:
+            return "No events today"
+        }
     }
     
     // MARK: - Helper Functions
@@ -697,6 +742,72 @@ struct EventRow: View {
         .cornerRadius(8)
     }
 }
+
+// MARK: - Simple Events List Component
+struct SimpleEventsList: View {
+    let events: [StudyEvent]
+    
+    var body: some View {
+        LazyVStack(spacing: 8) {
+            ForEach(events) { event in
+                SimpleEventRow(event: event)
+            }
+        }
+    }
+}
+
+// MARK: - Simple Event Row Component
+struct SimpleEventRow: View {
+    let event: StudyEvent
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Simple event type indicator
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 8, height: 8)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                
+                HStack(spacing: 8) {
+                    Text(event.time.formatted(date: .omitted, time: .shortened))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Text(event.eventType.displayName)
+                        .font(.caption)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundColor(.accentColor)
+                        .cornerRadius(4)
+                }
+            }
+            
+            Spacer()
+            
+            // Simple RSVP indicator
+            if event.attendees.contains(where: { $0 == "lola_ramirez_947" }) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 16))
+            } else {
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 14))
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color(.systemBackground))
+        .cornerRadius(8)
+    }
+}
+
 
 struct EventCreationSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -1515,6 +1626,16 @@ struct EventCreationSheet: View {
             return Color.purple
         case .business:
             return Color.orange
+        case .cultural:
+            return Color.orange
+        case .academic:
+            return Color.green
+        case .networking:
+            return Color.pink
+        case .social:
+            return Color.red
+        case .language_exchange:
+            return Color.teal
         case .other:
             return Color.gray
         }
@@ -1830,6 +1951,16 @@ func eventColor(for event: StudyEvent) -> Color {
         return Color.purple.opacity(0.9)
     case .business:
         return Color.orange.opacity(0.9)
+    case .cultural:
+        return Color.orange.opacity(0.9)
+    case .academic:
+        return Color.green.opacity(0.9)
+    case .networking:
+        return Color.pink.opacity(0.9)
+    case .social:
+        return Color.red.opacity(0.9)
+    case .language_exchange:
+        return Color.teal.opacity(0.9)
     case .other:
         return Color.gray.opacity(0.9)
     }

@@ -125,6 +125,16 @@ struct StudyEventCard: View {
             return .purple
         case .business:
             return .green
+        case .cultural:
+            return .orange
+        case .academic:
+            return .green
+        case .networking:
+            return .pink
+        case .social:
+            return .red
+        case .language_exchange:
+            return .teal
         case .other:
             return .orange
         }
@@ -155,7 +165,7 @@ func createSampleEvent() -> StudyEvent? {
     return StudyEvent(
         id: UUID(),
         title: "Machine Learning Study Group",
-        coordinate: CLLocationCoordinate2D(latitude: 48.2082, longitude: 16.3738),
+        coordinate: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816),
         time: Date(),
         endTime: Date().addingTimeInterval(3600 * 2),
         description: "Weekly study group for machine learning.",

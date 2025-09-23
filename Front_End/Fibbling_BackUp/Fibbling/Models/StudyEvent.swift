@@ -9,7 +9,7 @@ import Foundation
 import MapKit
 
 enum EventType: String, Codable, CaseIterable, Identifiable {
-    case study, party, business, other
+    case study, party, business, other, cultural, academic, networking, social, language_exchange
     
     var id: String { self.rawValue }
     
@@ -18,6 +18,11 @@ enum EventType: String, Codable, CaseIterable, Identifiable {
         case .study:    return "Study"
         case .party:    return "Party"
         case .business: return "Business"
+        case .cultural: return "Cultural"
+        case .academic: return "Academic"
+        case .networking: return "Networking"
+        case .social: return "Social"
+        case .language_exchange: return "Language Exchange"
         case .other:    return "Other"
         }
     }

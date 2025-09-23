@@ -2079,7 +2079,7 @@ struct ProfileView: View {
                 Spacer()
                 
                 // Format date to show only month and day
-                Text(rating.createdAt, style: .date)
+                Text(parseDate(from: rating.createdAt), style: .date)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -2100,6 +2100,11 @@ struct ProfileView: View {
             }
         }
         .padding(.vertical, 5)
+    }
+    
+    private func parseDate(from dateString: String) -> Date {
+        let formatter = ISO8601DateFormatter()
+        return formatter.date(from: dateString) ?? Date()
     }
     
     private func ratingsListView(username: String) -> some View {

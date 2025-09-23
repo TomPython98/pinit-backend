@@ -16,7 +16,7 @@ struct WeatherAndCalendarView: View {
     
     // Add state properties for map
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 48.2082, longitude: 16.3738), // Vienna coordinates
+        center: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816), // Buenos Aires coordinates
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
     @State private var mapEvents: [StudyEvent] = []
