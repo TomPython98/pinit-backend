@@ -1,0 +1,1968 @@
+Enhanced Auto-Matching Results
+=============================
+
+Event: Student Mixer at Science Lab (ID: 584dc0cd-9ed6-403f-93c2-0f1a8baedc88)
+Host: yasmin_el-said
+Type: party
+Interests: Philosophy, Cognitive science, Computer science, Social, Networking, Data science, Food Sharing
+Location: 48.2184145873954, 16.349797878882775
+Time: 2025-10-10 12:30:11.901158+00:00
+
+Found 1 matches:
+  User: emma_koch
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Art Workshop (ID: faee8495-eef8-48e2-94aa-babda86a8dbb)
+Host: jakob_müller
+Type: study
+Interests: Research Methods, Digital art, Art history, Academic, University, Art, Education, Street art
+Location: 48.229401939212444, 16.32081725604156
+Time: 2025-10-11 12:30:11.901158+00:00
+
+Found 1 matches:
+  User: jakob_kovacs
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Radio Project Planning at Arts Building (ID: bf131eae-b805-4ee5-af47-b1730a71df2b)
+Host: divya_kumar
+Type: other
+Interests: Medicine, Urban planning
+Location: 48.18401668140572, 16.298787123010996
+Time: 2025-10-15 17:45:11.901158+00:00
+
+Found 1 matches:
+  User: emma_santos
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Chemistry Exam Preparation (ID: b3ee3791-0a7f-448b-bf1f-b7297ae490f3)
+Host: julia_novak
+Type: study
+Interests: Academic, University, Current Developments, Education, Chemistry
+Location: 48.168618323417135, 16.293557389990696
+Time: 2025-10-11 18:45:11.901158+00:00
+
+Found 1 matches:
+  User: sarah_berger
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Climate Action Student Meeting at Business School (ID: d76c6e24-2fdd-4476-9498-f4f1bad6727b)
+Host: stefan_neumann
+Type: other
+Interests: Business administration, Computer Science
+Location: 48.18576795945916, 16.406134630160782
+Time: 2025-09-16 08:00:11.901158+00:00
+
+Found 1 matches:
+  User: thomas_reiter
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Medicine Exam Preparation (ID: eae0b9d8-84d0-482f-b852-901cad1d142b)
+Host: hannah_reiter
+Type: study
+Interests: Medicine, University, Academic, Education, Practical Applications
+Location: 48.20909713776658, 16.376009083755676
+Time: 2025-09-29 20:15:11.901158+00:00
+
+Found 1 matches:
+  User: sophie_weber
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Students Gathering (ID: 04db6b85-75ec-4ef5-8668-352094e24c22)
+Host: simon_mayer
+Type: party
+Interests: Literature, Social, Networking, International relations, Food Sharing
+Location: 48.25357318157829, 16.438608159311165
+Time: 2025-10-10 11:45:11.901158+00:00
+
+Found 1 matches:
+  User: maria_brunner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Radio Project Planning at Tech Hub (ID: 1c8ebe19-b08a-4ae3-96ac-aa0dee558cc3)
+Host: mei_chen
+Type: other
+Interests: Sociology, Urban planning
+Location: 48.192667893991484, 16.32420265420684
+Time: 2025-09-18 20:45:11.901158+00:00
+
+Found 1 matches:
+  User: hannah_müller
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Students Gathering (ID: ccc0531c-349f-4a8a-bef6-5175c6d56c80)
+Host: nina_martinez
+Type: party
+Interests: Social, Networking, Karaoke, International relations, Music
+Location: 48.16830150226307, 16.35318168356108
+Time: 2025-10-15 14:00:11.901158+00:00
+
+Found 1 matches:
+  User: sabine_hofmann
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: c1092f00-6f96-4416-8fee-711b2a2b70b3)
+Host: maximilian_bauer
+Type: business
+Interests: Physics, Healthcare, Career, Professional Development
+Location: 48.1917395613681, 16.355864657521142
+Time: 2025-09-24 14:45:11.901158+00:00
+
+Found 1 matches:
+  User: omar_khalil
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Art Exam Preparation (ID: 0f2dafd6-87ce-420f-83e7-4e2fca711a28)
+Host: theresa_hofmann
+Type: study
+Interests: Data Analysis, Digital art, Art history, Academic, University, Art, Education, Street art
+Location: 48.22203125990945, 16.334096752462447
+Time: 2025-10-06 21:30:11.901158+00:00
+
+Found 1 matches:
+  User: simon_santos
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Sociology Study Group at Arts Building (ID: b3dc1fff-9026-44b7-97ae-a02478b2e7b1)
+Host: felix_steiner
+Type: study
+Interests: Academic, Sociology, University, Current Developments, Education
+Location: 48.16314689890243, 16.29944666363516
+Time: 2025-10-13 12:30:11.901158+00:00
+
+Found 1 matches:
+  User: maria_schmid
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Philosophy (ID: 669b46ef-4ddb-4bde-8244-5c98c1f23d7b)
+Host: maria_brenner
+Type: study
+Interests: Philosophy, Essay Writing, Academic, University, Education
+Location: 48.21025564498097, 16.379590611112622
+Time: 2025-09-25 12:15:11.901158+00:00
+
+Found 1 matches:
+  User: valentina_kovacs
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: 8e63167e-5bbf-4231-ad9b-8cf64f39c520)
+Host: jonas_pichler
+Type: business
+Interests: Career, Medicine, Retail, Professional Development
+Location: 48.19223650786579, 16.37137310711532
+Time: 2025-10-10 10:45:11.901158+00:00
+
+Found 1 matches:
+  User: jakob_baumgartner1
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Math (ID: 46a8634f-db59-42f4-b729-abe7665d7b87)
+Host: martin_haas
+Type: study
+Interests: Math, Data Analysis, Academic, University, Education
+Location: 48.236034541423415, 16.361552074782775
+Time: 2025-10-07 19:00:11.901158+00:00
+
+Found 1 matches:
+  User: patrick_hofer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Radio Project Planning at Innovation Space (ID: 1f81246d-6b4a-4f48-ad8b-7d649305a6f6)
+Host: christian_eder
+Type: other
+Interests: Philosophy, Urban planning
+Location: 48.18992318992615, 16.335980867144656
+Time: 2025-09-17 22:45:11.901158+00:00
+
+Found 1 matches:
+  User: stefan_meyer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Philosophy Exam Preparation (ID: 44099142-b2a9-47f9-bd92-a758197df72e)
+Host: marie_winkler
+Type: study
+Interests: Philosophy, Academic, University, Current Developments, Education
+Location: 48.19350309229833, 16.32793121566725
+Time: 2025-10-03 10:30:11.901158+00:00
+
+Found 1 matches:
+  User: jakob_neumann
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: games Group in Tech Hub (ID: 92ec4fbd-b6e4-452f-b53e-ca2c26672f02)
+Host: min_li
+Type: other
+Interests: Literature, Creative writing
+Location: 48.190454503129175, 16.323805807684057
+Time: 2025-10-03 20:30:11.901158+00:00
+
+Found 1 matches:
+  User: johannes_eder
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Party Night (ID: ce549b7c-ed62-4012-8c21-c32fcd955bdb)
+Host: valentina_steiner
+Type: party
+Interests: Philosophy, Quiz Competition, Social, Networking, International relations
+Location: 48.198725117130955, 16.36755703242347
+Time: 2025-10-09 15:15:11.901158+00:00
+
+Found 1 matches:
+  User: martin_maier
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Volunteering at Tech Hub Food Bank (ID: d6709724-5a48-4210-9152-50b12ffe194a)
+Host: sophie_schmid
+Type: other
+Interests: Volunteering, Psychology
+Location: 48.24988283866757, 16.44546048115947
+Time: 2025-10-12 13:15:11.901158+00:00
+
+Found 1 matches:
+  User: hannah_reiter
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Economics (ID: 14b32560-8fd5-4190-a46f-a2cb733f8275)
+Host: christian_gruber
+Type: study
+Interests: Economics, Academic, University, Education, Practical Applications
+Location: 48.21856903714983, 16.33483849383678
+Time: 2025-10-01 22:00:11.901158+00:00
+
+Found 1 matches:
+  User: thomas_mayer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Climate Action Student Meeting at Central Library (ID: dc9ae0e6-6fc4-4669-bfe7-9f060d697ed3)
+Host: michael_wallner
+Type: other
+Interests: History
+Location: 48.161863834384924, 16.289203678296932
+Time: 2025-10-05 11:45:11.901158+00:00
+
+Found 1 matches:
+  User: valentina_fischer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Volunteering at Coffee House Food Bank (ID: b9fdd5e2-9e2f-43fd-94cc-29c3c5f38711)
+Host: stefan_hofmann1
+Type: other
+Interests: Vienna coffee culture, Volunteering, Political Science
+Location: 48.201915552658, 16.367563856958174
+Time: 2025-10-11 14:45:11.901158+00:00
+
+Found 1 matches:
+  User: peter_winter
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Biology (ID: 5effb5c9-4027-4af3-89fa-b923d6257927)
+Host: josip_horvat
+Type: study
+Interests: Case Studies, Biology, University, Academic, Education
+Location: 48.16158684966135, 16.414395591783084
+Time: 2025-09-22 22:45:11.901158+00:00
+
+Found 1 matches:
+  User: sarah_zimmermann1
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: IBM Information Session (ID: e553643f-8a83-42f4-ba4e-b77ba117787a)
+Host: isabella_marino
+Type: business
+Interests: Manufacturing, Biology, Career, Professional Development
+Location: 48.21765091414315, 16.370413746966275
+Time: 2025-09-21 09:15:11.901158+00:00
+
+Found 1 matches:
+  User: laura_ricci
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Chemistry Workshop (ID: bc67a932-159b-4c9c-bec4-182d694662d8)
+Host: maximilian_novak
+Type: study
+Interests: Research Methods, Academic, University, Education, Chemistry
+Location: 48.26910291156188, 16.3248558473974
+Time: 2025-10-08 14:15:11.901158+00:00
+
+Found 1 matches:
+  User: simon_mayer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: End of Semester Celebration (ID: 1fffbcd4-2a55-4ea8-a284-243501a354f3)
+Host: raj_sharma
+Type: party
+Interests: Social, Movie Screening, Networking, Art
+Location: 48.18396178009899, 16.335173698672453
+Time: 2025-10-10 15:00:11.901158+00:00
+
+Found 1 matches:
+  User: birgit_reiter
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Workshop: Content Creation for Beginners (ID: 8964f637-2e38-4229-bfa5-b119f1ece952)
+Host: birgit_fischer
+Type: business
+Interests: Tech, Biology, Career, Professional Development
+Location: 48.15181202240286, 16.415879932367076
+Time: 2025-10-09 22:45:11.901158+00:00
+
+Found 1 matches:
+  User: monika_schmidt
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Healthcare Networking Event (ID: 92240ebc-757d-492a-896a-9d76fbc196d3)
+Host: patrick_wieser
+Type: business
+Interests: Sociology, Healthcare, Career, Professional Development
+Location: 48.1827174365844, 16.370973966251494
+Time: 2025-10-09 16:45:11.901158+00:00
+
+Found 1 matches:
+  User: julia_ricci1
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Workshop: Data Analysis for Beginners (ID: c514896b-21f2-4289-8781-6cb422364ed4)
+Host: sophie_hofbauer
+Type: business
+Interests: Literature, Professional Development, Nonprofit, Career, Data science
+Location: 48.21023025436626, 16.355259300489116
+Time: 2025-09-25 09:00:11.901158+00:00
+
+Found 1 matches:
+  User: elisabeth_mayer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Climate Action Student Meeting at City Park (ID: 27f6924f-5448-4325-a28f-513296d93a17)
+Host: divya_kumar
+Type: other
+Interests: Psychology
+Location: 48.21200067969851, 16.34287863867607
+Time: 2025-10-06 08:15:11.901158+00:00
+
+Found 1 matches:
+  User: paul_huber
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: End of Semester Celebration (ID: 05abb33f-72be-4eaa-852f-2648c0741716)
+Host: maximilian_wallner
+Type: party
+Interests: Social, Networking, Political Science, Games
+Location: 48.22421114783478, 16.299576877904936
+Time: 2025-09-30 17:00:11.901158+00:00
+
+Found 1 matches:
+  User: valentina_silva
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Mixer at Central Library (ID: 8feccb8c-4aa2-4a78-8aba-a6f438f81a9f)
+Host: hannah_silva
+Type: party
+Interests: Social, Dancing, Networking, Art
+Location: 48.17440288257792, 16.35652819149577
+Time: 2025-10-03 19:30:11.901158+00:00
+
+Found 1 matches:
+  User: simon_müller
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Medicine (ID: 466fa316-d834-4eba-8db9-e2e0d3b6b614)
+Host: jonas_bauer
+Type: study
+Interests: Medicine, Exam Preparation, University, Academic, Education
+Location: 48.200985782101874, 16.348637440102518
+Time: 2025-10-06 11:45:11.901158+00:00
+
+Found 1 matches:
+  User: stefan_lang
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Radio Project Planning at Business School (ID: 3574be6c-21e6-4cb7-a269-e87fc5b2e7ae)
+Host: elisabeth_koch
+Type: other
+Interests: Business administration, Medicine, Urban planning
+Location: 48.17201972556474, 16.325932185661447
+Time: 2025-09-30 15:45:11.901158+00:00
+
+Found 1 matches:
+  User: paul_hofmann
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Physics Study Group at Tech Hub (ID: 46e1603b-ff2a-4c23-8e05-b96d3b7f3b81)
+Host: jonas_schmidt
+Type: study
+Interests: Case Studies, Academic, University, Quantum physics, Education, Physics
+Location: 48.20308230477457, 16.36540265485723
+Time: 2025-10-13 10:30:11.901158+00:00
+
+Found 1 matches:
+  User: felix_lehner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: 04565351-b11b-44c2-83d4-88f1df1db2e3)
+Host: nikolaus_schwarz
+Type: business
+Interests: Education, Physics, Career, Professional Development
+Location: 48.204796648485555, 16.347848554427124
+Time: 2025-09-17 14:15:11.901158+00:00
+
+Found 1 matches:
+  User: sebastian_fischer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Political Science Study Group at Student Center (ID: 9874f000-0cfc-46cd-ada8-e8480d6284d9)
+Host: valentina_kovacs
+Type: study
+Interests: Political Science, Cognitive science, Research Methods, Computer science, Academic, University, Education, Data science
+Location: 48.18382995148105, 16.346277167612445
+Time: 2025-09-26 10:45:11.901158+00:00
+
+Found 1 matches:
+  User: theresa_steiner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Literature Exam Preparation (ID: 8cbf472c-5b39-4c95-b089-a1151f0f2ea4)
+Host: simon_reiter
+Type: study
+Interests: Literature, Academic, University, Current Developments, Education
+Location: 48.25586795035656, 16.467382323257773
+Time: 2025-09-21 12:00:11.901158+00:00
+
+Found 1 matches:
+  User: sophie_hoffmann
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Radio Project Planning at Arts Building (ID: 7d173b68-fa2e-448d-85a2-7dd65e38fb9b)
+Host: florian_martinez
+Type: other
+Interests: Literature, Urban planning
+Location: 48.16549438330125, 16.410096836491505
+Time: 2025-10-01 19:15:11.901158+00:00
+
+Found 1 matches:
+  User: philipp_eder1
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Biology Exam Preparation (ID: 47b9d610-8954-4492-9192-06fb26a0666a)
+Host: emma_schmidt
+Type: study
+Interests: Exam Preparation, Biology, University, Academic, Education
+Location: 48.251564124419104, 16.386019400153714
+Time: 2025-10-04 21:15:11.901158+00:00
+
+Found 1 matches:
+  User: emma_müller
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: cultural showcase Group in Central Library (ID: b33b86dc-7a04-4e85-b98a-db86a94e6792)
+Host: patrick_fischer
+Type: other
+Interests: Biology
+Location: 48.17515983850365, 16.338564331388316
+Time: 2025-10-11 13:45:11.901158+00:00
+
+Found 1 matches:
+  User: anna_schuster
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Workshop: Financial Modeling for Beginners (ID: 150ed483-21c1-4ed9-a491-90114db3aafe)
+Host: sophie_martinez
+Type: business
+Interests: Consulting, Career, Computer Science, Professional Development
+Location: 48.15072655870645, 16.30196556289671
+Time: 2025-09-16 20:15:11.901158+00:00
+
+Found 1 matches:
+  User: jonas_wieser
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Radio Project Planning at Student Center (ID: 446f61d5-0c7b-4b77-b6dd-d09867b96db4)
+Host: julia_eder
+Type: other
+Interests: Political Science, Urban planning
+Location: 48.198503423372415, 16.367400021703048
+Time: 2025-10-13 12:45:11.901158+00:00
+
+Found 1 matches:
+  User: christina_lehner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: quiz competition Group in Central Library (ID: 6c2b4035-977f-4faa-bd1f-afdb735ab5d7)
+Host: markus_hoffmann
+Type: other
+Interests: Biology
+Location: 48.242376434591336, 16.46827257961859
+Time: 2025-09-30 22:30:11.901158+00:00
+
+Found 1 matches:
+  User: anna_martinez
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Volunteering at Coffee House Food Bank (ID: c27c597f-4957-4c9e-8306-1fbb275b3a12)
+Host: nina_petrović
+Type: other
+Interests: Vienna coffee culture, Volunteering, Economics
+Location: 48.17059240800197, 16.364009377626477
+Time: 2025-09-26 19:45:11.901158+00:00
+
+Found 1 matches:
+  User: arjun_singh
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: End of Semester Celebration (ID: 4f2839c6-a3b5-4e65-a396-3ac111fbff95)
+Host: thomas_kovacs
+Type: party
+Interests: Music, Dancing, Networking, Social
+Location: 48.19990734715956, 16.381115500254534
+Time: 2025-10-02 11:30:11.901158+00:00
+
+Found 1 matches:
+  User: alice_davis
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Math Workshop (ID: 3a111f4c-c508-4107-9a39-562d2c5804a9)
+Host: isabella_gruber
+Type: study
+Interests: Math, Experimental Design, Academic, University, Education
+Location: 48.249844119920894, 16.32196919451605
+Time: 2025-10-09 22:45:11.901158+00:00
+
+Found 1 matches:
+  User: takashi_tanaka
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Art (ID: 243a96a8-0e34-4b20-90be-245917e16b95)
+Host: theresa_huber1
+Type: study
+Interests: Digital art, Experimental Design, Art history, Academic, University, Art, Education, Street art
+Location: 48.15966039598152, 16.27775811026214
+Time: 2025-09-21 18:45:11.901158+00:00
+
+Found 1 matches:
+  User: florian_wolf
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Volunteering at City Park Food Bank (ID: edb97038-fe9d-4367-beb0-adb1a46815c5)
+Host: thomas_martinez1
+Type: other
+Interests: Volunteering, Computer Science
+Location: 48.20935726962013, 16.311206593217303
+Time: 2025-10-01 20:00:11.901158+00:00
+
+Found 1 matches:
+  User: johannes_wolf
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Art Study Group at Coffee House (ID: 2050c3e6-39e0-43ca-8c0c-e4047e574028)
+Host: peter_schneider
+Type: study
+Interests: Vienna coffee culture, Digital art, Art history, Academic, University, Art, Historical Context, Education
+Location: 48.22103323994685, 16.35885623508516
+Time: 2025-09-26 15:15:11.901158+00:00
+
+Found 1 matches:
+  User: nina_pichler
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Amazon Information Session (ID: 946325c5-757f-4859-b7f4-dcb7490c72b0)
+Host: sophie_hofbauer
+Type: business
+Interests: Consulting, Physics, Career, Professional Development
+Location: 48.180019855945226, 16.338093912315404
+Time: 2025-09-30 18:15:11.901158+00:00
+
+Found 1 matches:
+  User: jonas_mayer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: e4a81ba5-ecb8-4454-a5e7-5f77dc07941d)
+Host: markus_kovacs
+Type: business
+Interests: Career, Biology, Media, Professional Development
+Location: 48.1654213674128, 16.326153620217656
+Time: 2025-09-27 10:45:11.901158+00:00
+
+Found 1 matches:
+  User: monika_schmidt
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: karaoke Group in Arts Building (ID: 2f364ca9-322c-4bf7-b912-feb4e92e54cc)
+Host: valentina_wallner1
+Type: other
+Interests: Creative writing, Economics
+Location: 48.229890341774585, 16.358540807527536
+Time: 2025-10-11 08:15:11.901158+00:00
+
+Found 1 matches:
+  User: thomas_moser
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Literature Exam Preparation (ID: 5dd8fc25-00bd-48f9-8784-a7fddaaf216f)
+Host: katharina_steiner
+Type: study
+Interests: Literature, Theories, Academic, University, Education
+Location: 48.18193203303521, 16.423372261878566
+Time: 2025-10-08 11:15:11.901158+00:00
+
+Found 1 matches:
+  User: max_ricci
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Students Gathering (ID: 9841bd66-0e49-4a09-bf32-d490ba652ec0)
+Host: daniel_wolf
+Type: party
+Interests: Dancing, Political Science, Social, Networking, International relations
+Location: 48.159373260926834, 16.30025055602847
+Time: 2025-10-06 14:15:11.901158+00:00
+
+Found 1 matches:
+  User: benjamin_winter
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Workshop: Leadership for Beginners (ID: fd1eca3d-8fe6-471a-b5fa-8d1ede5f1420)
+Host: hyun_kim
+Type: business
+Interests: Energy, Career, Professional Development, Chemistry
+Location: 48.229818656750496, 16.386829551089207
+Time: 2025-10-02 09:30:11.901158+00:00
+
+Found 1 matches:
+  User: peter_huber
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Mixer at Arts Building (ID: 2ced637a-6a25-4408-9ab3-7a8839708a98)
+Host: nina_gruber
+Type: party
+Interests: Quiz Competition, Networking, Medicine, Social
+Location: 48.22811285350235, 16.364919008044126
+Time: 2025-10-03 19:00:11.901158+00:00
+
+Found 1 matches:
+  User: simon_neumann
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Workshop: Digital Marketing for Beginners (ID: 44a87dca-8763-4e27-ba21-029ceccc0ee6)
+Host: sebastian_neumann
+Type: business
+Interests: Philosophy, Digital marketing, Professional Development, Digital art, Career, Consulting
+Location: 48.27608391436488, 16.388096081213536
+Time: 2025-09-29 19:30:11.901158+00:00
+
+Found 1 matches:
+  User: jonas_berger
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: IBM Information Session (ID: 6d9f7046-ea54-44a0-af78-d01640eed80d)
+Host: simon_reiter
+Type: business
+Interests: Philosophy, Career, Education, Professional Development
+Location: 48.22038740354251, 16.30959983052359
+Time: 2025-09-19 09:15:11.901158+00:00
+
+Found 1 matches:
+  User: birgit_wolf
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Party Night (ID: 126e3374-e5c7-459f-b832-56b5c732c4d8)
+Host: valentina_eder
+Type: party
+Interests: Social, Biology, Networking, International relations, Music
+Location: 48.17229046958425, 16.38241932281829
+Time: 2025-09-18 17:15:11.901158+00:00
+
+Found 1 matches:
+  User: christina_marino
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Art Workshop (ID: c8087645-86e4-4345-b530-846b767c4aa9)
+Host: alexander_lang
+Type: study
+Interests: Digital art, Exam Preparation, Art history, Academic, University, Art, Education, Street art
+Location: 48.20133818285979, 16.34603758797279
+Time: 2025-10-12 17:00:11.901158+00:00
+
+Found 1 matches:
+  User: maximilian_wallner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Music Study Group at Coffee House (ID: fef1f22f-f7fc-4faa-a84d-56984748947c)
+Host: paul_huber
+Type: study
+Interests: Vienna coffee culture, Theories, Classical music, Music production, Academic, University, Education, Music
+Location: 48.22010898876373, 16.33011118310388
+Time: 2025-09-29 08:00:11.901158+00:00
+
+Found 1 matches:
+  User: anna_martinez
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Volunteering at Innovation Space Food Bank (ID: e7da9786-4167-45ae-a6c7-4bd77a934dc7)
+Host: maximilian_wallner
+Type: other
+Interests: Literature, Volunteering
+Location: 48.17614895343134, 16.389372493503192
+Time: 2025-09-27 09:15:11.901158+00:00
+
+Found 1 matches:
+  User: felix_ferrari
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: History Study Group at City Park (ID: 9caa488c-862f-4170-a6b2-848dbd1bacec)
+Host: philipp_ferrari
+Type: study
+Interests: Austrian history, History, Experimental Design, Art history, Academic, University, Habsburg history, Education
+Location: 48.20557466547677, 16.357652777830307
+Time: 2025-09-25 17:00:11.901158+00:00
+
+Found 1 matches:
+  User: katharina_schmidt
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: IBM Information Session (ID: 40df33ad-f921-481b-a605-f9c6f2e3d433)
+Host: florian_wieser
+Type: business
+Interests: Manufacturing, Career, Art, Professional Development
+Location: 48.21198620877399, 16.31181033756341
+Time: 2025-09-16 22:30:11.901158+00:00
+
+Found 1 matches:
+  User: sabine_eder
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Volunteering at Coffee House Food Bank (ID: bcb73548-e174-4fab-ac2c-62921729fab9)
+Host: benjamin_marino
+Type: other
+Interests: Vienna coffee culture, Volunteering, Art
+Location: 48.25004093129952, 16.353064400036377
+Time: 2025-09-16 17:00:11.901158+00:00
+
+Found 1 matches:
+  User: patrick_steiner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Volunteering at Coffee House Food Bank (ID: 75a4c065-ac81-4e40-beea-765b3a791d7e)
+Host: martin_wolf
+Type: other
+Interests: Vienna coffee culture, Music, Volunteering
+Location: 48.16424702187092, 16.274603944655926
+Time: 2025-09-18 21:45:11.901158+00:00
+
+Found 1 matches:
+  User: patrick_müller
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Beach Party Night (ID: 651464a7-a440-40c8-b2a9-999d0ef43ff8)
+Host: jonas_hofmann
+Type: party
+Interests: Quiz Competition, Networking, Medicine, Social
+Location: 48.140303020326996, 16.306028001778955
+Time: 2025-09-16 22:45:11.901158+00:00
+
+Found 1 matches:
+  User: elisabeth_richter1
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Finance Networking Event (ID: 523f3102-7fdb-4f00-b220-6487d9bbe8a2)
+Host: marie_fischer
+Type: business
+Interests: Professional Development, Career, Economics, Finance
+Location: 48.26335050888766, 16.410323437831295
+Time: 2025-10-13 18:15:11.901158+00:00
+
+Found 1 matches:
+  User: emma_haas
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Medicine Exam Preparation (ID: 83f5643c-4917-481d-9f3e-d85c808f1ead)
+Host: sophie_hofbauer
+Type: study
+Interests: Case Studies, Medicine, University, Academic, Education
+Location: 48.20269434898672, 16.360952178703297
+Time: 2025-09-24 10:45:11.901158+00:00
+
+Found 1 matches:
+  User: alexander_pichler
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: End of Semester Celebration (ID: 16308686-4234-4d41-b3de-99bf38608475)
+Host: ali_yılmaz
+Type: party
+Interests: Math, Networking, Music, Social
+Location: 48.190672986003925, 16.391094533320622
+Time: 2025-10-11 21:30:11.901158+00:00
+
+Found 1 matches:
+  User: valentina_weber
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Climate Action Student Meeting at City Park (ID: 28c9240e-881b-4a59-bee4-bc9ca6ce9d75)
+Host: marie_wagner
+Type: other
+Interests: Computer Science
+Location: 48.16609642377961, 16.26717213135057
+Time: 2025-10-01 22:45:11.901158+00:00
+
+Found 1 matches:
+  User: stefan_steiner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Party Night (ID: a63adeaf-1196-4144-a400-ebabe20d1f05)
+Host: birgit_ferrari
+Type: party
+Interests: History, Social, Networking, International relations, Music
+Location: 48.161295936882354, 16.427459074565476
+Time: 2025-09-29 18:30:11.901158+00:00
+
+Found 1 matches:
+  User: sophie_winter
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: OMV Information Session (ID: 09df46c1-de1f-4a45-a720-f2f8acd55932)
+Host: florian_wolf
+Type: business
+Interests: Consulting, Career, Art, Professional Development
+Location: 48.20742745258903, 16.34441090748341
+Time: 2025-09-18 08:45:11.901158+00:00
+
+Found 1 matches:
+  User: anna_silva
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Physics (ID: 05335a54-00d9-42c6-adec-8d5fdc84e7c8)
+Host: theresa_steiner
+Type: study
+Interests: Academic, University, Quantum physics, Current Developments, Education, Physics
+Location: 48.219990970715905, 16.366068249649043
+Time: 2025-10-05 10:00:11.901158+00:00
+
+Found 1 matches:
+  User: sebastian_marino
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Workshop: Python Programming for Beginners (ID: 7392c327-8014-4441-8139-b0d2367408dc)
+Host: stefan_meyer
+Type: business
+Interests: Biology, Career, Professional Development, Nonprofit
+Location: 48.19110863185222, 16.348617123773376
+Time: 2025-09-20 12:15:11.901158+00:00
+
+Found 1 matches:
+  User: patrick_richter
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Students Gathering (ID: 379154f1-2586-45d7-a377-e8ca8c274cf3)
+Host: julia_baumgartner
+Type: party
+Interests: Social, Networking, Art, International relations, Music
+Location: 48.16161236223501, 16.2797574367989
+Time: 2025-09-18 18:00:11.901158+00:00
+
+Found 1 matches:
+  User: lukas_schneider1
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Economics (ID: 62aa3506-6678-4af0-b750-d8d1010d7c3a)
+Host: marie_koch
+Type: study
+Interests: Theories, Economics, Academic, University, Education
+Location: 48.240405150172684, 16.39463735973817
+Time: 2025-10-03 15:00:11.901158+00:00
+
+Found 1 matches:
+  User: philipp_schwarz
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: End of Semester Celebration (ID: 257df4c6-671c-4d75-a86c-55de712f827b)
+Host: ji-woo_park
+Type: party
+Interests: Math, Dancing, Networking, Social
+Location: 48.205126507793004, 16.361868069591655
+Time: 2025-09-26 17:45:11.901158+00:00
+
+Found 1 matches:
+  User: felix_haas
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Tech Networking Event (ID: d334dbf5-2ce7-42ee-88e0-200bbb4cbcfa)
+Host: simon_haas
+Type: business
+Interests: Tech, Political Science, Career, Professional Development
+Location: 48.139932400941056, 16.29319218987767
+Time: 2025-10-15 19:15:11.901158+00:00
+
+Found 1 matches:
+  User: peter_winter
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Music Workshop (ID: d14d8642-c190-4365-b373-1dac7ac1cade)
+Host: elisabeth_schneider
+Type: study
+Interests: Data Analysis, Music production, Classical music, Academic, University, Education, Music
+Location: 48.238995669489725, 16.33214051483385
+Time: 2025-10-10 21:00:11.901158+00:00
+
+Found 1 matches:
+  User: isabella_eder
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Economics (ID: 27d62424-f2c1-44a6-a627-107414aebfd4)
+Host: charlotte_williams
+Type: study
+Interests: Economics, Academic, University, Historical Context, Education
+Location: 48.170907537989876, 16.26555565461456
+Time: 2025-10-02 22:00:11.901158+00:00
+
+Found 1 matches:
+  User: michael_schwarz
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Math Exam Preparation (ID: cad400a9-9b3e-474c-a0cd-6f9f4db78217)
+Host: florian_ricci
+Type: study
+Interests: Math, Academic, University, Current Developments, Education
+Location: 48.20364971788015, 16.372261025451536
+Time: 2025-09-26 20:45:11.901158+00:00
+
+Found 1 matches:
+  User: maria_wagner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Chemistry Study Group at Science Lab (ID: 88cae44b-acbe-43a3-9972-ae62159341dc)
+Host: jakob_pichler
+Type: study
+Interests: Case Studies, Cognitive science, Computer science, Academic, University, Education, Data science, Chemistry
+Location: 48.14405735910818, 16.313605844503805
+Time: 2025-10-09 17:45:11.901158+00:00
+
+Found 1 matches:
+  User: simon_hofer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Students Gathering (ID: 02c262c3-6e7f-4a26-8ee5-41571616feac)
+Host: anna_braun
+Type: party
+Interests: Philosophy, Social, Networking, Karaoke, International relations
+Location: 48.18999687407487, 16.394476925369457
+Time: 2025-10-15 19:30:11.901158+00:00
+
+Found 1 matches:
+  User: maria_mayer1
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Literature Study Group at Arts Building (ID: b8f00efa-d493-4b3d-81c4-7283edd8c170)
+Host: florian_schmidt
+Type: study
+Interests: Literature, Exam Preparation, Academic, University, Education
+Location: 48.18435434461598, 16.349895237427727
+Time: 2025-10-14 17:00:11.901158+00:00
+
+Found 1 matches:
+  User: benjamin_eder
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Economics Exam Preparation (ID: 2ea371ad-5dbb-4a69-ae0e-fc99c7a13ddb)
+Host: sebastian_bauer
+Type: study
+Interests: Economics, Problem Solving, Academic, University, Education
+Location: 48.24964802625774, 16.371210409713324
+Time: 2025-09-23 10:45:11.901158+00:00
+
+Found 1 matches:
+  User: elisabeth_gruber
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Biology Workshop (ID: 568125dd-23f1-4f18-85b3-990090e915c5)
+Host: yasmin_el-said
+Type: study
+Interests: Case Studies, Biology, University, Academic, Education
+Location: 48.16653200439764, 16.278032658418365
+Time: 2025-10-09 14:15:11.901158+00:00
+
+Found 1 matches:
+  User: sebastian_hofmann
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Workshop: Content Creation for Beginners (ID: 122a5863-c0fb-471a-8d43-313f1e4a99b5)
+Host: theresa_gruber
+Type: business
+Interests: Math, Career, Retail, Professional Development
+Location: 48.17653425963265, 16.404601186098095
+Time: 2025-10-12 10:45:11.901158+00:00
+
+Found 1 matches:
+  User: stefan_neumann
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Psychology Study Group at Tech Hub (ID: 1ad80e6c-2688-48da-b17c-2c7b54bb5248)
+Host: benjamin_wieser
+Type: study
+Interests: Problem Solving, Academic, University, Psychology, Education
+Location: 48.21723175457449, 16.361671471867393
+Time: 2025-09-22 10:30:11.901158+00:00
+
+Found 1 matches:
+  User: stefan_steiner1
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Education Networking Event (ID: e34f0cf0-0c10-41ac-8142-c1d18561daca)
+Host: christian_eder
+Type: business
+Interests: Education, Political Science, Career, Professional Development
+Location: 48.198059982279396, 16.33003100963412
+Time: 2025-09-27 17:15:11.901158+00:00
+
+Found 1 matches:
+  User: marie_fischer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Volunteering at Science Lab Food Bank (ID: 64ef0dff-3d45-438d-9ea8-ac6d0707e8da)
+Host: marie_pichler
+Type: other
+Interests: Computer science, Biology, Cognitive science, Data science
+Location: 48.21811874903272, 16.287654526728712
+Time: 2025-10-11 11:45:11.901158+00:00
+
+Found 1 matches:
+  User: ana_popović
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: 92332969-a747-472b-8fce-7a593109952e)
+Host: paul_hofmann
+Type: business
+Interests: Healthcare, Career, Art, Professional Development
+Location: 48.23591591793949, 16.33038756627666
+Time: 2025-10-11 12:00:11.901158+00:00
+
+Found 1 matches:
+  User: martin_wolf
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Economics (ID: 0b6fa528-845e-4a5a-8290-7751a6f0dfa1)
+Host: maximilian_bauer
+Type: study
+Interests: Economics, Essay Writing, Academic, University, Education
+Location: 48.16379004263632, 16.332736994381087
+Time: 2025-09-29 09:00:11.901158+00:00
+
+Found 1 matches:
+  User: christina_braun
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: cultural showcase Group in Student Center (ID: 687dee60-bf66-4f45-8b12-5ffe6a588ac3)
+Host: sarah_hofbauer
+Type: other
+Interests: Chemistry
+Location: 48.22793812705084, 16.380051207841987
+Time: 2025-09-29 17:15:11.901158+00:00
+
+Found 1 matches:
+  User: maria_schmid
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Physics Workshop (ID: 32a8244e-f04d-4462-9c81-8175c52a48a0)
+Host: sabine_reiter
+Type: study
+Interests: Problem Solving, Academic, University, Quantum physics, Education, Physics
+Location: 48.220635366580716, 16.34358062794536
+Time: 2025-10-14 18:00:11.901158+00:00
+
+Found 1 matches:
+  User: birgit_ferrari
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Radio Project Planning at Business School (ID: b8e34dfc-530a-48f5-8848-554ffcc5f08d)
+Host: paul_mayer
+Type: other
+Interests: Business administration, Urban planning, Chemistry
+Location: 48.20676048442372, 16.358122656784712
+Time: 2025-09-25 12:15:11.901158+00:00
+
+Found 1 matches:
+  User: hannah_silva
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Healthcare Networking Event (ID: 56be5eed-169b-4a05-a603-5d85323dbe29)
+Host: nikolaus_schwarz
+Type: business
+Interests: Healthcare, Career, Art, Professional Development
+Location: 48.19849598170485, 16.336109928419745
+Time: 2025-09-20 15:30:11.901158+00:00
+
+Found 1 matches:
+  User: markus_neumann
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Mixer at Arts Building (ID: 6dafe45c-6dbe-4493-a8f9-31e59fd07c92)
+Host: michael_maier
+Type: party
+Interests: Quiz Competition, Networking, Sociology, Social
+Location: 48.17823420655926, 16.37051163904586
+Time: 2025-09-18 22:00:11.901158+00:00
+
+Found 1 matches:
+  User: ana_popović
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Economics Workshop (ID: 1b7ea187-60fc-44a3-8fae-1a5cfae7962d)
+Host: lukas_schneider
+Type: study
+Interests: Economics, Exam Preparation, Academic, University, Education
+Location: 48.16848865966962, 16.30670901185529
+Time: 2025-09-19 15:30:11.901158+00:00
+
+Found 1 matches:
+  User: elisabeth_zimmermann
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Mixer at City Park (ID: d2b58f47-1579-4d26-9539-9f93802f6e2e)
+Host: sophie_schmidt
+Type: party
+Interests: Social, Biology, Cultural Showcase, Networking
+Location: 48.17284556795161, 16.291590445269126
+Time: 2025-09-21 08:00:11.901158+00:00
+
+Found 1 matches:
+  User: valentina_ferrari
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: 083eedb8-445c-4d5c-8244-02c289f1f7ba)
+Host: max_baumgartner
+Type: business
+Interests: Tech, Career, Computer Science, Professional Development
+Location: 48.132886299394755, 16.29101261318459
+Time: 2025-09-27 18:15:11.901158+00:00
+
+Found 1 matches:
+  User: alexander_pichler
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Raiffeisen Bank Information Session (ID: c3e97597-4793-4ece-8ee6-c8eeda739581)
+Host: sophie_marino
+Type: business
+Interests: Healthcare, Career, Art, Professional Development
+Location: 48.21460612636478, 16.318735871594452
+Time: 2025-09-23 08:15:11.901158+00:00
+
+Found 1 matches:
+  User: anna_schneider
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Climate Action Student Meeting at Central Library (ID: 6560ab94-ba01-4c73-b4b5-29f75dd42306)
+Host: maria_lehner
+Type: other
+Interests: Philosophy
+Location: 48.19674650996258, 16.338902302095804
+Time: 2025-09-30 21:30:11.901158+00:00
+
+Found 1 matches:
+  User: katharina_schmidt
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Chemistry Workshop (ID: fb019413-914c-490a-b7e8-425c3fc1de4d)
+Host: maximilian_wallner
+Type: study
+Interests: Academic, University, Education, Practical Applications, Chemistry
+Location: 48.1690346652448, 16.352892027424485
+Time: 2025-09-20 11:30:11.901158+00:00
+
+Found 1 matches:
+  User: sabine_baumgartner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: c92ebd16-c2cb-4ea8-9d4c-1d1bab64be92)
+Host: sarah_neumann
+Type: business
+Interests: Tech, Career, History, Professional Development
+Location: 48.16113339964277, 16.282754245406107
+Time: 2025-10-02 14:45:11.901158+00:00
+
+Found 1 matches:
+  User: maria_brenner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: 6909834b-2ae1-4500-846f-defd135fddac)
+Host: monika_baumgartner
+Type: business
+Interests: Retail, Career, History, Professional Development
+Location: 48.18741037632817, 16.342848990218407
+Time: 2025-09-22 10:30:11.901158+00:00
+
+Found 1 matches:
+  User: philipp_steiner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Literature (ID: c37fe9ab-75fa-4c03-808c-12d37626af69)
+Host: julia_winkler
+Type: study
+Interests: Literature, Problem Solving, Academic, University, Education
+Location: 48.22854614120683, 16.31371162871913
+Time: 2025-09-26 19:45:11.901158+00:00
+
+Found 1 matches:
+  User: stefanie_meyer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Art Workshop (ID: badf5fbd-9b32-4b50-ab65-e94cdb434c1c)
+Host: christina_braun
+Type: study
+Interests: Digital art, Art history, Problem Solving, Academic, University, Art, Education, Street art
+Location: 48.183356962641675, 16.403798436096377
+Time: 2025-09-21 17:30:11.901158+00:00
+
+Found 1 matches:
+  User: nikolaus_martinez
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: End of Semester Celebration (ID: 9bf06c12-3174-4449-9a7b-b6c478361726)
+Host: benjamin_eder
+Type: party
+Interests: Philosophy, Music, Networking, Social
+Location: 48.1577934191222, 16.40760136136549
+Time: 2025-10-03 10:00:11.901158+00:00
+
+Found 1 matches:
+  User: sophie_maier
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Students Gathering (ID: d7749925-c362-494c-8ea4-677fedd817ba)
+Host: paul_meyer
+Type: party
+Interests: Social, Networking, Psychology, Karaoke, International relations
+Location: 48.229468096015204, 16.374160258391534
+Time: 2025-09-23 12:15:11.901158+00:00
+
+Found 1 matches:
+  User: anna_berger
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Volunteering at Central Library Food Bank (ID: 3a66a3bd-d813-4662-92ee-a51e55ea283c)
+Host: julia_schmidt
+Type: other
+Interests: Biology, Volunteering
+Location: 48.20212380464226, 16.331476621995385
+Time: 2025-10-14 14:15:11.901158+00:00
+
+Found 1 matches:
+  User: emma_schneider
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Biology Workshop (ID: 5a845faa-83a4-4931-abf3-2bbdfd59fc11)
+Host: martin_wallner
+Type: study
+Interests: Biology, University, Academic, Historical Context, Education
+Location: 48.20976446145793, 16.38329939765032
+Time: 2025-10-03 13:00:11.901158+00:00
+
+Found 1 matches:
+  User: florian_bauer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Workshop: Python Programming for Beginners (ID: 698a954c-6ddd-41a3-aa35-28de97e433d2)
+Host: markus_neumann
+Type: business
+Interests: Energy, Career, Art, Professional Development
+Location: 48.17551468195077, 16.36552160987491
+Time: 2025-10-02 21:45:11.901158+00:00
+
+Found 1 matches:
+  User: maria_mayer1
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Healthcare Networking Event (ID: ce5bb3ca-2e67-462e-8672-6c28db6c0ddb)
+Host: florian_bauer
+Type: business
+Interests: Healthcare, Career, Computer Science, Professional Development
+Location: 48.25021745773734, 16.347219935285576
+Time: 2025-09-16 08:00:11.901158+00:00
+
+Found 1 matches:
+  User: stefanie_schmidt
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Mixer at Student Center (ID: 90d56c37-9262-4fbc-abcb-27affe124b71)
+Host: nina_petrović
+Type: party
+Interests: Social, Movie Screening, Networking, Art
+Location: 48.2021063451562, 16.349485828943312
+Time: 2025-10-10 16:15:11.901158+00:00
+
+Found 1 matches:
+  User: max_martinez
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Workshop: UX Design for Beginners (ID: 90f6bd3e-1f16-4d02-9608-a8df183b9325)
+Host: sabine_hoffmann
+Type: business
+Interests: Design, Professional Development, Fashion design, Biology, UX/UI design, Career, Consulting
+Location: 48.15183833695934, 16.308217213311718
+Time: 2025-10-02 09:30:11.901158+00:00
+
+Found 1 matches:
+  User: isabella_bauer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Climate Action Student Meeting at Innovation Space (ID: df00c8b0-a54e-49ae-ac21-b039a3bbd5fd)
+Host: daniel_koch
+Type: other
+Interests: Chemistry
+Location: 48.2107124647153, 16.326932230922722
+Time: 2025-09-16 20:45:11.901158+00:00
+
+Found 1 matches:
+  User: maximilian_schuster
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: 699baa39-2e3e-4806-952f-de8256f66c00)
+Host: nina_maier
+Type: business
+Interests: Manufacturing, Career, History, Professional Development
+Location: 48.22748679719609, 16.27849738472607
+Time: 2025-09-29 08:00:11.901158+00:00
+
+Found 1 matches:
+  User: alice_davis
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: History Exam Preparation (ID: eb1a2206-2597-4196-acb2-0c14f3aa5721)
+Host: birgit_wagner
+Type: study
+Interests: Theories, Austrian history, History, Art history, Academic, University, Habsburg history, Education
+Location: 48.218457361723296, 16.378875093460685
+Time: 2025-09-20 16:00:11.901158+00:00
+
+Found 1 matches:
+  User: ji-woo_park
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Group Project Meeting: Literature (ID: fffb9cee-89ee-4d8f-ba24-c65cacadce70)
+Host: simon_lang
+Type: study
+Interests: Literature, Research Methods, Academic, University, Education
+Location: 48.181758132558905, 16.273156772777757
+Time: 2025-09-27 18:00:11.901158+00:00
+
+Found 1 matches:
+  User: katharina_marino
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Microsoft Information Session (ID: 90d918e1-0f5c-4221-83f3-bb2f66979d0f)
+Host: valentina_fischer
+Type: business
+Interests: Consulting, Political Science, Career, Professional Development
+Location: 48.18750569860245, 16.36255141615453
+Time: 2025-09-19 22:00:11.901158+00:00
+
+Found 1 matches:
+  User: maria_wagner
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Physics Workshop (ID: 9f659953-5156-4bc5-bfac-264e47e2646f)
+Host: emma_johnson
+Type: study
+Interests: Academic, University, Quantum physics, Historical Context, Education, Physics
+Location: 48.15894144548198, 16.3314372452465
+Time: 2025-10-09 14:00:11.901158+00:00
+
+Found 1 matches:
+  User: maria_schmid
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Math Study Group at Student Center (ID: 0a58da16-9dc4-4535-baab-bbcf8fa60e9f)
+Host: felix_lang
+Type: study
+Interests: Math, Academic, University, Historical Context, Education
+Location: 48.162822337500415, 16.41707842210414
+Time: 2025-10-09 10:30:11.901158+00:00
+
+Found 1 matches:
+  User: emma_huber
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: International Party Night (ID: bfa2a977-fd47-4d86-b4ce-2e01b9add931)
+Host: sarah_schuster
+Type: party
+Interests: Dancing, Social, Networking, Psychology, International relations
+Location: 48.239858136088536, 16.319949264248848
+Time: 2025-10-12 12:15:11.901158+00:00
+
+Found 1 matches:
+  User: simon_gruber
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Education Networking Event (ID: 3f430847-b622-4abc-8f30-d2ec5bfa99ef)
+Host: michael_brunner
+Type: business
+Interests: Education, Math, Career, Professional Development
+Location: 48.255149283138984, 16.32835065446764
+Time: 2025-10-02 19:45:11.901158+00:00
+
+Found 1 matches:
+  User: birgit_eder
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Biology Exam Preparation (ID: db4063ff-73d5-497d-8692-229505adaeb7)
+Host: jakob_lehner
+Type: study
+Interests: Case Studies, Biology, University, Academic, Education
+Location: 48.25035453296259, 16.317313000315718
+Time: 2025-10-09 20:45:11.901158+00:00
+
+Found 1 matches:
+  User: birgit_reiter
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Red Bull Information Session (ID: 71c2dae9-04f5-448a-bb3a-395885bd2566)
+Host: sebastian_fischer
+Type: business
+Interests: Consulting, Career, Professional Development, Chemistry
+Location: 48.18875452705562, 16.33945926837789
+Time: 2025-10-12 21:45:11.901158+00:00
+
+Found 1 matches:
+  User: maximilian_hofbauer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Beach Party Night (ID: ca21ae5b-9f83-4870-bbe9-75a33a1fc164)
+Host: daniel_hofer
+Type: party
+Interests: Music, Networking, Cultural Showcase, Social
+Location: 48.21925548162705, 16.34828845707405
+Time: 2025-10-14 21:00:11.901158+00:00
+
+Found 1 matches:
+  User: christina_haas
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+
+Event: Student Startup Pitch Competition (ID: a1ab43b0-5a5e-408a-92f0-135ab30aedd1)
+Host: stefan_wagner
+Type: business
+Interests: Professional Development, Career, Art, Finance
+Location: 48.216863336339124, 16.27206928556872
+Time: 2025-10-09 22:00:11.901158+00:00
+
+Found 1 matches:
+  User: simon_hofer
+  Match Score: 10.00
+  Matching Interests: 
+  Score Breakdown: interest_match: 0.00, interest_ratio: 0.00, content_similarity: 0.00, location: 0.00, social: 0.00, time_pattern: 0.00, event_type_affinity: 10.00
+
+-------------------------------------------
+

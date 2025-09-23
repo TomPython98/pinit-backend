@@ -1,0 +1,93 @@
+import Foundation
+import Combine
+
+/// Simple model for each group chat message
+struct GroupChatMessage: Identifiable {
+    let id = UUID()
+    let sender: String
+    let text: String
+}
+
+class GroupChatWebSocketManager: ObservableObject {
+    @Published var messages: [GroupChatMessage] = []
+    
+    private var webSocketTask: URLSessionWebSocketTask?
+    private let urlSession = URLSession(configuration: .default)
+    
+    let eventID: UUID      // This is our "group" identifier
+    let currentUsername: String
+    
+    init(eventID: UUID, currentUsername: String) {
+        self.eventID = eventID
+        self.currentUsername = currentUsername
+    }
+    
+    func connect() {
+        // Ensure your Django Channels routing uses a URL like:
+        // ws://127.0.0.1:8000/ws/group_chat/<event_id>/
+        guard let url = URL(string: "ws://127.0.0.1:8000/ws/group_chat/\(eventID.uuidString)/") else {
+            print("❌ Invalid WebSocket URL")
+            return
+        }
+        
+        webSocketTask = urlSession.webSocketTask(with: url)
+        webSocketTask?.resume()
+        
+        listenForMessages()
+        print("✅ Group WebSocket CONNECTED for eventID=\(eventID)")
+    }
+    
+    func disconnect() {
+        webSocketTask?.cancel(with: .goingAway, reason: nil)
+        print("❌ Group WebSocket DISCONNECTED from eventID=\(eventID)")
+    }
+    
+    func sendMessage(_ message: String) {
+        let payload: [String: Any] = [
+            "sender": currentUsername,
+            "message": message
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: payload) {
+            let wsMessage = URLSessionWebSocketTask.Message.data(data)
+            webSocketTask?.send(wsMessage) { error in
+                if let error = error {
+                    print("❌ Error sending group chat message: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func listenForMessages() {
+        webSocketTask?.receive { [weak self] result in
+            guard let self = self else { return }
+            
+            switch result {
+            case .failure(let error):
+                print("❌ WebSocket receive error: \(error)")
+            case .success(let message):
+                switch message {
+                case .data(let data):
+                    self.handleIncoming(data)
+                case .string(let text):
+                    if let data = text.data(using: .utf8) {
+                        self.handleIncoming(data)
+                    }
+                @unknown default:
+                    print("❌ Unknown WebSocket message type")
+                }
+                self.listenForMessages() // Continue listening
+            }
+        }
+    }
+    
+    private func handleIncoming(_ data: Data) {
+        if let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let sender = dict["sender"] as? String,
+           let msgText = dict["message"] as? String {
+            DispatchQueue.main.async {
+                let newMsg = GroupChatMessage(sender: sender, text: msgText)
+                self.messages.append(newMsg)
+            }
+        }
+    }
+}

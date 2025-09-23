@@ -1,0 +1,13 @@
+                Button("Logout") {
+                    accountManager.logout { success, message in
+                        if success {
+                            DispatchQueue.main.async {
+                                isLoggedIn = false  // ✅ Redirect to LoginView
+                            }
+                        }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .foregroundColor(.red)
+                .padding()
+            }
