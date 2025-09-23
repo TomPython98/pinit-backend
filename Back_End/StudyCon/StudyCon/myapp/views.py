@@ -1824,13 +1824,14 @@ def get_event_feed(request, event_id):
             # Check if the current user is in the matched users list
             is_matched = current_username in matched_users
             
-            # Check if the user is the host or an attendee
+            # Check if the user is the host, an attendee, or directly invited
             is_host = event.host.username == current_username
             is_attendee = event.attendees.filter(username=current_username).exists()
+            is_invited = event.invited_friends.filter(username=current_username).exists()
             
             # If this is an auto-matched event AND user is not in matched_users list,
-            # AND user is not host or attendee, then deny access
-            if (not is_matched and not is_host and not is_attendee):
+            # AND user is not host, attendee, or directly invited, then deny access
+            if (not is_matched and not is_host and not is_attendee and not is_invited):
                 print(f"⛔ DENYING ACCESS to auto-matched event '{event.title}' - user {current_username} not in matched_users")
                 return JsonResponse({"error": "You do not have access to this event"}, status=403)
             else:
@@ -1841,6 +1842,8 @@ def get_event_feed(request, event_id):
                     print(f"   - Reason: User is the host")
                 elif is_attendee:
                     print(f"   - Reason: User is an attendee")
+                elif is_invited:
+                    print(f"   - Reason: User is directly invited")
         
         # Get all comments (sorted by newest first)
         comments = EventComment.objects.filter(event=event, parent=None).order_by('-created_at')

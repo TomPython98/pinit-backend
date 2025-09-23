@@ -226,8 +226,11 @@ class CalendarManager: ObservableObject {
                 return
             }
             
-            // Debug: Log raw response
-            print("📦 [CalendarManager] Raw response: \(String(data: data, encoding: .utf8) ?? "invalid data")")
+            // Debug: Log raw response (truncated for readability)
+            if let responseString = String(data: data, encoding: .utf8) {
+                let truncatedResponse = String(responseString.prefix(500)) + (responseString.count > 500 ? "..." : "")
+                print("📦 [CalendarManager] Raw response (truncated): \(truncatedResponse)")
+            }
             
             do {
                 let decoder = JSONDecoder()
@@ -246,6 +249,8 @@ class CalendarManager: ObservableObject {
                     
                     // Filter out events that have already ended AND filter out pending invitations.
                     // In CalendarManager.fetchEvents() method, update the filtering logic:
+                    print("🔍 [CalendarManager] Starting to filter \(response.events.count) events for user: \(self.username)")
+                    
                     let filteredEvents = response.events.filter { event in
                         // Check if the user is related to this event - either as host or attendee
                         let isUserEvent = event.host == self.username ||
@@ -254,12 +259,15 @@ class CalendarManager: ObservableObject {
                         // Check if this is an auto-matched event for the user
                         let isAutoMatchedEvent = event.isAutoMatched == true
                         
+                        // Check if the user is invited to this event
+                        let isInvitedEvent = event.invitedFriends.contains(self.username)
+                        
                         // For debugging
                         let isExpired = event.endTime <= Date()
                         
-                        // UPDATED: Include events where the user is attending, hosting, OR auto-matched
-                        // This ensures RSVPed, created, and auto-matched events are shown
-                        let include = !isExpired && (isUserEvent || isAutoMatchedEvent)
+                        // UPDATED: Include events where the user is attending, hosting, auto-matched, OR invited
+                        // This ensures RSVPed, created, auto-matched, and invited events are shown
+                        let include = !isExpired && (isUserEvent || isAutoMatchedEvent || isInvitedEvent)
                         
                         if include {
                             print("✓ [CalendarManager] Including event: \(event.title) (ID: \(event.id))")
@@ -274,6 +282,9 @@ class CalendarManager: ObservableObject {
                             if isAutoMatchedEvent {
                                 print("🎯 User is auto-matched to event: \(event.title)")
                             }
+                            if isInvitedEvent {
+                                print("📩 User is invited to event: \(event.title)")
+                            }
                         } else if isExpired {
                             print("⏰ [CalendarManager] Skipping past event: \(event.title)")
                         } else {
@@ -282,6 +293,8 @@ class CalendarManager: ObservableObject {
                         
                         return include
                     }
+                    
+                    print("📊 [CalendarManager] Filtered to \(filteredEvents.count) events from \(response.events.count) total events")
                     
                     self.events = filteredEvents
                     print("📊 [CalendarManager] Final event count: \(self.events.count)")

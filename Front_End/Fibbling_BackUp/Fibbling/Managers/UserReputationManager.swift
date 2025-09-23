@@ -60,7 +60,7 @@ class UserReputationManager: ObservableObject {
         }
     }
     
-    func submitRating(fromUser: String, toUser: String, eventId: UUID?, rating: Int, reference: String?, completion: @escaping (Bool) -> Void) {
+    func submitRating(fromUser: String, toUser: String, eventId: String?, rating: Int, reference: String?, completion: @escaping (Bool) -> Void) {
         isLoading = true
         errorMessage = nil
         
@@ -154,7 +154,7 @@ class UserReputationManager: ObservableObject {
         let ratingData: [String: Any] = [
             "from_username": userRating.fromUser,
             "to_username": userRating.toUser,
-            "event_id": userRating.eventId?.uuidString as Any,
+            "event_id": userRating.eventId as Any,
             "rating": userRating.rating,
             "reference": userRating.reference as Any
         ]
@@ -210,13 +210,23 @@ class UserReputationManager: ObservableObject {
         do {
             print("🔵 Attempting to parse reputation JSON data")
             
+            // Debug: Print raw JSON data
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("📦 Raw reputation JSON: \(jsonString)")
+            }
+            
             let decoder = JSONDecoder()
             let stats = try decoder.decode(UserReputationStats.self, from: data)
             
             DispatchQueue.main.async {
                 self.userStats = stats
                 self.isLoading = false
-                print("✅ Reputation data successfully parsed")
+                print("✅ Reputation data successfully parsed:")
+                print("   Total ratings: \(stats.totalRatings)")
+                print("   Average rating: \(stats.averageRating)")
+                print("   Events hosted: \(stats.eventsHosted)")
+                print("   Events attended: \(stats.eventsAttended)")
+                print("   Trust level: \(stats.trustLevel.title)")
                 completion(true)
             }
         } catch {
@@ -224,6 +234,7 @@ class UserReputationManager: ObservableObject {
                 self.isLoading = false
                 self.errorMessage = "Error parsing reputation data: \(error.localizedDescription)"
                 print("❌ Error parsing reputation data: \(error.localizedDescription)")
+                print("❌ Error details: \(error)")
                 completion(false)
             }
         }
@@ -233,9 +244,16 @@ class UserReputationManager: ObservableObject {
         do {
             print("🔵 Attempting to parse ratings JSON data")
             
+            // Parse the backend response structure
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            guard let ratingsArray = json?["ratings_received"] as? [[String: Any]] else {
+                throw NSError(domain: "ParseError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid ratings structure"])
+            }
+            
+            // Convert to UserRating objects
             let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            let ratings = try decoder.decode([UserRating].self, from: data)
+            let ratingsData = try JSONSerialization.data(withJSONObject: ratingsArray)
+            let ratings = try decoder.decode([UserRating].self, from: ratingsData)
             
             DispatchQueue.main.async {
                 self.userRatings = ratings
@@ -293,10 +311,10 @@ class UserReputationManager: ObservableObject {
                 mockRatings.append(UserRating(
                     fromUser: raterNames[i % raterNames.count],
                     toUser: username,
-                    eventId: UUID(),
+                    eventId: UUID().uuidString,
                     rating: min(i + 3, 5),
                     reference: references[i % references.count],
-                    createdAt: date
+                    createdAt: date.ISO8601Format()
                 ))
             }
             

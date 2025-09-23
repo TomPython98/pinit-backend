@@ -78,14 +78,14 @@ func getHotPostsForMap() -> [EventHotPost] {
             eventId: UUID(),
             text: "Hot Post 1",
             username: "alice",
-            coordinate: CLLocationCoordinate2D(latitude: 48.2082, longitude: 16.3738),
+            coordinate: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816),
             likeCount: 10
         ),
         EventHotPost(
             eventId: UUID(),
             text: "Hot Post 2",
             username: "bob",
-            coordinate: CLLocationCoordinate2D(latitude: 48.2085, longitude: 16.3735),
+            coordinate: CLLocationCoordinate2D(latitude: -34.5889, longitude: -58.4108),
             likeCount: 5
         )
     ]
@@ -270,6 +270,21 @@ final class AnimatedAnnotationView: UIView {
         case .business:
             pinImageName = "briefcase.fill"
             pinTintColor = .systemIndigo
+        case .cultural:
+            pinImageName = "theatermasks.fill"
+            pinTintColor = .systemOrange
+        case .academic:
+            pinImageName = "graduationcap.fill"
+            pinTintColor = .systemGreen
+        case .networking:
+            pinImageName = "network"
+            pinTintColor = .systemPink
+        case .social:
+            pinImageName = "person.3.fill"
+            pinTintColor = .systemRed
+        case .language_exchange:
+            pinImageName = "globe"
+            pinTintColor = .systemTeal
         case .other:
             pinImageName = "mappin.circle.fill"
             pinTintColor = .systemGray
@@ -579,13 +594,23 @@ final class ClusterAnnotationView: UIView {
         let color: UIColor
         switch dominantType {
         case .study:
-            color = UIColor(red: 0.3, green: 0.6, blue: 0.9, alpha: 1)
+            color = UIColor(red: 0.3, green: 0.6, blue: 0.9, alpha: 1)  // Blue
         case .party:
-            color = UIColor(red: 0.6, green: 0.3, blue: 0.9, alpha: 1)
+            color = UIColor(red: 0.6, green: 0.3, blue: 0.9, alpha: 1)  // Purple
         case .business:
-            color = UIColor(red: 0.3, green: 0.3, blue: 0.7, alpha: 1)
+            color = UIColor(red: 0.3, green: 0.3, blue: 0.7, alpha: 1)  // Dark Blue
+        case .cultural:
+            color = UIColor(red: 0.9, green: 0.5, blue: 0.2, alpha: 1)  // Orange
+        case .academic:
+            color = UIColor(red: 0.2, green: 0.7, blue: 0.4, alpha: 1)  // Green
+        case .networking:
+            color = UIColor(red: 0.7, green: 0.2, blue: 0.7, alpha: 1)  // Magenta
+        case .social:
+            color = UIColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1)  // Red
+        case .language_exchange:
+            color = UIColor(red: 0.3, green: 0.8, blue: 0.8, alpha: 1)  // Cyan
         case .other:
-            color = UIColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1)
+            color = UIColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1)  // Gray
         }
         
         return (size, color)
@@ -776,7 +801,7 @@ struct StudyMapView: View {
     @Environment(\.dismiss) var dismiss
     
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 48.2082, longitude: 16.3738),
+        center: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816),
         span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
     )
     @State private var showEventCreationSheet = false
@@ -853,6 +878,10 @@ struct StudyMapView: View {
         
         let username = accountManager.currentUser ?? ""
         
+        print("🗺️ [StudyMapView] Starting with \(calendarManager.events.count) events from CalendarManager")
+        print("🗺️ [StudyMapView] Current eventViewMode: \(eventViewMode)")
+        print("🗺️ [StudyMapView] Filter query: '\(filterQuery)'")
+        
         // First filter events by view mode - Read from calendarManager.events
         let eventsFilteredByType = calendarManager.events.filter { event in
             switch eventViewMode {
@@ -875,6 +904,8 @@ struct StudyMapView: View {
             }
         }
         
+        print("🗺️ [StudyMapView] After view mode filtering: \(eventsFilteredByType.count) events")
+        
         // Apply standard filtering
         let events = eventsFilteredByType.filter { event in
             let queryMatches = lowercaseQuery.isEmpty || mathematicsRelatedTerms.contains(lowercaseQuery)
@@ -891,11 +922,29 @@ struct StudyMapView: View {
                 } ?? false)
             let anyTextMatches = titleMatches || descriptionMatches
             let privateMatches = !filterPrivateOnly || (!event.isPublic)
-            let certifiedMatches = !filterCertifiedOnly || event.host.userprofile.is_certified
+            let certifiedMatches = !filterCertifiedOnly || event.hostIsCertified
             let typeMatches = filterEventType == nil || event.eventType == filterEventType!
             let notExpired = event.endTime > Date()
-            return anyTextMatches && privateMatches && certifiedMatches && typeMatches && notExpired
+            
+            let include = anyTextMatches && privateMatches && certifiedMatches && typeMatches && notExpired
+            
+            if !include {
+                print("🗺️ [StudyMapView] Excluding event '\(event.title)':")
+                print("   - Text matches: \(anyTextMatches)")
+                print("   - Private matches: \(privateMatches)")
+                print("   - Certified matches: \(certifiedMatches)")
+                print("   - Type matches: \(typeMatches)")
+                print("   - Not expired: \(notExpired)")
+            }
+            
+            return include
         }
+        
+        print("🗺️ [StudyMapView] Final filtered events: \(events.count)")
+        for event in events {
+            print("   📍 \(event.title) (host: \(event.host), attendees: \(event.attendees.count))")
+        }
+        
         return events
     }
     
@@ -1078,7 +1127,7 @@ struct StudyMapView: View {
                 // Get RSVP count - Read from calendarManager.events
                 let rsvpCount = calendarManager.events.filter { event in
                     let username = accountManager.currentUser ?? ""
-                    return event.attendees.contains(username)
+                    return event.attendees.contains(username) || event.host == username
                 }.count
                 
                 Button(rsvpCount > 0 ? "My Events (\(rsvpCount))" : "My Events") {

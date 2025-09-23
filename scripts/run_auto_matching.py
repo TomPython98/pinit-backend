@@ -8,7 +8,7 @@ import sys
 import django
 
 # Add the Django project directory to the Python path
-sys.path.append('/Users/tombesinger/Desktop/Full_App Kopie/Back_End/StudyCon/StudyCon')
+sys.path.append('/Users/tombesinger/Desktop/Real_App/Back_End/StudyCon/StudyCon')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'StudyCon.settings')
 django.setup()
 

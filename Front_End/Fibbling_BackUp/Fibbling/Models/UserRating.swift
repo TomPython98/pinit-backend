@@ -1,13 +1,13 @@
 import Foundation
 
 struct UserRating: Identifiable, Codable, Equatable {
-    let id: UUID
+    let id: String  // Changed from UUID to String to match backend
     let fromUser: String
     let toUser: String
-    let eventId: UUID?
+    let eventId: String?  // Changed from UUID? to String? to match backend
     let rating: Int // 1-5 stars
     let reference: String?
-    let createdAt: Date
+    let createdAt: String  // Changed from Date to String to match backend
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -19,7 +19,7 @@ struct UserRating: Identifiable, Codable, Equatable {
         case createdAt = "created_at"
     }
     
-    init(id: UUID = UUID(), fromUser: String, toUser: String, eventId: UUID? = nil, rating: Int, reference: String? = nil, createdAt: Date = Date()) {
+    init(id: String = UUID().uuidString, fromUser: String, toUser: String, eventId: String? = nil, rating: Int, reference: String? = nil, createdAt: String = Date().ISO8601Format()) {
         self.id = id
         self.fromUser = fromUser
         self.toUser = toUser
@@ -57,6 +57,44 @@ struct UserTrustLevel: Codable, Equatable {
         
         return highestMatchingLevel
     }
+    
+    // Regular initializer for creating instances programmatically
+    init(level: Int, title: String, requiredRatings: Int, minAverageRating: Double) {
+        self.level = level
+        self.title = title
+        self.requiredRatings = requiredRatings
+        self.minAverageRating = minAverageRating
+    }
+    
+    // Custom decoder to handle backend response that only has level and title
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        level = try container.decode(Int.self, forKey: .level)
+        title = try container.decode(String.self, forKey: .title)
+        
+        // Set default values for fields not provided by backend
+        requiredRatings = 0
+        minAverageRating = 0.0
+        
+        // Try to find matching level from static levels array
+        if let matchingLevel = UserTrustLevel.levels.first(where: { $0.level == level && $0.title == title }) {
+            requiredRatings = matchingLevel.requiredRatings
+            minAverageRating = matchingLevel.minAverageRating
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(level, forKey: .level)
+        try container.encode(title, forKey: .title)
+        try container.encode(requiredRatings, forKey: .requiredRatings)
+        try container.encode(minAverageRating, forKey: .minAverageRating)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case level, title, requiredRatings, minAverageRating
+    }
 }
 
 struct UserReputationStats: Codable, Equatable {
@@ -75,5 +113,35 @@ struct UserReputationStats: Codable, Equatable {
         self.eventsHosted = eventsHosted
         self.eventsAttended = eventsAttended
         self.trustLevel = UserTrustLevel.getLevelForStats(totalRatings: totalRatings, averageRating: averageRating)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case totalRatings = "total_ratings"
+        case averageRating = "average_rating"
+        case eventsHosted = "events_hosted"
+        case eventsAttended = "events_attended"
+        case trustLevel = "trust_level"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        totalRatings = try container.decode(Int.self, forKey: .totalRatings)
+        averageRating = try container.decode(Double.self, forKey: .averageRating)
+        eventsHosted = try container.decode(Int.self, forKey: .eventsHosted)
+        eventsAttended = try container.decode(Int.self, forKey: .eventsAttended)
+        
+        // Decode the nested trust_level object
+        trustLevel = try container.decode(UserTrustLevel.self, forKey: .trustLevel)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(totalRatings, forKey: .totalRatings)
+        try container.encode(averageRating, forKey: .averageRating)
+        try container.encode(eventsHosted, forKey: .eventsHosted)
+        try container.encode(eventsAttended, forKey: .eventsAttended)
+        try container.encode(trustLevel, forKey: .trustLevel)
     }
 } 
