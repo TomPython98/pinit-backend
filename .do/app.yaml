@@ -1,0 +1,43 @@
+{
+  "name": "pinit-backend",
+  "services": [
+    {
+      "name": "web",
+      "source_dir": ".",
+      "github": {
+        "repo": "your-username/pinit-app",
+        "branch": "main"
+      },
+      "run_command": "gunicorn StudyCon.wsgi --log-file - --bind 0.0.0.0:$PORT",
+      "environment_slug": "python",
+      "instance_count": 1,
+      "instance_size_slug": "basic-xxs",
+      "http_port": 8080,
+      "envs": [
+        {
+          "key": "DEBUG",
+          "value": "False"
+        },
+        {
+          "key": "DJANGO_SETTINGS_MODULE",
+          "value": "StudyCon.settings_production"
+        },
+        {
+          "key": "SECRET_KEY",
+          "value": "your-production-secret-key-change-this"
+        },
+        {
+          "key": "ALLOWED_HOSTS",
+          "value": "pinit-backend.ondigitalocean.app,pin-it.net,www.pin-it.net"
+        }
+      ]
+    }
+  ],
+  "databases": [
+    {
+      "name": "pinit-db",
+      "engine": "PG",
+      "version": "13"
+    }
+  ]
+}

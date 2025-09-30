@@ -1,0 +1,456 @@
+Event: End of Semester Celebration (678dcaa8-336d-4f72-af46-1e993b42b76d)
+Event interests: ['Music', 'Social', 'Games', 'Networking']
+Potential users: 395
+Event: Masquerade Party Night (fb3aec1f-02b8-4dd8-8a01-ac7ecf30da17)
+Event interests: ['Social', 'Networking', 'Dancing', 'Philosophy']
+Potential users: 394
+Event: Sociology Exam Preparation (ebf969cd-bb51-447f-8bad-23f66bb2b43d)
+Event interests: ['Experimental Design', 'Sociology', 'Academic', 'Education', 'University']
+Potential users: 391
+Event: Red Bull Information Session (e731dc2d-17f3-44e0-8576-bf1b5a0bef78)
+Event interests: ['Professional Development', 'Energy', 'Career', 'History']
+Potential users: 390
+Event: Volunteering at Arts Building Food Bank (7b2a257e-d540-4724-a391-f2c54bea2285)
+Event interests: ['Volunteering', 'Psychology']
+Potential users: 397
+Event: Physics Study Group at City Park (3bef1e7c-65bf-43c4-9c30-0dbd5ca47e90)
+Event interests: ['Problem Solving', 'Academic', 'Physics', 'Education', 'University', 'Quantum physics']
+Potential users: 396
+Event: Medicine Study Group at Science Lab (4b896bc5-9499-4be9-89d5-16e51d493e24)
+Event interests: ['Data science', 'Current Developments', 'Computer science', 'Cognitive science', 'Academic', 'Education', 'University', 'Medicine']
+Potential users: 397
+Event: Volunteering at City Park Food Bank (02282bfb-a400-45e1-a7ef-77cda9154366)
+Event interests: ['Volunteering', 'Music']
+Potential users: 393
+Event: Apple Information Session (3ffff0a8-dfd5-4ca1-b4a5-f334443b3428)
+Event interests: ['Retail', 'Music', 'Professional Development', 'Career']
+Potential users: 398
+Event: Nonprofit Networking Event (2dc0c934-648b-4eb0-a567-bd715db4d2fa)
+Event interests: ['Professional Development', 'Medicine', 'Nonprofit', 'Career']
+Potential users: 398
+Event: Finance Networking Event (30661770-ee92-43a0-8d2b-08433491f517)
+Event interests: ['Professional Development', 'Finance', 'Career', 'Political Science']
+Potential users: 390
+Event: Medicine Workshop (33dc783c-7f46-4d6b-a3d9-a8638ead37ac)
+Event interests: ['Case Studies', 'Academic', 'Education', 'University', 'Medicine']
+Potential users: 393
+Event: End of Semester Celebration (23bd6d52-f878-489d-b2a6-c1fe7dd58a3c)
+Event interests: ['Music', 'Social', 'Dancing', 'Networking']
+Potential users: 392
+Event: Psychology Workshop (09c6aa69-886c-480a-bc2b-daa3ab7ea3fb)
+Event interests: ['Problem Solving', 'Psychology', 'Academic', 'Education', 'University']
+Potential users: 397
+Event: Philosophy Workshop (732340cb-7b89-4cb8-9b8c-81c73822db71)
+Event interests: ['Academic', 'University', 'Education', 'Philosophy', 'Research Methods']
+Potential users: 389
+Event: Halloween Party Night (c1c518a3-992c-4d63-832c-70de43f95299)
+Event interests: ['Cultural Showcase', 'Social', 'Networking', 'Physics']
+Potential users: 396
+Event: IBM Information Session (b3349d64-7d72-4cde-b358-70e8d7aad876)
+Event interests: ['Professional Development', 'Career', 'Consulting', 'Political Science']
+Potential users: 394
+Event: End of Semester Celebration (919b5c8b-e48a-4508-ac79-cc5b8f3b0be3)
+Event interests: ['Social', 'Networking', 'Karaoke', 'Philosophy']
+Potential users: 393
+Event: International Students Gathering (6d4ea5b5-c9c9-4976-b509-f25e7af5708f)
+Event interests: ['Economics', 'International relations', 'Social', 'Networking', 'Music']
+Potential users: 389
+Event: Finance Networking Event (b683e761-77aa-4dc8-9e6a-9b437fd801cf)
+Event interests: ['Career', 'Professional Development', 'Finance', 'Philosophy']
+Potential users: 392
+Event: End of Semester Celebration (4fff71c3-f0ac-4848-9130-97326e7de0ab)
+Event interests: ['Social', 'Networking', 'Food Sharing', 'Political Science']
+Potential users: 392
+Event: Media Networking Event (5bd1fa3b-d3dc-4656-9fc8-516cc1629156)
+Event interests: ['Professional Development', 'Psychology', 'Media', 'Career']
+Potential users: 394
+Event: Climate Action Student Meeting at Central Library (da1d2620-9c99-4bb7-a5be-0d6f790ff424)
+Event interests: ['Economics']
+Potential users: 389
+Event: Manufacturing Networking Event (103b4e44-fad5-4429-9d18-0c9f05555170)
+Event interests: ['Manufacturing', 'Professional Development', 'Computer Science', 'Career']
+Potential users: 396
+Event: Raiffeisen Bank Information Session (58372bc8-e729-40ff-8c61-914d005df157)
+Event interests: ['Healthcare', 'Professional Development', 'Computer Science', 'Career']
+Potential users: 394
+Event: quiz competition Group in Coffee House (0c252850-4301-4d45-8f66-2bbbec9b9bae)
+Event interests: ['Vienna coffee culture', 'Biology']
+Potential users: 391
+Event: Philosophy Study Group at Central Library (8b2bee41-639c-45a4-a8c5-1a8b8036b3c2)
+Event interests: ['Current Developments', 'Academic', 'University', 'Education', 'Philosophy']
+Potential users: 396
+Event: Volunteering at Arts Building Food Bank (ea4f401a-cb49-4981-ac72-4700a4b8dd3d)
+Event interests: ['Sociology', 'Volunteering']
+Potential users: 397
+Event: Group Project Meeting: Sociology (b85745c1-ced4-4c8a-8acd-5d9cb4d3ded6)
+Event interests: ['Problem Solving', 'Sociology', 'Academic', 'Education', 'University']
+Potential users: 397
+Event: dancing Group in Student Center (31fb3b3c-6b37-4092-a7da-a9d12a20f921)
+Event interests: ['Biology']
+Potential users: 390
+Event: Student Startup Pitch Competition (a40c2099-b59e-48d4-a2c3-3bf1182c2367)
+Event interests: ['Career', 'Professional Development', 'Finance', 'Math']
+Potential users: 397
+Event: Student Mixer at Innovation Space (853f42ca-9679-49bc-994b-566e6a4aadc0)
+Event interests: ['Social', 'Networking', 'Quiz Competition', 'History']
+Potential users: 392
+Event: Physics Workshop (9298bd3d-1195-4f3f-b97c-83615d124d7d)
+Event interests: ['Quantum physics', 'Academic', 'Physics', 'Education', 'University', 'Theories']
+Potential users: 395
+Event: Group Project Meeting: Psychology (e41d408c-9ecd-4be4-a9dd-5d5fa962c46b)
+Event interests: ['Exam Preparation', 'Psychology', 'Academic', 'Education', 'University']
+Potential users: 398
+Event: Vintage Party Night (d7b1c35f-85e6-4139-8b2f-b356ef83eae6)
+Event interests: ['Cultural Showcase', 'Social', 'Networking', 'Art']
+Potential users: 393
+Event: Workshop: Content Creation for Beginners (199eb561-a24b-4362-a01a-137cea8e9a9a)
+Event interests: ['Manufacturing', 'Psychology', 'Professional Development', 'Career']
+Potential users: 397
+Event: Group Project Meeting: Economics (c4eac887-6647-4a89-81f0-7a0f945186c9)
+Event interests: ['Problem Solving', 'Economics', 'Academic', 'Education', 'University']
+Potential users: 395
+Event: End of Semester Celebration (9fdb696d-e60a-4d05-8bc1-3c5fa2e735a7)
+Event interests: ['Social', 'Networking', 'Food Sharing', 'History']
+Potential users: 391
+Event: Biology Study Group at Science Lab (d23a634b-a81d-44ba-b247-e54d43ae1810)
+Event interests: ['Historical Context', 'Computer science', 'Cognitive science', 'Academic', 'Education', 'University', 'Biology']
+Potential users: 398
+Event: Microsoft Information Session (f2c1202a-f1cd-4484-903a-6996017a7048)
+Event interests: ['Career', 'Professional Development', 'Tech', 'Philosophy']
+Potential users: 395
+Event: Art Exam Preparation (4cecd18b-1abd-4704-9025-5df7a0ced1e6)
+Event interests: ['Art history', 'Art', 'Academic', 'Education', 'University', 'Research Methods', 'Street art', 'Digital art']
+Potential users: 395
+Event: Chemistry Exam Preparation (0762bed6-df6f-4dbb-9379-a2ccb10f763b)
+Event interests: ['Chemistry', 'Case Studies', 'Academic', 'Education', 'University']
+Potential users: 392
+Event: Student Radio Project Planning at Main Building (f1daaf65-debf-4177-bc5b-3f8316807f17)
+Event interests: ['Urban planning', 'Medicine']
+Potential users: 390
+Event: Workshop: Financial Modeling for Beginners (9ffe7aac-126f-4043-82cb-b36cd8223835)
+Event interests: ['Retail', 'Medicine', 'Professional Development', 'Career']
+Potential users: 398
+Event: Education Networking Event (ef382af2-7b5c-4679-8a04-f1da57b601fd)
+Event interests: ['Professional Development', 'Medicine', 'Career', 'Education']
+Potential users: 398
+Event: OMV Information Session (96cba2b1-8cef-4cea-8a27-d27da1c87bd1)
+Event interests: ['Professional Development', 'Tech', 'Career', 'History']
+Potential users: 396
+Event: Finance Networking Event (98cea5fb-6500-4b14-bcfd-593abd3e7cff)
+Event interests: ['Professional Development', 'Finance', 'Economics', 'Career']
+Potential users: 389
+Event: Student Mixer at Student Center (5f22e2de-2a29-4743-a546-ca4d1d8c70a5)
+Event interests: ['Cultural Showcase', 'Social', 'Computer Science', 'Networking']
+Potential users: 397
+Event: Nonprofit Networking Event (696bd9fb-9860-47ba-98d9-33ea9d326f2e)
+Event interests: ['Career', 'Professional Development', 'Nonprofit', 'Philosophy']
+Potential users: 398
+Event: Volunteering at Student Center Food Bank (cc259534-e977-4f8b-960e-d7d1986bb698)
+Event interests: ['Volunteering', 'Chemistry']
+Potential users: 392
+Event: Masquerade Party Night (7656a79c-27b3-4254-a44d-948b4a102be9)
+Event interests: ['Social', 'Networking', 'Quiz Competition', 'History']
+Potential users: 394
+Event: Group Project Meeting: Music (c590ca04-1975-4fbd-89ad-d1dbbdad0905)
+Event interests: ['Music production', 'Academic', 'Education', 'University', 'Music', 'Classical music', 'Theories']
+Potential users: 392
+Event: Student Startup Pitch Competition (cd70d764-a56a-4714-882f-d8dfede579de)
+Event interests: ['Professional Development', 'Computer Science', 'Finance', 'Career']
+Potential users: 396
+Event: food sharing Group in Central Library (3a4722a6-8861-48d5-b247-2a1540f00025)
+Event interests: ['Math']
+Potential users: 398
+Event: Education Networking Event (0a2934bc-3594-4c2e-8aab-5364489f1556)
+Event interests: ['Professional Development', 'Psychology', 'Career', 'Education']
+Potential users: 390
+Event: International Students Gathering (be911c43-f276-4f8a-88eb-fa18d06354d0)
+Event interests: ['International relations', 'Social', 'Networking', 'Philosophy', 'Food Sharing']
+Potential users: 398
+Event: Psychology Study Group at Main Building (f606dc76-91db-4a7b-a313-d46826be6594)
+Event interests: ['Data Analysis', 'Psychology', 'Academic', 'Education', 'University']
+Potential users: 397
+Event: Psychology Study Group at Coffee House (aaf9bec3-8440-4dc9-ae5b-7f61d9f3dd43)
+Event interests: ['Historical Context', 'Psychology', 'Vienna coffee culture', 'Academic', 'Education', 'University']
+Potential users: 390
+Event: Climate Action Student Meeting at Arts Building (e8e1f504-138b-47ab-bf01-3c8bdabc9d7b)
+Event interests: ['Economics']
+Potential users: 394
+Event: Student Startup Pitch Competition (efc3299c-a239-4a65-aa40-b9ebd0670682)
+Event interests: ['Professional Development', 'Music', 'Finance', 'Career']
+Potential users: 392
+Event: Film Characters Party Night (f040155b-9c3c-4d61-b3de-73dcebe4e167)
+Event interests: ['Computer Science', 'Cultural Showcase', 'Social', 'Networking', 'Film studies']
+Potential users: 389
+Event: Student Startup Pitch Competition (ff252525-6835-4f4e-84c8-b406e6f66c7f)
+Event interests: ['Sociology', 'Professional Development', 'Finance', 'Career']
+Potential users: 396
+Event: Volunteering at Main Building Food Bank (e245c913-7b51-48ee-bc3e-6fa72f8cdbee)
+Event interests: ['Volunteering', 'Physics']
+Potential users: 391
+Event: Erste Bank Information Session (a3e46262-8b31-46fe-8893-d04d83fb86f6)
+Event interests: ['Professional Development', 'Tech', 'Career', 'Political Science']
+Potential users: 397
+Event: Literature Exam Preparation (97d85e13-9a0d-4c10-bc81-d603f4e2ff60)
+Event interests: ['Literature', 'Academic', 'Education', 'University', 'Theories']
+Potential users: 392
+Event: Tech Networking Event (e845ab14-2c3e-40a4-9639-e31db73e3b2a)
+Event interests: ['Professional Development', 'Tech', 'Career', 'History']
+Potential users: 393
+Event: Tech Networking Event (040d19f5-753d-482b-9c5d-a53f078e671d)
+Event interests: ['Professional Development', 'Tech', 'Physics', 'Career']
+Potential users: 392
+Event: Group Project Meeting: Political Science (7401ad61-2f61-447d-954f-b2fa3d7a5c31)
+Event interests: ['Data science', 'Current Developments', 'Computer science', 'Cognitive science', 'Academic', 'Education', 'University', 'Political Science']
+Potential users: 391
+Event: Workshop: Content Creation for Beginners (fe42431f-b0ea-441d-9f5a-58ae08b12d1e)
+Event interests: ['Career', 'Professional Development', 'Nonprofit', 'Math']
+Potential users: 393
+Event: End of Semester Celebration (6950b8e3-e0ce-4619-a66b-51d13fa4955c)
+Event interests: ['Social', 'Networking', 'Quiz Competition', 'Economics']
+Potential users: 396
+Event: Student Radio Project Planning at City Park (df3b8a97-dd11-4db2-94e8-ef36ceb1b5f1)
+Event interests: ['Urban planning', 'Math']
+Potential users: 395
+Event: International Party Night (ee6f1577-7c5d-4433-9a16-240575732a32)
+Event interests: ['Literature', 'Games', 'International relations', 'Social', 'Networking']
+Potential users: 397
+Event: Physics Workshop (c1b2fa41-ed79-4703-90ad-abd27fb19c9c)
+Event interests: ['Practical Applications', 'Academic', 'Physics', 'Education', 'University', 'Quantum physics']
+Potential users: 389
+Event: Political Science Workshop (aef20d5f-f410-4def-bddf-1196f8f76412)
+Event interests: ['Data science', 'Computer science', 'Cognitive science', 'Academic', 'Essay Writing', 'Education', 'University', 'Political Science']
+Potential users: 395
+Event: Group Project Meeting: Computer Science (9e134996-41a3-49a5-9c63-cefea323ecf5)
+Event interests: ['Data science', 'Data Analysis', 'Computer Science', 'Computer science', 'Cognitive science', 'Academic', 'Education', 'University']
+Potential users: 396
+Event: Group Project Meeting: Computer Science (07e64948-1249-48e9-9783-41b7986972be)
+Event interests: ['Data science', 'Computer Science', 'Computer science', 'Cognitive science', 'Academic', 'Education', 'University', 'Research Methods']
+Potential users: 390
+Event: Volunteering at Central Library Food Bank (bc1470c3-7e16-4a0e-ba21-d926d4ae4fea)
+Event interests: ['Volunteering', 'Biology']
+Potential users: 396
+Event: Student Mixer at City Park (65376a27-6c2b-48dc-9c72-620c7a420f21)
+Event interests: ['Sociology', 'Social', 'Movie Screening', 'Networking']
+Potential users: 391
+Event: International Students Gathering (edcf49c2-d058-4562-b897-dcd3e7d61194)
+Event interests: ['Games', 'International relations', 'Social', 'Networking', 'Biology']
+Potential users: 389
+Event: Student Startup Pitch Competition (c54901d2-9b56-45a5-a0de-f8ae7a82fc2d)
+Event interests: ['Professional Development', 'Computer Science', 'Nonprofit', 'Career']
+Potential users: 395
+Event: Literature Workshop (c69829b9-35b6-459a-9919-6a21deb8aa24)
+Event interests: ['Literature', 'Data Analysis', 'Academic', 'Education', 'University']
+Potential users: 398
+Event: music Group in City Park (4c96e0f4-c5d5-4dfd-b46b-0c499e2a0fc0)
+Event interests: ['Music production', 'Classical music', 'Philosophy']
+Potential users: 397
+Event: Student Mixer at Tech Hub (efc30c9f-1ef3-49dc-8d9d-3dec53bf4ce9)
+Event interests: ['Literature', 'Social', 'Networking', 'Food Sharing']
+Potential users: 394
+Event: Climate Action Student Meeting at Arts Building (53c03a09-4d1c-4084-a17a-cdeba6873858)
+Event interests: ['Music']
+Potential users: 390
+Event: Volunteering at Business School Food Bank (42f7bab5-baae-458f-9aed-dcec121dbf8e)
+Event interests: ['Volunteering', 'Economics', 'Business administration']
+Potential users: 395
+Event: Climate Action Student Meeting at Business School (1b0e7f14-5611-439e-aea3-5c8a03aadc78)
+Event interests: ['Business administration', 'History']
+Potential users: 397
+Event: Student Mixer at Arts Building (22abfe9f-f27c-417a-add0-a7c3d5f535d4)
+Event interests: ['Sociology', 'Social', 'Networking', 'Food Sharing']
+Potential users: 389
+Event: Finance Networking Event (0a872d8f-e401-4445-8ad8-6071aa33333e)
+Event interests: ['Chemistry', 'Finance', 'Professional Development', 'Career']
+Potential users: 393
+Event: Erste Bank Information Session (8ffaec9d-2b13-488a-8d62-76a71795f4c6)
+Event interests: ['Career', 'Professional Development', 'Tech', 'Philosophy']
+Potential users: 396
+Event: Climate Action Student Meeting at Tech Hub (0450ef68-71e9-41e4-8020-bec0f7a9f58f)
+Event interests: ['History']
+Potential users: 398
+Event: Biology Exam Preparation (a8972ca7-1448-4ac8-8524-0123c283fc53)
+Event interests: ['Case Studies', 'Academic', 'Education', 'University', 'Biology']
+Potential users: 395
+Event: Vintage Party Night (94b792b3-963d-4fe0-b725-22fee86c6aa5)
+Event interests: ['Sociology', 'Music', 'Social', 'Networking']
+Potential users: 389
+Event: International Students Gathering (2af29028-0deb-4bef-8831-e41a70efe2e9)
+Event interests: ['Quiz Competition', 'Art', 'International relations', 'Social', 'Networking']
+Potential users: 396
+Event: Beach Party Night (a7da175d-1772-4422-a7e1-8ce5c7df839b)
+Event interests: ['Cultural Showcase', 'Literature', 'Social', 'Networking']
+Potential users: 397
+Event: International Students Gathering (33e36d82-5859-4ebb-9bca-b221f52fa4b3)
+Event interests: ['Dancing', 'Sociology', 'International relations', 'Social', 'Networking']
+Potential users: 390
+Event: Student Mixer at Innovation Space (4da59fc9-e660-4fc4-a71f-0e70352b88ec)
+Event interests: ['Networking', 'Social', 'Movie Screening', 'History']
+Potential users: 391
+Event: International Students Gathering (4d115878-b72f-4532-9bd4-f2c7a5b97cf8)
+Event interests: ['Quiz Competition', 'Economics', 'International relations', 'Social', 'Networking']
+Potential users: 395
+Event: Chemistry Workshop (77d93aed-3861-4c67-8c07-fe5aea7673a7)
+Event interests: ['Chemistry', 'Data Analysis', 'Academic', 'Education', 'University']
+Potential users: 389
+Event: Amazon Information Session (34ede67d-a0c9-4414-bc12-4b6adb7e08d0)
+Event interests: ['Career', 'Professional Development', 'Computer Science', 'Media']
+Potential users: 390
+Event: International Students Gathering (5ea74408-040e-47b1-b2ae-900ac223a2a2)
+Event interests: ['Art', 'International relations', 'Social', 'Networking', 'Movie Screening']
+Potential users: 392
+Event: Workshop: Data Analysis for Beginners (64c6d0a2-aa30-4ff6-93b5-834742ab1282)
+Event interests: ['Data science', 'Healthcare', 'Professional Development', 'Math', 'Career']
+Potential users: 395
+Event: Student Mixer at Business School (f877b519-bcac-411f-ae09-9e8f48767135)
+Event interests: ['Chemistry', 'Games', 'Business administration', 'Social', 'Networking']
+Potential users: 398
+Event: food sharing Group in Arts Building (df636735-7ff4-4862-b395-1ad4d289089c)
+Event interests: ['Art']
+Potential users: 395
+Event: karaoke Group in Main Building (b49929c3-3667-4029-bc10-46d56c022221)
+Event interests: ['Physics']
+Potential users: 389
+Event: Political Science Exam Preparation (9ff0e459-ac0d-4481-9bec-4fe2ecc1ad47)
+Event interests: ['Data science', 'Computer science', 'Cognitive science', 'Practical Applications', 'Academic', 'Education', 'University', 'Political Science']
+Potential users: 398
+Event: Group Project Meeting: Music (992dec20-d4e3-49e5-a25b-8efea31bebb4)
+Event interests: ['Music production', 'Academic', 'Education', 'University', 'Music', 'Classical music', 'Theories']
+Potential users: 389
+Event: International Students Gathering (b24b3dfb-4027-4015-bbef-227f2d0fc2bc)
+Event interests: ['International relations', 'Social', 'Networking', 'Karaoke', 'Physics']
+Potential users: 394
+Event: Beach Party Night (a74a7a59-6b9f-4dd1-b663-437824106a13)
+Event interests: ['Psychology', 'Social', 'Dancing', 'Networking']
+Potential users: 393
+Event: Volunteering at Innovation Space Food Bank (c09f40ef-cbdd-4884-868e-ee0d001469ab)
+Event interests: ['Volunteering', 'Chemistry']
+Potential users: 391
+Event: Biology Study Group at Science Lab (5d14ad9b-6962-41c9-8fc9-c9ad36e45990)
+Event interests: ['Case Studies', 'Computer science', 'Cognitive science', 'Academic', 'Education', 'University', 'Biology']
+Potential users: 392
+Event: Workshop: Project Management for Beginners (db90f081-091c-405b-a8e3-1945f0c883b4)
+Event interests: ['Sociology', 'Professional Development', 'Nonprofit', 'Career']
+Potential users: 392
+Event: 80s Party Night (e428562c-c0ef-46c3-bd01-dbf397e26beb)
+Event interests: ['Cultural Showcase', 'Social', 'Networking', 'Physics']
+Potential users: 392
+Event: Biology Study Group at Arts Building (ec08d397-d329-4f00-80d8-a7257e4c8226)
+Event interests: ['Practical Applications', 'Academic', 'Education', 'University', 'Biology']
+Potential users: 389
+Event: International Students Gathering (e04f5e64-b4d4-45f9-b401-c1882d3f1788)
+Event interests: ['International relations', 'Social', 'Networking', 'Food Sharing', 'History']
+Potential users: 398
+Event: Raiffeisen Bank Information Session (a1b449a1-55ce-4cce-a56f-7cfe93b8271c)
+Event interests: ['Sociology', 'Professional Development', 'Finance', 'Career']
+Potential users: 394
+Event: Workshop: Data Analysis for Beginners (ae274954-fe9c-409b-9849-9bd040fb199c)
+Event interests: ['Chemistry', 'Data science', 'Manufacturing', 'Professional Development', 'Career']
+Potential users: 391
+Event: Education Networking Event (4a81bb7f-8cdc-4ff1-8cee-b566cfee847a)
+Event interests: ['Professional Development', 'Career', 'Education', 'History']
+Potential users: 393
+Event: Physics Workshop (195ab555-44dc-4d0b-b63f-2523e330fec3)
+Event interests: ['Data Analysis', 'Academic', 'Physics', 'Education', 'University', 'Quantum physics']
+Potential users: 393
+Event: History Exam Preparation (fa801bbe-04c9-4475-a804-c8757a3f470f)
+Event interests: ['Habsburg history', 'Art history', 'Case Studies', 'Academic', 'Austrian history', 'Education', 'University', 'History']
+Potential users: 389
+Event: Student Startup Pitch Competition (fd747249-b573-49db-b6dd-6d592bf3c3e0)
+Event interests: ['Sociology', 'Professional Development', 'Career', 'Healthcare']
+Potential users: 398
+Event: International Students Gathering (02d7058f-ee56-4f64-8abf-1dc933333d0f)
+Event interests: ['Computer Science', 'Games', 'International relations', 'Social', 'Networking']
+Potential users: 398
+Event: International Students Gathering (1d042104-29d1-4bf4-9619-3e1a5410fd4a)
+Event interests: ['Dancing', 'International relations', 'Social', 'Networking', 'Music']
+Potential users: 389
+Event: Workshop: Content Creation for Beginners (5b6df119-2759-4703-8389-11809b62e3da)
+Event interests: ['Professional Development', 'Tech', 'Career', 'Biology']
+Potential users: 397
+Event: music Group in Central Library (c952326a-6aeb-4610-94f5-af724894713c)
+Event interests: ['Music production', 'Music', 'Creative writing', 'Classical music']
+Potential users: 390
+Event: Climate Action Student Meeting at Main Building (35a46926-08dc-4288-8d57-71e27534a6da)
+Event interests: ['Political Science']
+Potential users: 392
+Event: Group Project Meeting: History (b58085a1-7af1-4204-853a-f8bb0e081d59)
+Event interests: ['Habsburg history', 'Art history', 'Academic', 'Austrian history', 'Education', 'University', 'History', 'Theories']
+Potential users: 396
+Event: Volunteering at Main Building Food Bank (8c19988b-be8d-4f34-99d9-0ee53e9b5939)
+Event interests: ['Volunteering', 'History']
+Potential users: 395
+Event: Erste Bank Information Session (282f3c52-9381-42fc-9d52-8fa97b8fe68b)
+Event interests: ['Chemistry', 'Career', 'Professional Development', 'Education']
+Potential users: 398
+Event: Student Radio Project Planning at Business School (43876437-8f09-40be-9248-5503d4a6128f)
+Event interests: ['Urban planning', 'Economics', 'Business administration']
+Potential users: 392
+Event: Math Workshop (d468d103-ec87-492a-be4d-24971c0d1bdb)
+Event interests: ['Academic', 'Education', 'University', 'Math', 'Theories']
+Potential users: 391
+Event: Group Project Meeting: Political Science (ada91edc-d3b3-4694-83bc-98f49765a75d)
+Event interests: ['Data science', 'Current Developments', 'Computer science', 'Cognitive science', 'Academic', 'Education', 'University', 'Political Science']
+Potential users: 389
+Event: Group Project Meeting: Chemistry (639044ac-24cf-40ea-bb6b-2d2efb4e8185)
+Event interests: ['Chemistry', 'Academic', 'Education', 'University', 'Theories']
+Potential users: 390
+Event: Futuristic Party Night (2494c67a-d704-4f31-8c58-2a107d41d3b9)
+Event interests: ['Social', 'Networking', 'Karaoke', 'Philosophy']
+Potential users: 393
+Event: Student Radio Project Planning at Business School (a43c9023-b741-4a98-af0f-9adbea20edd8)
+Event interests: ['Urban planning', 'Business administration', 'Art']
+Potential users: 389
+Event: Volunteering at Central Library Food Bank (da71dccf-99f3-48fa-ae1d-fc3591dcbd62)
+Event interests: ['Sociology', 'Volunteering']
+Potential users: 393
+Event: End of Semester Celebration (8319ef6c-daea-4e09-add5-504ae7d0c284)
+Event interests: ['Social', 'Networking', 'Games', 'Biology']
+Potential users: 395
+Event: Climate Action Student Meeting at City Park (178ab501-53a6-486d-9be5-f1144a020346)
+Event interests: ['Music']
+Potential users: 396
+Event: Student Radio Project Planning at Coffee House (378dff9c-2146-4b85-baeb-5de04c62ae0b)
+Event interests: ['Urban planning', 'Vienna coffee culture', 'Biology']
+Potential users: 395
+Event: Climate Action Student Meeting at Central Library (c4150677-eae8-4d75-87c4-6b8c997cf989)
+Event interests: ['Philosophy']
+Potential users: 393
+Event: Volunteering at Student Center Food Bank (ef3588fa-48e6-481c-a36e-744154e20caa)
+Event interests: ['Volunteering', 'Computer Science']
+Potential users: 395
+Event: Medicine Workshop (4e4fac4d-d8b3-4029-92eb-fd5b51de2592)
+Event interests: ['Academic', 'Essay Writing', 'Education', 'University', 'Medicine']
+Potential users: 398
+Event: Volunteering at Main Building Food Bank (4080d706-c843-4fc4-b865-16381024fee4)
+Event interests: ['Volunteering', 'History']
+Potential users: 394
+Event: Student Radio Project Planning at Central Library (5e1fa016-bf3f-4596-935a-9e8b8f715c20)
+Event interests: ['Urban planning', 'Medicine']
+Potential users: 394
+Event: Amazon Information Session (8af40f70-be77-492a-887d-041e2266c26c)
+Event interests: ['Professional Development', 'Medicine', 'Media', 'Career']
+Potential users: 393
+Event: Retail Networking Event (bd4b0184-f937-4b98-a05b-dae8e3e5e616)
+Event interests: ['Retail', 'Psychology', 'Professional Development', 'Career']
+Potential users: 392
+Event: Biology Exam Preparation (a459b4a9-6029-44d5-9cc9-6ba0a7961385)
+Event interests: ['Data Analysis', 'Academic', 'Education', 'University', 'Biology']
+Potential users: 390
+Event: Erste Bank Information Session (c568fd87-aa53-40e7-be93-31698f195c47)
+Event interests: ['Career', 'Professional Development', 'Media', 'Math']
+Potential users: 390
+Event: Manufacturing Networking Event (e99e1883-b6fb-4771-b4ea-4785d29229f0)
+Event interests: ['Manufacturing', 'Professional Development', 'Career', 'Math']
+Potential users: 395
+Event: Student Startup Pitch Competition (f9277d56-81fe-4dae-97ec-f832e6e494d6)
+Event interests: ['Professional Development', 'Psychology', 'Media', 'Career']
+Potential users: 394
+Event: Climate Action Student Meeting at Arts Building (63bcce20-bb93-4984-806a-c1f8c8cfc247)
+Event interests: ['Literature']
+Potential users: 390
+Event: quiz competition Group in Science Lab (80247349-4ec8-41a3-883f-05e0e1c3239a)
+Event interests: ['Computer science', 'Cognitive science', 'Data science', 'Philosophy']
+Potential users: 392
+Event: games Group in Tech Hub (5dd77d64-3b23-4ce8-a856-416488c8fbf8)
+Event interests: ['Sociology', 'Creative writing']
+Potential users: 389
