@@ -37,23 +37,20 @@ struct SettingsView: View {
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 24) {
+                    VStack(spacing: 32) {
                         // Profile Section
                         profileSection
-                            .padding(.top, 20)
+                            .padding(.top, 24)
                         
-                        // Main Settings Grid
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 16) {
+                        // Settings Sections - Clean single column layout
+                        VStack(spacing: 24) {
                             // Account Settings
                             settingsCard("Account", icon: PinItIcons.profile, color: .pinItPrimary) {
                                 accountSettings
                             }
                             
-                            // Privacy Settings
-                            settingsCard("Privacy", icon: PinItIcons.privacy, color: .pinItAccent) {
+                            // Privacy & Security
+                            settingsCard("Privacy & Security", icon: PinItIcons.privacy, color: .pinItAccent) {
                                 privacySettings
                             }
                             
@@ -66,21 +63,19 @@ struct SettingsView: View {
                             settingsCard("App Settings", icon: PinItIcons.settings, color: .pinItAcademic) {
                                 appSettings
                             }
+                            
+                            // Help & Support
+                            settingsCard("Help & Support", icon: PinItIcons.help, color: .pinItInfo) {
+                                supportSettings
+                            }
+                            
+                            // Danger Zone
+                            settingsCard("Danger Zone", icon: PinItIcons.delete, color: .pinItError) {
+                                dangerZone
+                            }
                         }
                         .padding(.horizontal, 20)
-                        
-                        // Help & Support
-                        settingsCard("Help & Support", icon: PinItIcons.help, color: .pinItInfo) {
-                            supportSettings
-                        }
-                        .padding(.horizontal, 20)
-                        
-                        // Danger Zone
-                        settingsCard("Danger Zone", icon: PinItIcons.delete, color: .pinItError) {
-                            dangerZone
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 30)
+                        .padding(.bottom, 40)
                     }
                 }
             }
@@ -200,26 +195,35 @@ struct SettingsView: View {
     
     // MARK: - Settings Card
     private func settingsCard<Content: View>(_ title: String, icon: String, color: Color, @ViewBuilder content: @escaping () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundStyle(color)
-                    .frame(width: 24, height: 24)
+        VStack(alignment: .leading, spacing: 20) {
+            // Header with icon and title
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.1))
+                        .frame(width: 40, height: 40)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(color)
+                }
+                
                 Text(title)
-                    .font(.headline)
+                    .font(.title3.bold())
                     .foregroundStyle(.primary)
+                
                 Spacer()
             }
             
+            // Content with proper spacing
             content()
         }
-        .padding(20)
+        .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 20)
                 .fill(Color.white)
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
         )
     }
     
@@ -233,44 +237,45 @@ struct SettingsView: View {
         @ViewBuilder overlay: () -> Overlay = { EmptyView() }
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.secondary)
-                    .frame(width: 20)
+                    .frame(width: 24, height: 24)
                 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.body)
+                        .font(.body.weight(.medium))
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     if let subtitle = subtitle {
                         Text(subtitle)
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 
                 Image(systemName: PinItIcons.chevronRight)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.tertiary)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(Color.clear)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.05))
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .overlay(overlay())
-        .scaleEffect(1.0)
-        .animation(.easeInOut(duration: 0.1), value: false)
     }
     
     // MARK: - Settings Content
     private var accountSettings: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             settingsButton(icon: "person.circle", title: "Edit Profile", action: {
                 // Navigation handled by NavigationLink
             }) {
@@ -295,7 +300,7 @@ struct SettingsView: View {
     }
     
     private var privacySettings: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 16) {
             settingsButton(
                 icon: "shield.lefthalf.filled",
                 title: "Privacy & Security",
@@ -304,18 +309,34 @@ struct SettingsView: View {
             )
             
             Divider()
+                .padding(.vertical, 8)
+            
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Show Online Status")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Toggle("", isOn: $showOnlineStatus)
+                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItAccent))
+                }
                 .padding(.vertical, 4)
-            
-            Toggle("Show Online Status", isOn: $showOnlineStatus)
-                .toggleStyle(SwitchToggleStyle(tint: Color.pinItAccent))
-            
-            Toggle("Allow Tagging", isOn: $allowTagging)
-                .toggleStyle(SwitchToggleStyle(tint: Color.pinItAccent))
+                
+                HStack {
+                    Text("Allow Tagging")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Toggle("", isOn: $allowTagging)
+                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItAccent))
+                }
+                .padding(.vertical, 4)
+            }
         }
     }
     
     private var notificationSettings: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 16) {
             settingsButton(
                 icon: "bell.badge",
                 title: "Notification Preferences",
@@ -324,35 +345,58 @@ struct SettingsView: View {
             )
             
             Divider()
+                .padding(.vertical, 8)
+            
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Enable Notifications")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Toggle("", isOn: $enableNotifications)
+                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItSecondary))
+                }
                 .padding(.vertical, 4)
-            
-            Toggle("Enable Notifications", isOn: $enableNotifications)
-                .toggleStyle(SwitchToggleStyle(tint: Color.pinItSecondary))
-            
-            Toggle("Show Activity Status", isOn: $showActivityStatus)
-                .toggleStyle(SwitchToggleStyle(tint: Color.pinItSecondary))
+                
+                HStack {
+                    Text("Show Activity Status")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Toggle("", isOn: $showActivityStatus)
+                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItSecondary))
+                }
+                .padding(.vertical, 4)
+            }
         }
     }
     
     private var appSettings: some View {
-        VStack(spacing: 8) {
-            Toggle("Dark Mode", isOn: $darkMode)
-                .toggleStyle(SwitchToggleStyle(tint: Color.pinItAcademic))
-                .onChange(of: darkMode) { newValue in
-                    theme.isDarkMode = newValue
-                }
+        VStack(spacing: 16) {
+            HStack {
+                Text("Dark Mode")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Toggle("", isOn: $darkMode)
+                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItAcademic))
+                    .onChange(of: darkMode) { newValue in
+                        theme.isDarkMode = newValue
+                    }
+            }
+            .padding(.vertical, 4)
             
             Divider()
-                .padding(.vertical, 4)
+                .padding(.vertical, 8)
             
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 16) {
                     Image(systemName: "globe")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(.secondary)
-                        .frame(width: 20)
+                        .frame(width: 24, height: 24)
                     Text("Language")
-                        .font(.body)
+                        .font(.body.weight(.medium))
                         .foregroundStyle(.primary)
                     Spacer()
                 }
@@ -363,13 +407,13 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .padding(.leading, 32)
+                .padding(.leading, 40)
             }
         }
     }
     
     private var supportSettings: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             Link(destination: URL(string: "https://pinit.app/help")!) {
                 settingsButton(icon: "questionmark.circle", title: "Help Center", action: {})
             }
@@ -387,72 +431,76 @@ struct SettingsView: View {
             }
             
             Divider()
-                .padding(.vertical, 4)
+                .padding(.vertical, 8)
             
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 Image(systemName: "info.circle")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.secondary)
-                    .frame(width: 20)
+                    .frame(width: 24, height: 24)
                 Text("App Version")
-                    .font(.body)
+                    .font(.body.weight(.medium))
                     .foregroundStyle(.secondary)
                 Spacer()
                 Text("1.0.0")
                     .font(.body.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.05))
+            )
         }
     }
     
     private var dangerZone: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             Button(action: { showLogoutAlert = true }) {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     Image(systemName: PinItIcons.logout)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(Color.pinItError)
-                        .frame(width: 20)
+                        .frame(width: 24, height: 24)
                     
                     Text("Logout")
-                        .font(.body)
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.pinItError)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     Image(systemName: PinItIcons.chevronRight)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.pinItError.opacity(0.6))
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color.pinItError.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(Color.pinItError.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             
             Button(action: { showDeleteAlert = true }) {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     Image(systemName: PinItIcons.delete)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(Color.pinItError)
-                        .frame(width: 20)
+                        .frame(width: 24, height: 24)
                     
                     Text("Delete Account")
-                        .font(.body)
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.pinItError)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     Image(systemName: PinItIcons.chevronRight)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.pinItError.opacity(0.6))
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color.pinItError.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(Color.pinItError.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
