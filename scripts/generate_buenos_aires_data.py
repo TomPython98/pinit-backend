@@ -173,6 +173,8 @@ def generate_buenos_aires_events(users, num_events=150):
         
         # Random date within next 30 days
         start_time = fake.date_time_between(start_date='now', end_date='+30d')
+        # Set end_time to 2-6 hours after start_time
+        end_time = start_time + timedelta(hours=random.randint(2, 6))
         
         # Generate interest tags for the event
         event_interests = random.sample(INTERESTS, random.randint(2, 5))
@@ -185,6 +187,7 @@ def generate_buenos_aires_events(users, num_events=150):
             latitude=location['lat'] + random.uniform(-0.005, 0.005),
             longitude=location['lng'] + random.uniform(-0.005, 0.005),
             time=start_time,
+            end_time=end_time,
             host=host,
             max_participants=random.randint(5, 25),
             auto_matching_enabled=random.choice([True, False]),

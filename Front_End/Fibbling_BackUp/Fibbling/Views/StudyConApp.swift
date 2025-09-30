@@ -2,7 +2,7 @@ import SwiftUI
 import Foundation
 
 @main
-struct StudyConApp: App {
+struct PinItApp: App {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @StateObject private var accountManager:     UserAccountManager
     @StateObject private var chatManager = ChatManager()  // Global ChatManager
@@ -13,7 +13,7 @@ struct StudyConApp: App {
     @UIApplicationDelegateAdaptor(FibblingAppDelegate.self) private var appDelegate
 
     init() {
-        print("📱 [StudyConApp] Initializing app...")
+        print("📱 [PinItApp] Initializing app...")
         
         // Create account manager
         let am = UserAccountManager()
@@ -22,7 +22,7 @@ struct StudyConApp: App {
         // Create calendar manager with the account manager
         _calendarManager = StateObject(wrappedValue: CalendarManager(accountManager: am))
         
-        print("✅ [StudyConApp] Managers initialized")
+        print("✅ [PinItApp] Managers initialized")
     }
     
     var body: some Scene {
@@ -34,11 +34,11 @@ struct StudyConApp: App {
                     .environmentObject(chatManager)
                     .environmentObject(notificationManager)
                     .onAppear {
-                        print("🔐 [StudyConApp] User logged in, showing ContentView")
+                        print("🔐 [PinItApp] User logged in, showing ContentView")
                         
                         // When app appears while logged in, refresh calendar events
                         if let username = accountManager.currentUser, !username.isEmpty {
-                            print("🔄 [StudyConApp] Setting up WebSocket connection for \(username)")
+                            print("🔄 [PinItApp] Setting up WebSocket connection for \(username)")
                             // calendarManager.fetchEvents() // Removed - WebSocket will handle updates
                             
                             // Request notification permission
@@ -51,7 +51,7 @@ struct StudyConApp: App {
                     .environmentObject(chatManager)
                     .environmentObject(notificationManager)
                     .onAppear {
-                        print("🔒 [StudyConApp] User not logged in, showing LoginView")
+                        print("🔒 [PinItApp] User not logged in, showing LoginView")
                     }
             }
         }

@@ -13,6 +13,8 @@ Welcome to the comprehensive documentation for **StudyCon**, a social networking
 4. **[Frontend_Architecture.md](./Frontend_Architecture.md)** - iOS SwiftUI app architecture
 5. **[Deployment_Guide.md](./Deployment_Guide.md)** - Setup and deployment instructions
 6. **[System_Interactions.md](./System_Interactions.md)** - How components interact
+7. **[Data_Generation_Scripts.md](./Data_Generation_Scripts.md)** - Complete guide to generating test data
+8. **[Troubleshooting_Auto_Matching.md](./Troubleshooting_Auto_Matching.md)** - Auto-matching troubleshooting guide
 
 ## 🎯 Quick Navigation
 
@@ -33,6 +35,11 @@ Welcome to the comprehensive documentation for **StudyCon**, a social networking
 - **System Interactions**: [System_Interactions.md](./System_Interactions.md)
 - **Data Flow**: [System_Interactions.md](./System_Interactions.md#data-synchronization-patterns)
 - **Real-time Communication**: [System_Interactions.md](./System_Interactions.md#real-time-communication-patterns)
+
+### For Data Management
+- **Test Data Generation**: [Data_Generation_Scripts.md](./Data_Generation_Scripts.md#complete-setup-workflow)
+- **Auto-Matching Issues**: [Troubleshooting_Auto_Matching.md](./Troubleshooting_Auto_Matching.md)
+- **Buenos Aires Dataset**: [Data_Generation_Scripts.md](./Data_Generation_Scripts.md#test-accounts)
 
 ## 🔧 Technology Stack Summary
 
@@ -204,6 +211,8 @@ xcrun simctl boot "iPhone 15 Pro"
 - [x] **Frontend_Architecture.md** - iOS app architecture
 - [x] **Deployment_Guide.md** - Setup and deployment
 - [x] **System_Interactions.md** - Component interactions
+- [x] **Data_Generation_Scripts.md** - Test data generation guide
+- [x] **Troubleshooting_Auto_Matching.md** - Auto-matching troubleshooting
 - [x] **INDEX.md** - This navigation guide
 
 ## 🚀 Next Steps

@@ -3498,3 +3498,304 @@ def get_profile_completion(request, username):
         print(f"❌ Error getting profile completion: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
+
+# MARK: - PinIt User Preferences and Settings API Endpoints
+
+@csrf_exempt
+def get_user_preferences(request, username):
+    """
+    Get user preferences and settings for PinIt
+    
+    Returns:
+    {
+        "matching_preferences": {
+            "allow_auto_matching": true,
+            "preferred_radius": 10.0,
+            "interests": ["Study Groups", "Language Exchange"],
+            "skills": ["Programming", "Design"],
+            "preferred_event_types": ["study", "cultural"],
+            "age_range": "18-25",
+            "university": "University of Buenos Aires",
+            "degree": "Computer Science",
+            "year": "Junior"
+        },
+        "privacy_settings": {
+            "show_online_status": true,
+            "allow_tagging": true,
+            "allow_direct_messages": true,
+            "show_activity_status": true
+        },
+        "notification_settings": {
+            "enable_notifications": true,
+            "event_reminders": true,
+            "friend_requests": true,
+            "event_invitations": true,
+            "rating_notifications": true
+        },
+        "app_settings": {
+            "dark_mode": false,
+            "accent_color": "Blue",
+            "font_size": "Medium",
+            "language": "English"
+        }
+    }
+    """
+    try:
+        user = User.objects.get(username=username)
+        userprofile = user.userprofile
+        
+        # Get matching preferences
+        matching_preferences = {
+            "allow_auto_matching": getattr(userprofile, 'auto_invite_enabled', True),
+            "preferred_radius": getattr(userprofile, 'preferred_radius', 10.0),
+            "interests": userprofile.get_interests() if hasattr(userprofile, 'get_interests') else [],
+            "skills": list(userprofile.get_skills().keys()) if hasattr(userprofile, 'get_skills') else [],
+            "preferred_event_types": [],  # This would need to be added to the model
+            "age_range": "18-25",  # This would need to be added to the model
+            "university": getattr(userprofile, 'university', ''),
+            "degree": getattr(userprofile, 'degree', ''),
+            "year": getattr(userprofile, 'year', '')
+        }
+        
+        # Get privacy settings (these would be stored in a separate model or JSON field)
+        privacy_settings = {
+            "show_online_status": True,
+            "allow_tagging": True,
+            "allow_direct_messages": True,
+            "show_activity_status": True
+        }
+        
+        # Get notification settings (these would be stored in a separate model or JSON field)
+        notification_settings = {
+            "enable_notifications": True,
+            "event_reminders": True,
+            "friend_requests": True,
+            "event_invitations": True,
+            "rating_notifications": True
+        }
+        
+        # Get app settings (these would be stored in a separate model or JSON field)
+        app_settings = {
+            "dark_mode": False,
+            "accent_color": "Blue",
+            "font_size": "Medium",
+            "language": "English"
+        }
+        
+        return JsonResponse({
+            "matching_preferences": matching_preferences,
+            "privacy_settings": privacy_settings,
+            "notification_settings": notification_settings,
+            "app_settings": app_settings
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        print(f"❌ Error getting user preferences: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def update_user_preferences(request, username):
+    """
+    Update user preferences and settings for PinIt
+    
+    Expected JSON payload:
+    {
+        "matching_preferences": {
+            "allow_auto_matching": true,
+            "preferred_radius": 10.0,
+            "interests": ["Study Groups", "Language Exchange"],
+            "skills": ["Programming", "Design"],
+            "preferred_event_types": ["study", "cultural"],
+            "age_range": "18-25",
+            "university": "University of Buenos Aires",
+            "degree": "Computer Science",
+            "year": "Junior"
+        },
+        "privacy_settings": {
+            "show_online_status": true,
+            "allow_tagging": true,
+            "allow_direct_messages": true,
+            "show_activity_status": true
+        },
+        "notification_settings": {
+            "enable_notifications": true,
+            "event_reminders": true,
+            "friend_requests": true,
+            "event_invitations": true,
+            "rating_notifications": true
+        },
+        "app_settings": {
+            "dark_mode": false,
+            "accent_color": "Blue",
+            "font_size": "Medium",
+            "language": "English"
+        }
+    }
+    """
+    try:
+        user = User.objects.get(username=username)
+        userprofile = user.userprofile
+        
+        if request.method != 'POST':
+            return JsonResponse({"error": "Only POST method allowed"}, status=405)
+        
+        data = json.loads(request.body)
+        
+        # Update matching preferences
+        if 'matching_preferences' in data:
+            prefs = data['matching_preferences']
+            
+            if 'allow_auto_matching' in prefs:
+                userprofile.auto_invite_enabled = prefs['allow_auto_matching']
+            
+            if 'preferred_radius' in prefs:
+                userprofile.preferred_radius = float(prefs['preferred_radius'])
+            
+            if 'interests' in prefs:
+                userprofile.set_interests(prefs['interests'])
+            
+            if 'skills' in prefs:
+                # Convert list to dict with default skill level
+                skills_dict = {skill: 'INTERMEDIATE' for skill in prefs['skills']}
+                userprofile.set_skills(skills_dict)
+            
+            if 'university' in prefs:
+                userprofile.university = prefs['university']
+            
+            if 'degree' in prefs:
+                userprofile.degree = prefs['degree']
+            
+            if 'year' in prefs:
+                userprofile.year = prefs['year']
+        
+        # Save the profile
+        userprofile.save()
+        
+        return JsonResponse({
+            "message": "Preferences updated successfully",
+            "status": "success"
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        print(f"❌ Error updating user preferences: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def get_matching_preferences(request, username):
+    """
+    Get detailed matching preferences for PinIt auto-matching
+    
+    Returns:
+    {
+        "allow_auto_matching": true,
+        "preferred_radius": 10.0,
+        "interests": ["Study Groups", "Language Exchange"],
+        "skills": ["Programming", "Design"],
+        "preferred_event_types": ["study", "cultural"],
+        "age_range": "18-25",
+        "university": "University of Buenos Aires",
+        "degree": "Computer Science",
+        "year": "Junior",
+        "matching_score_threshold": 0.7
+    }
+    """
+    try:
+        user = User.objects.get(username=username)
+        userprofile = user.userprofile
+        
+        return JsonResponse({
+            "allow_auto_matching": getattr(userprofile, 'auto_invite_enabled', True),
+            "preferred_radius": getattr(userprofile, 'preferred_radius', 10.0),
+            "interests": userprofile.get_interests() if hasattr(userprofile, 'get_interests') else [],
+            "skills": list(userprofile.get_skills().keys()) if hasattr(userprofile, 'get_skills') else [],
+            "preferred_event_types": [],  # This would need to be added to the model
+            "age_range": "18-25",  # This would need to be added to the model
+            "university": getattr(userprofile, 'university', ''),
+            "degree": getattr(userprofile, 'degree', ''),
+            "year": getattr(userprofile, 'year', ''),
+            "matching_score_threshold": 0.7  # This would need to be added to the model
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        print(f"❌ Error getting matching preferences: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def update_matching_preferences(request, username):
+    """
+    Update matching preferences for PinIt auto-matching
+    
+    Expected JSON payload:
+    {
+        "allow_auto_matching": true,
+        "preferred_radius": 10.0,
+        "interests": ["Study Groups", "Language Exchange"],
+        "skills": ["Programming", "Design"],
+        "preferred_event_types": ["study", "cultural"],
+        "age_range": "18-25",
+        "university": "University of Buenos Aires",
+        "degree": "Computer Science",
+        "year": "Junior",
+        "matching_score_threshold": 0.7
+    }
+    """
+    try:
+        user = User.objects.get(username=username)
+        userprofile = user.userprofile
+        
+        if request.method != 'POST':
+            return JsonResponse({"error": "Only POST method allowed"}, status=405)
+        
+        data = json.loads(request.body)
+        
+        # Update matching preferences
+        if 'allow_auto_matching' in data:
+            userprofile.auto_invite_enabled = data['allow_auto_matching']
+        
+        if 'preferred_radius' in data:
+            userprofile.preferred_radius = float(data['preferred_radius'])
+        
+        if 'interests' in data:
+            userprofile.set_interests(data['interests'])
+        
+        if 'skills' in data:
+            # Convert list to dict with default skill level
+            skills_dict = {skill: 'INTERMEDIATE' for skill in data['skills']}
+            userprofile.set_skills(skills_dict)
+        
+        if 'university' in data:
+            userprofile.university = data['university']
+        
+        if 'degree' in data:
+            userprofile.degree = data['degree']
+        
+        if 'year' in data:
+            userprofile.year = data['year']
+        
+        # Save the profile
+        userprofile.save()
+        
+        return JsonResponse({
+            "message": "Matching preferences updated successfully",
+            "status": "success"
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        print(f"❌ Error updating matching preferences: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
