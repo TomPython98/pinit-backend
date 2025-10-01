@@ -8,7 +8,7 @@ def sanitize_username(username):
     sanitized = re.sub(r'[^a-zA-Z0-9_-]', '_', username)
     return sanitized
 
-# class ChatConsumer(AsyncWebsocketConsumer):  # Disabled for Railway deployment
+class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.sender = self.scope["url_route"]["kwargs"]["sender"]
         self.receiver = self.scope["url_route"]["kwargs"]["receiver"]
