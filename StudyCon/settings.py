@@ -11,15 +11,18 @@ DEBUG = False
 ALLOWED_HOSTS = ['*', 'healthcheck.railway.app']
 
 INSTALLED_APPS = [
+    "daphne",  # Django Channels
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'myapp',
-    'corsheaders',
+    "myapp",
+    "corsheaders", 
     'rest_framework',
+    'rest_framework.authtoken',
+    'channels',
     'push_notifications',
 ]
 
@@ -54,6 +57,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'StudyCon.wsgi.application'
+
+# WebSocket configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",  # For Railway deployment
+    },
+}
+
+# Set Django Channels as the ASGI server
+ASGI_APPLICATION = "StudyCon.asgi.application"
 
 # SQLite Database
 DATABASES = {
