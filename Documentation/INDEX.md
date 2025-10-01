@@ -12,9 +12,10 @@ Welcome to the comprehensive documentation for **StudyCon**, a social networking
 3. **[Database_Schema.md](./Database_Schema.md)** - Database models and relationships
 4. **[Frontend_Architecture.md](./Frontend_Architecture.md)** - iOS SwiftUI app architecture
 5. **[Deployment_Guide.md](./Deployment_Guide.md)** - Setup and deployment instructions
-6. **[System_Interactions.md](./System_Interactions.md)** - How components interact
-7. **[Data_Generation_Scripts.md](./Data_Generation_Scripts.md)** - Complete guide to generating test data
-8. **[Troubleshooting_Auto_Matching.md](./Troubleshooting_Auto_Matching.md)** - Auto-matching troubleshooting guide
+6. **[Production_Deployment.md](./Production_Deployment.md)** - Railway production deployment guide
+7. **[System_Interactions.md](./System_Interactions.md)** - How components interact
+8. **[Data_Generation_Scripts.md](./Data_Generation_Scripts.md)** - Complete guide to generating test data
+9. **[Troubleshooting_Auto_Matching.md](./Troubleshooting_Auto_Matching.md)** - Auto-matching troubleshooting guide
 
 ## 🎯 Quick Navigation
 
@@ -26,7 +27,8 @@ Welcome to the comprehensive documentation for **StudyCon**, a social networking
 
 ### For DevOps/Deployment
 - **Virtual Environment**: [Deployment_Guide.md](./Deployment_Guide.md#virtual-environment-setup)
-- **Production Setup**: [Deployment_Guide.md](./Deployment_Guide.md#production-server-gunicorn--nginx)
+- **Production Setup**: [Production_Deployment.md](./Production_Deployment.md#railway-deployment)
+- **Railway Deployment**: [Production_Deployment.md](./Production_Deployment.md#deployment-configuration)
 - **Docker Deployment**: [Deployment_Guide.md](./Deployment_Guide.md#docker-deployment)
 - **Cloud Deployment**: [Deployment_Guide.md](./Deployment_Guide.md#cloud-deployment)
 
@@ -62,8 +64,9 @@ Welcome to the comprehensive documentation for **StudyCon**, a social networking
 
 ### Infrastructure
 - **Development**: Local development server
-- **Production**: Docker, Heroku, AWS, DigitalOcean
-- **Monitoring**: Django logging, performance tools
+- **Production**: Railway (live at https://pinit-backend-production.up.railway.app)
+- **Database**: SQLite3 (production), PostgreSQL (planned)
+- **Monitoring**: Django logging, Railway dashboard
 - **Security**: HTTPS, CORS, input validation
 
 ## 📊 Key Features Documentation
@@ -210,6 +213,7 @@ xcrun simctl boot "iPhone 15 Pro"
 - [x] **Database_Schema.md** - Database models and relationships
 - [x] **Frontend_Architecture.md** - iOS app architecture
 - [x] **Deployment_Guide.md** - Setup and deployment
+- [x] **Production_Deployment.md** - Railway production deployment
 - [x] **System_Interactions.md** - Component interactions
 - [x] **Data_Generation_Scripts.md** - Test data generation guide
 - [x] **Troubleshooting_Auto_Matching.md** - Auto-matching troubleshooting

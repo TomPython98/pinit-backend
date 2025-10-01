@@ -220,14 +220,16 @@ class UserAccountManager: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     
+    // Production-first URL configuration
     private let baseURLs = [
-        "http://127.0.0.1:8000/api",
-        "http://localhost:8000/api",
-        "http://10.0.0.30:8000/api"
+        "https://pinit-backend-production.up.railway.app/api",  // Production (primary)
+        "http://127.0.0.1:8000/api",                           // Local development
+        "http://localhost:8000/api",                           // Local development
+        "http://10.0.0.30:8000/api"                            // Network development
     ]
     
     func login(username: String, password: String, completion: @escaping (Bool) -> Void) {
-        // Authentication logic
+        // Authentication logic with production server priority
     }
     
     func logout() {
@@ -249,13 +251,20 @@ class CalendarManager: ObservableObject {
     private var autoRefreshTimer: Timer?
     private let autoRefreshInterval: TimeInterval = 60.0
     
+    // Production server URL
+    private let baseURL = "https://pinit-backend-production.up.railway.app/api/"
+    
     init(accountManager: UserAccountManager) {
         self.accountManager = accountManager
         setupNotificationObservers()
     }
     
     func fetchEvents() {
-        // Fetch events from API
+        // Fetch events from production API
+        guard let username = accountManager.currentUser,
+              let url = URL(string: "\(baseURL)get_study_events/\(username)/")
+        else { return }
+        // API call implementation
     }
     
     func setupWebSocket() {
@@ -380,10 +389,12 @@ private func clusterEvents(_ events: [StudyEvent], region: MKCoordinateRegion) -
 ### API Communication
 ```swift
 class NetworkManager {
+    // Development URLs (fallback)
     private let baseURLs = [
-        "http://127.0.0.1:8000/api",
-        "http://localhost:8000/api",
-        "http://10.0.0.30:8000/api"
+        "https://pinit-backend-production.up.railway.app/api",  // Production
+        "http://127.0.0.1:8000/api",                           // Local development
+        "http://localhost:8000/api",                           // Local development
+        "http://10.0.0.30:8000/api"                            // Network development
     ]
     
     func makeRequest<T: Codable>(endpoint: String, method: HTTPMethod, 

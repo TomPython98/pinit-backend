@@ -57,7 +57,7 @@ class CalendarManager: ObservableObject {
     private var hasFetchedInitialEvents = false // Flag to track initial fetch
     
     // Change this to your backend's base URL.
-    private let baseURL = "http://127.0.0.1:8000/api/"
+    private let baseURL = "https://pinit-backend-production.up.railway.app/api/"
     private var cancellable: AnyCancellable?
     private var webSocketManager: EventsWebSocketManager?
     

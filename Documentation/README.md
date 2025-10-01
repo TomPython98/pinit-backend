@@ -373,30 +373,88 @@ python manage.py runserver 0.0.0.0:8000
 
 ## 🚀 Deployment Guide
 
+### Production Deployment (Railway)
+
+**Platform**: Railway
+**Production URL**: https://pinit-backend-production.up.railway.app
+**Database**: SQLite3 (production)
+**Status**: ✅ Live and operational
+
+#### Railway Configuration
+```python
+# Production settings (settings_production.py)
+DEBUG = False
+ALLOWED_HOSTS = ['pinit-backend-production.up.railway.app', '*.railway.app']
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+# CORS Configuration
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://pinit-backend-production.up.railway.app",
+]
+
+# WebSocket Configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
+```
+
+#### Deployment Files
+- **Procfile**: `web: daphne StudyCon.asgi:application --port $PORT --bind 0.0.0.0`
+- **requirements_production.txt**: Production dependencies
+- **runtime.txt**: Python version specification
+- **railway.json**: Railway deployment configuration
+
+#### Environment Variables (Railway)
+- `DEBUG=False`
+- `SECRET_KEY`: Auto-generated secure key
+- `ALLOWED_HOSTS`: Railway domain
+- `PORT`: Railway assigned port
+
 ### Production Checklist
-1. **Security**: Set `DEBUG=False`, use secure secret key
-2. **Database**: Migrate to PostgreSQL for production
-3. **CORS**: Configure specific allowed origins
-4. **WebSockets**: Use Redis for channel layers
-5. **Static Files**: Configure static file serving
-6. **SSL**: Enable HTTPS for production
+1. ✅ **Security**: `DEBUG=False`, secure secret key configured
+2. ✅ **Database**: SQLite3 database with migrations applied
+3. ✅ **CORS**: Configured for Railway domain
+4. ✅ **WebSockets**: In-memory channel layers configured
+5. ✅ **Static Files**: Served via Railway
+6. ✅ **SSL**: HTTPS enabled by Railway
+7. ✅ **Health Check**: `/api/health/` endpoint available
 
 ### Server Configuration
 ```python
 # Production settings example
 DEBUG = False
-ALLOWED_HOSTS = ['yourdomain.com']
+ALLOWED_HOSTS = ['pinit-backend-production.up.railway.app']
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'studycon_prod',
-        'USER': 'your_db_user',
-        'PASSWORD': 'your_db_password',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 ```
+
+### Frontend Configuration
+**iOS App URLs**: Must be updated to use production server
+```swift
+// CalendarManager.swift
+private let baseURL = "https://pinit-backend-production.up.railway.app/api/"
+
+// InvitationsView.swift  
+let url = URL(string: "https://pinit-backend-production.up.railway.app/api/get_invitations/\(username)/")
+```
+
+### Production Data
+- **Users**: 29 international students
+- **Events**: 150+ study events across Buenos Aires
+- **Social Network**: Friend connections and user ratings
+- **Auto-matching**: Intelligent event-user matching system
 
 ## 🔄 Development Workflow
 
@@ -444,6 +502,37 @@ DATABASES = {
 - **Xcode Debugger**: For frontend debugging
 - **WebSocket Inspector**: For real-time debugging
 - **Network Inspector**: For API call debugging
+
+## ⚠️ Known Issues & Production Notes
+
+### Backend Issues
+1. **invite_to_event Endpoint Bug**
+   - **Issue**: Endpoint tries to create `EventInvitation` with non-existent `inviter` field
+   - **Status**: Known issue, workaround implemented
+   - **Workaround**: Create events with `invited_friends` directly in event creation
+
+2. **Production Database**
+   - **Platform**: Railway with SQLite3 (not PostgreSQL as originally planned)
+   - **Status**: Working correctly with current data volume
+   - **Note**: Consider PostgreSQL migration for larger scale
+
+### Frontend Issues
+1. **Hardcoded URLs**
+   - **Issue**: Some components were hardcoded to localhost URLs
+   - **Status**: ✅ Fixed - Updated to production URLs
+   - **Components Fixed**: `CalendarManager`, `InvitationsView`
+
+2. **URL Configuration**
+   - **Issue**: iOS app needs manual URL updates for production
+   - **Status**: ✅ Resolved - Production URLs configured
+   - **Note**: Future versions should use environment-based URL configuration
+
+### Production Environment
+- **Platform**: Railway
+- **URL**: https://pinit-backend-production.up.railway.app
+- **Database**: SQLite3 with 29 users, 150+ events
+- **Status**: ✅ Live and fully operational
+- **Data**: Comprehensive test data with social network and auto-matching
 
 ## 📞 Support
 

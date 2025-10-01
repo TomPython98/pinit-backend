@@ -105,7 +105,7 @@ struct InvitationsView: View {
     /// Fetches pending invitations for the current user from the backend.
     private func fetchInvitations() {
         guard let username = accountManager.currentUser,
-              let url = URL(string: "http://127.0.0.1:8000/api/get_invitations/\(username)/")
+              let url = URL(string: "https://pinit-backend-production.up.railway.app/api/get_invitations/\(username)/")
         else {
             print("❌ [InvitationsView] Invalid username or URL")
             return

@@ -3,8 +3,14 @@
 ## 🌐 Base URL
 ```
 Development: http://localhost:8000
-Production: https://yourdomain.com
+Production: https://pinit-backend-production.up.railway.app
 ```
+
+### Production Status
+- **Platform**: Railway
+- **Status**: ✅ Live and operational
+- **Health Check**: https://pinit-backend-production.up.railway.app/api/health/
+- **Database**: SQLite3 with 29 users and 150+ events
 
 ## 🔐 Authentication
 
