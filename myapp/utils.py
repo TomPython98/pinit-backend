@@ -3,8 +3,8 @@ Utility functions for the myapp Django application.
 """
 import json
 import asyncio
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
+# from channels.layers import get_channel_layer  # Removed for Railway deployment
+# from asgiref.sync import async_to_sync  # Removed for Railway deployment
 
 def broadcast_event_update(event_id, event_type, usernames):
     """
@@ -16,36 +16,8 @@ def broadcast_event_update(event_id, event_type, usernames):
         event_type (str): Type of update: 'create', 'update', or 'delete'
         usernames (list): List of usernames to notify
     """
-    # Get the channel layer
-    channel_layer = get_channel_layer()
-    
-    # Make sure we have usernames to notify
-    if not usernames:
-        return
-    
-    # Map event_type to consumer handler method
-    handler_map = {
-        'create': 'event_create',
-        'update': 'event_update',
-        'delete': 'event_delete'
-    }
-    
-    # Default to update if event_type is not recognized
-    handler = handler_map.get(event_type, 'event_update')
-    
-    # Notify each user of the event change
-    for username in usernames:
-        group_name = f"events_{username}"
-        print(f"📢 Broadcasting {event_type} for event {event_id} to user: {username}")
-        
-        # Send the message to the group
-        async_to_sync(channel_layer.group_send)(
-            group_name,
-            {
-                "type": handler,
-                "event_id": str(event_id)
-            }
-        )
+    # Function disabled for Railway deployment - channels removed
+    pass
 
 def broadcast_event_created(event_id, host_username, invited_friends=[]):
     """Notify the host and any invited friends that a new event was created"""
