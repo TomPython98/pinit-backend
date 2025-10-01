@@ -19,7 +19,8 @@ ALLOWED_HOSTS = [
     'pin-it.net',
     'www.pin-it.net',
     'api.pin-it.net',
-    # Add your hosting provider's domain if different
+    'healthcheck.railway.app',
+    '*',  # Allow all hosts for Railway
 ]
 
 # Application definition
@@ -74,15 +75,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'StudyCon.wsgi.application'
 ASGI_APPLICATION = "StudyCon.asgi.application"
 
-# Database - Use PostgreSQL for production
+# Database - Use SQLite for Railway deployment
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'pinit_production'),
-        'USER': os.environ.get('DB_USER', 'pinit_user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
