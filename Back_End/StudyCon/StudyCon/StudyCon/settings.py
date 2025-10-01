@@ -98,20 +98,14 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# Database configuration for Railway
-if 'DATABASE_URL' in os.environ:
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.parse(os.environ['DATABASE_URL'])
+# Force SQLite database for Railway deployment
+# This prevents PostgreSQL connection issues
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-else:
-    # Fallback to SQLite for development/testing
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+}
 
 
 # Password validation
