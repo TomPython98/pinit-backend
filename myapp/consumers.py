@@ -56,8 +56,6 @@ def sanitize_username(username):
 # myapp/consumers.py
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-import json
-from channels.generic.websocket import AsyncWebsocketConsumer
 
 class GroupChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
