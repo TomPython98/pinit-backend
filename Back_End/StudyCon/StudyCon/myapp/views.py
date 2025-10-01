@@ -3805,3 +3805,4 @@ def update_matching_preferences(request, username):
         print(f"❌ Error updating matching preferences: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
+# Auto-matching fix deployed Wed Oct  1 12:27:33 -03 2025
