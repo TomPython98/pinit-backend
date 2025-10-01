@@ -7,12 +7,8 @@ class AutoMatchingManager: ObservableObject {
     @Published var error: String?
     @Published var matchDetails: [String: MatchDetail] = [:]
     
-    // Update to support all possible backend URLs
-    private let baseURLs = [
-        "http://127.0.0.1:8000/api",
-        "http://localhost:8000/api",
-        "http://10.0.0.30:8000/api"
-    ]
+    // Use APIConfig for consistent URL management
+    private let baseURLs = APIConfig.baseURLs
     // Default to the first URL, but will try others if needed
     private var currentBaseURLIndex = 0
     

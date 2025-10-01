@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">PinIt</string>
+<string name="mapbox_access_token">pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw</string>
+</resources>

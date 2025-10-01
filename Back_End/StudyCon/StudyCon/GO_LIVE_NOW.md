@@ -137,3 +137,4 @@ Your iOS app is already configured! Just:
 5. **Submit**: To App Store
 
 **Your PinIt app will be LIVE in 5 minutes!** 🎉
+

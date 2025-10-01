@@ -9,7 +9,7 @@ import UIKit
 // iOS or visionOS specific AppDelegate
 class FibblingAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     // Base server URL - this should match what's used in the rest of the app
-    private let serverBaseURL = "http://127.0.0.1:8000"
+    private let serverBaseURL = APIConfig.serverBaseURL
     
     func application(_ application: UIApplication, 
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {

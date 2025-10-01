@@ -198,3 +198,4 @@ echo "   heroku run python manage.py shell --app $APP_NAME    # Django shell"
 echo "   heroku restart --app $APP_NAME    # Restart app"
 echo ""
 echo "✅ Your PinIt backend is now live!"
+

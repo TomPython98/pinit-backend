@@ -7,14 +7,8 @@ class UserReputationManager: ObservableObject {
     @Published var userRatings: [UserRating] = []
     @Published var userStats: UserReputationStats = UserReputationStats()
     
-    // Try multiple base URLs to maximize chances of successful connection (same as UserProfileManager)
-    private let baseURLs = [
-        "http://127.0.0.1:8000/api",
-        "http://localhost:8000/api",
-        "http://10.0.0.30:8000/api",
-        // Real server
-        "http://tombesinger.pythonanywhere.com/api"
-    ]
+    // Use APIConfig for consistent URL management
+    private let baseURLs = APIConfig.baseURLs
     
     // MARK: - API Methods
     

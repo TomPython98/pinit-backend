@@ -1,0 +1,982 @@
+package com.example.pinit.components
+
+import android.util.Log
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.pinit.R
+import com.example.pinit.components.map.ClusterAnnotationView
+import com.example.pinit.components.map.EventAnnotationView
+import com.example.pinit.components.map.MapClusteringUtils
+import com.example.pinit.models.CoordinateConverter
+import com.example.pinit.models.EventType
+import com.example.pinit.models.StudyEventMap
+import com.example.pinit.models.UserAccountManager
+import com.mapbox.geojson.Point
+import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.MapView
+import com.mapbox.maps.Style
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.lifecycle.viewModelScope
+import com.example.pinit.repository.EventRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+
+/**
+ * ViewModel for FullScreenMapView
+ */
+class MapViewModel(private val accountManager: UserAccountManager) : ViewModel() {
+    // Repository for data fetching
+    private val repository = EventRepository()
+    
+    // Events from the API
+    val events = mutableStateListOf<StudyEventMap>()
+    
+    // State variables
+    val isLoading = mutableStateOf(true)
+    val errorMessage = mutableStateOf<String?>(null)
+    
+    // Filter states
+    var showEventTypes = mutableStateMapOf(
+        EventType.STUDY to true,
+        EventType.PARTY to true,
+        EventType.BUSINESS to true,
+        EventType.OTHER to true
+    )
+    
+    var showPrivateEvents = mutableStateOf(true)
+    
+    // Initial loading of data
+    init {
+        loadEvents()
+    }
+    
+    // Load events from the API using the logged-in user
+    fun loadEvents() {
+        isLoading.value = true
+        errorMessage.value = null
+        
+        val username = accountManager.currentUser ?: "guest"
+        Log.d("MapViewModel", "Loading events for user: $username")
+        
+        viewModelScope.launch {
+            repository.getEventsForUser(username).collect { result ->
+                isLoading.value = false
+                
+                result.fold(
+                    onSuccess = { eventsList ->
+                        events.clear()
+                        events.addAll(eventsList)
+                        Log.d("MapViewModel", "Successfully loaded ${events.size} events for user $username")
+                        
+                        // Debug each event's data
+                        events.forEachIndexed { index, event ->
+                            Log.d("MapViewModel", "Event[$index] - Title: ${event.title}, " +
+                                  "Coordinates: ${event.coordinate}, Type: ${event.eventType}")
+                        }
+                    },
+                    onFailure = { error ->
+                        errorMessage.value = "Failed to load events: ${error.message}"
+                        Log.e("MapViewModel", "Error loading events for user $username: ${error.message}", error)
+                        
+                        // Load sample events as fallback for development/testing
+                        loadSampleEvents()
+                    }
+                )
+            }
+        }
+    }
+    
+    // Search for events
+    fun searchEvents(query: String) {
+        isLoading.value = true
+        errorMessage.value = null
+        
+        viewModelScope.launch {
+            repository.searchEvents(query).collect { result ->
+                isLoading.value = false
+                
+                result.fold(
+                    onSuccess = { eventsList ->
+                        events.clear()
+                        events.addAll(eventsList)
+                        Log.d("MapViewModel", "Search found ${events.size} events")
+                    },
+                    onFailure = { error ->
+                        errorMessage.value = "Search failed: ${error.message}"
+                        Log.e("MapViewModel", "Error searching events", error)
+                    }
+                )
+            }
+        }
+    }
+    
+    // Get filtered events based on selected filters
+    fun getFilteredEvents(): List<StudyEventMap> {
+        return events.filter { event ->
+            val typeFilter = event.eventType?.let { showEventTypes[it] } ?: true
+            val visibilityFilter = if (event.isPublic) true else showPrivateEvents.value
+            typeFilter && visibilityFilter
+        }
+    }
+    
+    // Load sample events for development/testing
+    private fun loadSampleEvents() {
+        events.clear()
+        events.addAll(listOf(
+            StudyEventMap(
+                id = "1",
+                title = "Mathematics Study Group",
+                coordinate = Pair(16.3738, 48.2082), // Vienna
+                time = LocalDateTime.now().plusHours(1),
+                endTime = LocalDateTime.now().plusHours(3),
+                description = "Join our study group to prepare for the math exam",
+                invitedFriends = emptyList(),
+                attendees = 5,
+                isPublic = true,
+                host = "John Doe",
+                hostIsCertified = true,
+                eventType = EventType.STUDY
+            ),
+            StudyEventMap(
+                id = "2",
+                title = "Physics Study Session",
+                coordinate = Pair(16.3758, 48.2102), // Near Vienna
+                time = LocalDateTime.now().plusHours(2),
+                endTime = LocalDateTime.now().plusHours(4),
+                description = "Physics study session focusing on mechanics",
+                invitedFriends = emptyList(),
+                attendees = 3,
+                isPublic = false,
+                host = "Jane Smith",
+                hostIsCertified = false,
+                eventType = EventType.STUDY
+            ),
+            StudyEventMap(
+                id = "3",
+                title = "Startup Networking",
+                coordinate = Pair(16.3718, 48.2062), // Also near Vienna
+                time = LocalDateTime.now().plusHours(5),
+                endTime = LocalDateTime.now().plusHours(7),
+                description = "Connect with other entrepreneurs",
+                invitedFriends = emptyList(),
+                attendees = 12,
+                isPublic = true,
+                host = "Startup Hub",
+                hostIsCertified = true,
+                eventType = EventType.BUSINESS
+            ),
+            StudyEventMap(
+                id = "4",
+                title = "Weekend Party",
+                coordinate = Pair(16.3768, 48.2042), // Also near Vienna
+                time = LocalDateTime.now().plusDays(1),
+                endTime = LocalDateTime.now().plusDays(1).plusHours(4),
+                description = "Come join our weekend party!",
+                invitedFriends = emptyList(),
+                attendees = 25,
+                isPublic = true,
+                host = "Party Planners",
+                hostIsCertified = false,
+                eventType = EventType.PARTY
+            ),
+            StudyEventMap(
+                id = "5",
+                title = "Language Exchange",
+                coordinate = Pair(16.3708, 48.2052), // Also near Vienna
+                time = LocalDateTime.now().plusDays(2),
+                endTime = LocalDateTime.now().plusDays(2).plusHours(2),
+                description = "Practice your language skills",
+                invitedFriends = emptyList(),
+                attendees = 8,
+                isPublic = true,
+                host = "Language Club",
+                hostIsCertified = false,
+                eventType = EventType.OTHER
+            )
+        ))
+        Log.d("MapViewModel", "Loaded ${events.size} sample events")
+    }
+}
+
+/**
+ * Factory for creating MapViewModel with the UserAccountManager
+ */
+class MapViewModelFactory(private val accountManager: UserAccountManager) : androidx.lifecycle.ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MapViewModel::class.java)) {
+            return MapViewModel(accountManager) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FullScreenMapView(
+    onClose: () -> Unit,
+    accountManager: UserAccountManager,
+    viewModel: MapViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = MapViewModelFactory(accountManager)
+    )
+) {
+    val context = LocalContext.current
+    val events = viewModel.getFilteredEvents()
+    
+    // State management
+    var mapView by remember { mutableStateOf<MapView?>(null) }
+    var mapReady by remember { mutableStateOf(false) }
+    var isMapError by remember { mutableStateOf(false) }
+    var currentZoom by remember { mutableStateOf(14.0) }
+    
+    // Loading and error states from ViewModel
+    val isLoading = viewModel.isLoading.value
+    val errorMessage = viewModel.errorMessage.value
+    
+    // Search state
+    var isSearching by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var searchResults by remember { mutableStateOf(listOf<String>()) }
+    
+    // Current user display
+    val currentUsername = accountManager.currentUser ?: "Guest"
+    
+    // Filter state
+    var showFilterDialog by remember { mutableStateOf(false) }
+    
+    // PointAnnotationManager for adding markers
+    var pointAnnotationManager by remember { mutableStateOf<PointAnnotationManager?>(null) }
+    
+    // Used to track clusters for updates
+    var currentClusters by remember { mutableStateOf(listOf<com.example.pinit.components.map.Cluster>()) }
+    
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Vienna coordinates as default
+    val viennaPoint = Point.fromLngLat(16.3738, 48.2082)
+    
+    // Animate search bar expansion
+    val searchBarWidth by animateDpAsState(
+        targetValue = if (isSearching) 280.dp else 48.dp, 
+        label = "searchBarWidth"
+    )
+    
+    // New state variables
+    var showEventDetails by remember { mutableStateOf(false) }
+    var selectedEventId by remember { mutableStateOf<String?>(null) }
+    var showEventCreation by remember { mutableStateOf(false) }
+    var selectedCoordinate by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    
+    // Effect to update annotations when events or filters change
+    LaunchedEffect(events, mapReady, currentZoom) {
+        if (mapReady && mapView != null && pointAnnotationManager != null) {
+            updateMapAnnotations(mapView!!, pointAnnotationManager!!, events, currentZoom, 
+                onClusterClick = { cluster ->
+                    // Handle cluster click
+                    Log.d("FullScreenMapView", "Cluster clicked: ${cluster.events.size} events")
+                    
+                    // If zoomed in far enough and small cluster, show details
+                    if (currentZoom > 14.0 && cluster.events.size <= 3) {
+                        // Show the first event in the cluster
+                        if (cluster.events.isNotEmpty()) {
+                            selectedEventId = cluster.events[0].id
+                            showEventDetails = true
+                        }
+                    } else {
+                        // Zoom in to cluster
+                        mapView?.getMapboxMap()?.setCamera(
+                            CameraOptions.Builder()
+                                .center(cluster.coordinate)
+                                .zoom(currentZoom + 1.5)
+                                .build()
+                        )
+                    }
+                },
+                onSingleEventClick = { event ->
+                    // Handle single event click
+                    Log.d("FullScreenMapView", "Event clicked: ${event.title}")
+                    selectedEventId = event.id
+                    showEventDetails = true
+                }
+            )
+        }
+    }
+    
+    // We'll modify the long press handler approach since there seem to be API compatibility issues
+    // Instead, we'll make sure users can create events using the FAB button only
+    if (mapReady) {
+        // We don't need the complex gesture handling anymore - rely on the FAB for event creation
+        // Users can move the map to where they want and tap the FAB
+    }
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    Scaffold(
+        // Bottom app bar with menu actions
+        bottomBar = {
+            BottomAppBar(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Home
+                    IconButton(onClick = { /* home action */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = "Home"
+                        )
+                    }
+                    
+                    // Map
+                    IconButton(onClick = { /* map action */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Map,
+                            contentDescription = "Map",
+                            tint = MaterialTheme.colorScheme.primary // Highlighted as current screen
+                        )
+                    }
+                    
+                    // Refresh events
+                    IconButton(onClick = { viewModel.loadEvents() }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh Events"
+                        )
+                    }
+                    
+                    // Filter
+                    IconButton(onClick = { showFilterDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filter Events"
+                        )
+                    }
+                    
+                    // Profile
+                    IconButton(onClick = { /* show profile */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profile"
+                        )
+                    }
+                }
+            }
+        },
+        
+        // Snackbar host for notifications
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
+        
+        // Rest of the content
+        content = { innerPadding -> 
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                // Map view
+                if (!isMapError) {
+                    AndroidView(
+                        factory = { ctx ->
+                            MapView(ctx).apply {
+                                mapView = this
+                                
+                                getMapboxMap().apply {
+                                    // Set initial camera position
+                                    setCamera(CameraOptions.Builder()
+                                        .center(viennaPoint)
+                                        .zoom(14.0)
+                                        .pitch(45.0)
+                                        .bearing(15.0)
+                                        .build()
+                                    )
+                                    
+                                    // Listen for camera changes to update zoom level
+                                    addOnCameraChangeListener {
+                                        currentZoom = cameraState.zoom
+                                    }
+                                    
+                                    // Load map style
+                                    loadStyleUri(Style.MAPBOX_STREETS) { style ->
+                                        mapReady = true
+                                        
+                                        // Create annotation manager
+                                        val annotationApi = annotations
+                                        pointAnnotationManager = annotationApi.createPointAnnotationManager()
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                
+                // Loading indicator
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularProgressIndicator(color = Color.White)
+                            Text(
+                                text = "Loading events for $currentUsername...",
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+                
+                // Error message
+                if (errorMessage != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .align(Alignment.TopCenter)
+                            .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(8.dp))
+                            .padding(16.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = errorMessage,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Button(
+                                onClick = { viewModel.loadEvents() },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                )
+                            ) {
+                                Icon(Icons.Default.Refresh, contentDescription = "Retry")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Retry")
+                            }
+                        }
+                    }
+                }
+                
+                // Top app bar with controls
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    // Top bar with back button, search, and filter
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(
+                            onClick = onClose,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Search bar
+                        Box(
+                            modifier = Modifier
+                                .width(searchBarWidth)
+                                .height(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                                .clickable { isSearching = true }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = "Search",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                                
+                                if (isSearching) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    
+                                    TextField(
+                                        value = searchQuery,
+                                        onValueChange = { newValue ->
+                                            searchQuery = newValue
+                                            if (newValue.isNotEmpty()) {
+                                                viewModel.searchEvents(newValue)
+                                            } else {
+                                                viewModel.loadEvents()
+                                            }
+                                        },
+                                        placeholder = { 
+                                            Text(
+                                                text = "Search events...",
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            )
+                                        },
+                                        colors = TextFieldDefaults.colors(
+                                            focusedContainerColor = Color.Transparent,
+                                            unfocusedContainerColor = Color.Transparent,
+                                            disabledContainerColor = Color.Transparent,
+                                            focusedIndicatorColor = Color.Transparent,
+                                            unfocusedIndicatorColor = Color.Transparent
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(vertical = 8.dp),
+                                        singleLine = true
+                                    )
+                                    
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = {
+                                            searchQuery = ""
+                                            viewModel.loadEvents()
+                                        }) {
+                                            Icon(
+                                                Icons.Default.Clear,
+                                                contentDescription = "Clear search",
+                                                tint = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Username display (new)
+                    if (accountManager.isLoggedIn) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .padding(top = 8.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f))
+                                .padding(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Person, 
+                                    contentDescription = "User",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = currentUsername,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                // Location label
+                if (mapReady) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 80.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.8f))
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Vienna, Austria",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                // Add Event FAB
+                FloatingActionButton(
+                    onClick = {
+                        // Use current center of map as the coordinate for the new event
+                        val center = mapView?.getMapboxMap()?.cameraState?.center
+                        if (center != null) {
+                            selectedCoordinate = Pair(center.longitude(), center.latitude())
+                            showEventCreation = true
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Create Event"
+                    )
+                }
+            }
+            
+            // Filter dialog
+            if (showFilterDialog) {
+                AlertDialog(
+                    onDismissRequest = { showFilterDialog = false },
+                    title = { Text("Filter Events") },
+                    text = {
+                        Column {
+                            Text("Event Types", fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            // Study events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Study Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showEventTypes[EventType.STUDY] ?: true,
+                                    onCheckedChange = { 
+                                        viewModel.showEventTypes[EventType.STUDY] = it
+                                    }
+                                )
+                            }
+                            
+                            // Party events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Party Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showEventTypes[EventType.PARTY] ?: true,
+                                    onCheckedChange = { 
+                                        viewModel.showEventTypes[EventType.PARTY] = it
+                                    }
+                                )
+                            }
+                            
+                            // Business events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Business Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showEventTypes[EventType.BUSINESS] ?: true,
+                                    onCheckedChange = { 
+                                        viewModel.showEventTypes[EventType.BUSINESS] = it
+                                    }
+                                )
+                            }
+                            
+                            // Other events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Other Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showEventTypes[EventType.OTHER] ?: true,
+                                    onCheckedChange = { 
+                                        viewModel.showEventTypes[EventType.OTHER] = it
+                                    }
+                                )
+                            }
+                            
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                            
+                            // Private events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Show Private Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showPrivateEvents.value,
+                                    onCheckedChange = { 
+                                        viewModel.showPrivateEvents.value = it
+                                    }
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showFilterDialog = false }) {
+                            Text("Done")
+                        }
+                    }
+                )
+            }
+            
+            // Event Detail Dialog
+            if (showEventDetails && selectedEventId != null) {
+                val event = events.find { it.id == selectedEventId }
+                if (event != null) {
+                    // Enhanced logging for event selection
+                    Log.d("FullScreenMapView", "⭐️ DISPLAYING EventDetailView for event:")
+                    Log.d("FullScreenMapView", "  ID: ${event.id}")
+                    Log.d("FullScreenMapView", "  Title: ${event.title}")
+                    Log.d("FullScreenMapView", "  Host: ${event.host}")
+                    Log.d("FullScreenMapView", "  Type: ${event.eventType}")
+                    Log.d("FullScreenMapView", "  Coordinates: ${event.coordinate?.first}, ${event.coordinate?.second}")
+                    
+                    // Pass the exact event ID to ensure correct event is loaded
+                    EventDetailView(
+                        eventId = event.id,
+                        initialEvent = event,
+                        accountManager = accountManager,
+                        onClose = { 
+                            showEventDetails = false
+                            selectedEventId = null
+                            Log.d("FullScreenMapView", "Closed EventDetailView for event: ${event.id}")
+                        }
+                    )
+                } else {
+                    Log.e("FullScreenMapView", "❌ ERROR: Could not find event with ID: $selectedEventId in ${events.size} events")
+                    // Log all available events for debugging
+                    Log.d("FullScreenMapView", "Available events: ${events.map { "${it.id}:${it.title}" }}")
+                }
+            }
+            
+            // Event Creation Dialog
+            if (showEventCreation && selectedCoordinate != null) {
+                EventCreationView(
+                    initialCoordinate = selectedCoordinate!!,
+                    accountManager = accountManager,
+                    onClose = { 
+                        showEventCreation = false
+                        selectedCoordinate = null
+                    },
+                    onSave = { newEvent ->
+                        // Add the new event to the local list
+                        viewModel.events.add(newEvent)
+                        
+                        // Refresh the full events list to ensure we have the latest data from server
+                        viewModel.loadEvents()
+                        
+                        showEventCreation = false
+                        selectedCoordinate = null
+                        
+                        // Show a success message
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                "Event created successfully: ${newEvent.title}",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Update map annotations with clustered events
+ */
+private fun updateMapAnnotations(
+    mapView: MapView,
+    pointAnnotationManager: PointAnnotationManager,
+    events: List<StudyEventMap>,
+    zoomLevel: Double,
+    onClusterClick: (com.example.pinit.components.map.Cluster) -> Unit,
+    onSingleEventClick: (StudyEventMap) -> Unit
+) {
+    Log.d("FullScreenMapView", "Updating map annotations with ${events.size} events at zoom $zoomLevel")
+    
+    // Check for events with invalid coordinates
+    val validEvents = events.filter { it.coordinate != null }
+    if (validEvents.size < events.size) {
+        Log.w("FullScreenMapView", "Warning: ${events.size - validEvents.size} events have null coordinates and will be ignored")
+    }
+    
+    // Clear existing annotations
+    val previousCount = pointAnnotationManager.annotations.size
+    pointAnnotationManager.deleteAll()
+    Log.d("FullScreenMapView", "Cleared $previousCount previous annotations")
+    
+    // Cluster the events based on current zoom level
+    val clusters = MapClusteringUtils.clusterEvents(events, zoomLevel)
+    Log.d("FullScreenMapView", "Created ${clusters.size} clusters from ${events.size} events")
+    
+    // Debug cluster information
+    clusters.forEachIndexed { index, cluster ->
+        Log.d("FullScreenMapView", "Cluster[$index] - Events: ${cluster.events.size}, " +
+              "Coordinate: ${cluster.coordinate.longitude()},${cluster.coordinate.latitude()}")
+    }
+    
+    var successfulAnnotations = 0
+    var failedAnnotations = 0
+    
+    // Add clusters to the map
+    clusters.forEach { cluster ->
+        try {
+            // For single event markers
+            if (cluster.events.size == 1) {
+                val event = cluster.events.first()
+                val singleEventView = EventAnnotationView(mapView.context)
+                singleEventView.configure(event)
+                
+                // Convert view to bitmap for the marker - use the new method
+                val bitmap = singleEventView.createViewBitmap()
+                
+                // Create point annotation
+                val pointAnnotationOptions = PointAnnotationOptions()
+                    .withPoint(cluster.coordinate)
+                    .withIconImage(bitmap)
+                    .withIconSize(1.0)
+                    .withIconOffset(listOf(0.0, 0.0))
+                    .withDraggable(false)
+                
+                // Add annotation to manager
+                val annotation = pointAnnotationManager.create(pointAnnotationOptions)
+                
+                // Set click listener for the annotation
+                pointAnnotationManager.addClickListener { clickedAnnotation ->
+                    if (clickedAnnotation.id == annotation.id) {
+                        onSingleEventClick(event)
+                        true
+                    } else {
+                        false
+                    }
+                }
+                
+                successfulAnnotations++
+                Log.d("FullScreenMapView", "Added single event annotation for '${event.title}'")
+            } 
+            // For clusters with multiple events
+            else {
+                val clusterView = ClusterAnnotationView(mapView.context)
+                clusterView.configure(cluster.events)
+                
+                // Convert view to bitmap for the marker - use the new method
+                val bitmap = clusterView.createViewBitmap()
+                
+                // Create point annotation
+                val pointAnnotationOptions = PointAnnotationOptions()
+                    .withPoint(cluster.coordinate)
+                    .withIconImage(bitmap)
+                    .withIconSize(1.0)
+                    .withIconOffset(listOf(0.0, 0.0))
+                    .withDraggable(false)
+                
+                // Add annotation to manager
+                val annotation = pointAnnotationManager.create(pointAnnotationOptions)
+                
+                // Set click listener for the annotation
+                pointAnnotationManager.addClickListener { clickedAnnotation ->
+                    if (clickedAnnotation.id == annotation.id) {
+                        onClusterClick(cluster)
+                        true
+                    } else {
+                        false
+                    }
+                }
+                
+                successfulAnnotations++
+                Log.d("FullScreenMapView", "Added cluster annotation with ${cluster.events.size} events")
+            }
+        } catch (e: Exception) {
+            failedAnnotations++
+            Log.e("FullScreenMapView", "Error creating annotation: ${e.message}", e)
+        }
+    }
+    
+    Log.d("FullScreenMapView", "Annotation update complete: $successfulAnnotations added, $failedAnnotations failed")
+}
+
+/**
+ * Extension function to create a bitmap from a View
+ */
+fun android.view.View.createViewBitmap(): android.graphics.Bitmap {
+    // Force layout calculation
+    measure(
+        android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED),
+        android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
+    )
+    
+    // Layout with calculated dimensions
+    layout(0, 0, measuredWidth, measuredHeight)
+    
+    // Create bitmap of same size
+    val bitmap = android.graphics.Bitmap.createBitmap(
+        measuredWidth, measuredHeight, android.graphics.Bitmap.Config.ARGB_8888
+    )
+    
+    // Draw view into bitmap
+    val canvas = android.graphics.Canvas(bitmap)
+    background?.draw(canvas) ?: canvas.drawColor(android.graphics.Color.TRANSPARENT)
+    draw(canvas)
+    
+    return bitmap
+}

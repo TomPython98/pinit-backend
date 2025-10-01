@@ -9,7 +9,7 @@ class UserAccountManager: ObservableObject {
     
     // MARK: - Configuration
     // 🔧 FIX: Use consistent backend URL
-    private let baseURL = "http://127.0.0.1:8000/api"
+    private let baseURL = APIConfig.primaryBaseURL
 
     init() {
         // Check if user is logged in at startup by reading from UserDefaults

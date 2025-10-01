@@ -13,6 +13,7 @@
 		AE6419C72E82C6EF0015849D /* MapboxCommon.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE6419BE2E82C6EF0015849D /* MapboxCommon.xcframework */; };
 		AE6419C82E82C6EF0015849D /* Turf.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE6419C22E82C6EF0015849D /* Turf.xcframework */; };
 		AE6419C92E82C6EF0015849D /* MapboxCoreMaps.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE6419BF2E82C6EF0015849D /* MapboxCoreMaps.xcframework */; };
+		AEA72D832E8CB51800030799 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = AEA72D822E8CB51800030799 /* Icon.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,7 @@
 		AE6419C02E82C6EF0015849D /* MapboxMaps.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:GJZR2MEM28:Mapbox, Inc."; lastKnownFileType = wrapper.xcframework; path = MapboxMaps.xcframework; sourceTree = "<group>"; };
 		AE6419C12E82C6EF0015849D /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		AE6419C22E82C6EF0015849D /* Turf.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:GJZR2MEM28:Mapbox, Inc."; lastKnownFileType = wrapper.xcframework; path = Turf.xcframework; sourceTree = "<group>"; };
+		AEA72D822E8CB51800030799 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
 		AEDED9202D60EA8700595209 /* PinIt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PinIt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AEDED9312D60EA8800595209 /* FibblingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = FibblingTests.xctest; path = PinItTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AEDED93B2D60EA8800595209 /* FibblingUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = FibblingUITests.xctest; path = PinItUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -150,6 +152,7 @@
 		AEDED9172D60EA8700595209 = {
 			isa = PBXGroup;
 			children = (
+				AEA72D822E8CB51800030799 /* Icon.png */,
 				AEDED9222D60EA8700595209 /* Fibbling */,
 				AEDED9342D60EA8800595209 /* FibblingTests */,
 				AEDED93E2D60EA8800595209 /* FibblingUITests */,
@@ -301,6 +304,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AE6419C42E82C6EF0015849D /* README.md in Resources */,
+				AEA72D832E8CB51800030799 /* Icon.png in Resources */,
 				AE6419C52E82C6EF0015849D /* LICENSE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -482,6 +486,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = Fibbling/Fibbling.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -526,6 +531,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = Fibbling/Fibbling.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
