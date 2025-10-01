@@ -1,5 +1,5 @@
 import json
-# from channels.generic.websocket import AsyncWebsocketConsumer  # Removed for Railway deployment
+from channels.generic.websocket import AsyncWebsocketConsumer
 import re
 
 def sanitize_username(username):

@@ -12,7 +12,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-# from push_notifications.models import Device  # Removed for Railway deployment
+from push_notifications.models import APNSDevice
 
 
 
@@ -2850,7 +2850,7 @@ def send_push_notification(user_id, notification_type, **kwargs):
         for device in devices:
             if device.device_type == 'ios':
                 try:
-                    # from push_notifications.models import APNSDevice  # Removed for Railway deployment
+                    # APNSDevice is already imported at the top
                     apns_device, created = APNSDevice.objects.get_or_create(
                         registration_id=device.token,
                         defaults={'user_id': user_id}
