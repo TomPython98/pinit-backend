@@ -14,11 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.pinit.ui.theme.*
 import com.example.pinit.models.EventType
@@ -38,6 +40,10 @@ import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+enum class EventViewMode {
+    ALL, AUTO_MATCHED, MY_EVENTS
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BasicFullMapView(
@@ -48,6 +54,10 @@ fun BasicFullMapView(
     var isMapReady by remember { mutableStateOf(false) }
     var mapError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    
+    // iOS-style view mode selector
+    var eventViewMode by remember { mutableStateOf(EventViewMode.ALL) }
+    var showViewModeSelector by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val repository = remember { EventRepository() }
     
@@ -99,9 +109,9 @@ fun BasicFullMapView(
     }
     
     // Update filtered events when filter changes
-    LaunchedEffect(key1 = showOnlyMatched, key2 = showEventTypes, key3 = events) {
-        Log.d("BasicFullMapView", "Applying filters for user $username - showOnlyMatched=$showOnlyMatched, eventTypes=${showEventTypes.entries.filter { it.value }.map { it.key }}")
-        filteredEvents = applyFilters(events, showOnlyMatched, showEventTypes, username)
+    LaunchedEffect(showOnlyMatched, showEventTypes, events, eventViewMode) {
+        Log.d("BasicFullMapView", "Applying filters for user $username - showOnlyMatched=$showOnlyMatched, eventTypes=${showEventTypes.entries.filter { it.value }.map { it.key }}, viewMode=$eventViewMode")
+        filteredEvents = applyFiltersWithViewMode(events, showOnlyMatched, showEventTypes, username, eventViewMode)
         Log.d("BasicFullMapView", "After filtering: ${filteredEvents.size} of ${events.size} events visible")
         
         // Update map annotations if map is ready
@@ -187,16 +197,28 @@ fun BasicFullMapView(
                         label = { Text(eventType.displayName) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = when(eventType) {
-                                EventType.STUDY -> Color(0xFF4CAF50)
-                                EventType.PARTY -> Color(0xFFE91E63)
-                                EventType.BUSINESS -> Color(0xFF3F51B5)
-                                EventType.OTHER -> Color(0xFFFF9800)
+                                EventType.STUDY -> Color(0xFF007AFF)      // iOS Blue
+                                EventType.PARTY -> Color(0xFFAF52DE)      // iOS Purple
+                                EventType.BUSINESS -> Color(0xFF5856D6)  // iOS Indigo
+                                EventType.CULTURAL -> Color(0xFFFF9500)  // iOS Orange
+                                EventType.ACADEMIC -> Color(0xFF34C759)  // iOS Green
+                                EventType.NETWORKING -> Color(0xFFFF2D92) // iOS Pink
+                                EventType.SOCIAL -> Color(0xFFFF3B30)    // iOS Red
+                                EventType.LANGUAGE_EXCHANGE -> Color(0xFF5AC8FA) // iOS Teal
+                                EventType.OTHER -> Color(0xFF8E8E93)     // iOS Gray
+                                else -> Color(0xFF8E8E93) // Default iOS Gray
                             }.copy(alpha = 0.2f),
                             selectedLabelColor = when(eventType) {
-                                EventType.STUDY -> Color(0xFF4CAF50)
-                                EventType.PARTY -> Color(0xFFE91E63)
-                                EventType.BUSINESS -> Color(0xFF3F51B5)
-                                EventType.OTHER -> Color(0xFFFF9800)
+                                EventType.STUDY -> Color(0xFF007AFF)      // iOS Blue
+                                EventType.PARTY -> Color(0xFFAF52DE)      // iOS Purple
+                                EventType.BUSINESS -> Color(0xFF5856D6)  // iOS Indigo
+                                EventType.CULTURAL -> Color(0xFFFF9500)  // iOS Orange
+                                EventType.ACADEMIC -> Color(0xFF34C759)  // iOS Green
+                                EventType.NETWORKING -> Color(0xFFFF2D92) // iOS Pink
+                                EventType.SOCIAL -> Color(0xFFFF3B30)    // iOS Red
+                                EventType.LANGUAGE_EXCHANGE -> Color(0xFF5AC8FA) // iOS Teal
+                                EventType.OTHER -> Color(0xFF8E8E93)     // iOS Gray
+                                else -> Color(0xFF8E8E93) // Default iOS Gray
                             }
                         )
                     )
@@ -220,12 +242,12 @@ fun BasicFullMapView(
                             val mapViewInstance = MapView(ctx)
                             mapView = mapViewInstance
                             
-                            // Vienna coordinates (center of the map)
-                            val viennaCoordinates = Point.fromLngLat(16.3738, 48.2082)
+                            // Buenos Aires coordinates (center of the map)
+                            val buenosAiresCoordinates = Point.fromLngLat(-58.3816, -34.6037)
                             
                             // Configure camera position
                             val cameraPosition = CameraOptions.Builder()
-                                .center(viennaCoordinates)
+                                .center(buenosAiresCoordinates)
                                 .zoom(12.0) // Adjusted for better overview of events
                                 .pitch(0.0) // Flat view for better marker visibility
                                 .bearing(0.0) // No rotation
@@ -270,6 +292,18 @@ fun BasicFullMapView(
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+                
+                // iOS-style View Mode Selector (bottom left)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 16.dp, bottom = 16.dp)
+                ) {
+                    ViewModeSelector(
+                        currentMode = eventViewMode,
+                        onModeClick = { showViewModeSelector = true }
+                    )
+                }
                 
                 // Loading or error overlay
                 if (!isMapReady || isLoading) {
@@ -351,6 +385,149 @@ fun BasicFullMapView(
             }
         }
     }
+    
+    // View Mode Selector Dialog
+    if (showViewModeSelector) {
+        ViewModeSelectorDialog(
+            currentMode = eventViewMode,
+            onModeSelected = { mode ->
+                eventViewMode = mode
+                showViewModeSelector = false
+            },
+            onDismiss = { showViewModeSelector = false }
+        )
+    }
+}
+
+@Composable
+fun ViewModeSelector(
+    currentMode: EventViewMode,
+    onModeClick: () -> Unit
+) {
+    val (icon, label, color) = when (currentMode) {
+        EventViewMode.ALL -> Triple("🌍", "All Events", Color(0xFF007AFF))
+        EventViewMode.AUTO_MATCHED -> Triple("🎯", "Auto Matched", Color(0xFF34C759))
+        EventViewMode.MY_EVENTS -> Triple("👤", "My Events", Color(0xFFAF52DE))
+    }
+    
+    Button(
+        onClick = onModeClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color.copy(alpha = 0.9f)
+        ),
+        shape = RoundedCornerShape(25.dp),
+        modifier = Modifier.shadow(4.dp, RoundedCornerShape(25.dp))
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = icon,
+                fontSize = 18.sp
+            )
+            Text(
+                text = label,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ViewModeSelectorDialog(
+    currentMode: EventViewMode,
+    onModeSelected: (EventViewMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "View Mode",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                EventViewMode.values().forEach { mode ->
+                    val (icon, label) = when (mode) {
+                        EventViewMode.ALL -> "🌍" to "All Events"
+                        EventViewMode.AUTO_MATCHED -> "🎯" to "Auto Matched"
+                        EventViewMode.MY_EVENTS -> "👤" to "My Events"
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onModeSelected(mode) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = icon,
+                            fontSize = 20.sp,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                        Text(
+                            text = label,
+                            fontSize = 16.sp,
+                            fontWeight = if (mode == currentMode) FontWeight.Bold else FontWeight.Normal,
+                            color = if (mode == currentMode) BrandPrimary else TextPrimary
+                        )
+                        if (mode == currentMode) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "✓",
+                                color = BrandPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Done")
+            }
+        }
+    )
+}
+
+// Function to apply filters to events with view mode
+private fun applyFiltersWithViewMode(
+    events: List<StudyEventMap>,
+    showOnlyMatched: Boolean,
+    showEventTypes: Map<EventType, Boolean>,
+    username: String,
+    viewMode: EventViewMode
+): List<StudyEventMap> {
+    Log.d("BasicFullMapView", "Applying filters with view mode: $viewMode")
+    
+    // First filter by view mode
+    val viewModeFilteredEvents = when (viewMode) {
+        EventViewMode.ALL -> events
+        EventViewMode.AUTO_MATCHED -> {
+            // Show only auto-matched events that user hasn't RSVPed to
+            events.filter { event ->
+                event.isAutoMatched == true && !event.isUserAttending
+            }
+        }
+        EventViewMode.MY_EVENTS -> {
+            // Show events the user has RSVPed to OR is hosting
+            events.filter { event ->
+                event.isUserAttending || event.host == username
+            }
+        }
+    }
+    
+    Log.d("BasicFullMapView", "After view mode filtering: ${viewModeFilteredEvents.size} of ${events.size} events")
+    
+    // Then apply the existing filters
+    return applyFilters(viewModeFilteredEvents, showOnlyMatched, showEventTypes, username)
 }
 
 // Function to apply filters to events
@@ -470,11 +647,16 @@ private fun updateMapAnnotations(
             
             // Determine marker color based on event type
             val color = when (event.eventType) {
-                EventType.STUDY -> Color(0xFF4CAF50)    // Green
-                EventType.PARTY -> Color(0xFFE91E63)    // Pink
-                EventType.BUSINESS -> Color(0xFF3F51B5) // Indigo
-                EventType.OTHER -> Color(0xFFFF9800)    // Orange
-                null -> Color.Gray
+                EventType.STUDY -> Color(0xFF007AFF)      // iOS Blue
+                EventType.PARTY -> Color(0xFFAF52DE)      // iOS Purple
+                EventType.BUSINESS -> Color(0xFF5856D6)  // iOS Indigo
+                EventType.CULTURAL -> Color(0xFFFF9500)  // iOS Orange
+                EventType.ACADEMIC -> Color(0xFF34C759)  // iOS Green
+                EventType.NETWORKING -> Color(0xFFFF2D92) // iOS Pink
+                EventType.SOCIAL -> Color(0xFFFF3B30)    // iOS Red
+                EventType.LANGUAGE_EXCHANGE -> Color(0xFF5AC8FA) // iOS Teal
+                EventType.OTHER -> Color(0xFF8E8E93)     // iOS Gray
+                else -> Color(0xFF8E8E93)               // Default iOS Gray
             }
             
             // Check if event is a potential match

@@ -1462,7 +1462,7 @@ class UserAccountManager : ViewModel() {
 class WeatherViewModel : ViewModel() {
     var temperature by mutableStateOf("24°")
     var condition by mutableStateOf("Sunny")
-    var location by mutableStateOf("Vienna")
+    var location by mutableStateOf("Buenos Aires")
     var forecastItems by mutableStateOf(
         listOf(
             WeatherForecast("Mon", "23°", "sunny"),

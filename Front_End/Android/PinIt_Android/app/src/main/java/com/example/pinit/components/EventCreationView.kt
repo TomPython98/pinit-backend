@@ -64,6 +64,8 @@ fun EventCreationView(
     var isSaving by remember { mutableStateOf(false) }
     var interestTags by remember { mutableStateOf("") }
     var autoMatchingEnabled by remember { mutableStateOf(false) }
+    var matchedUsers by remember { mutableStateOf(listOf<String>()) }
+    var eventImages by remember { mutableStateOf(listOf<String>()) }
     
     // Date-time pickers
     var showStartDatePicker by remember { mutableStateOf(false) }
@@ -340,7 +342,7 @@ fun EventDetailsCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     EventType.values().forEach { eventType ->
-                        EventTypeChip(
+                        LegacyEventTypeChip(
                             type = eventType,
                             selected = selectedEventType == eventType,
                             onClick = { onEventTypeChange(eventType) }
@@ -898,16 +900,21 @@ fun SettingsCard(
 }
 
 @Composable
-fun EventTypeChip(
+fun LegacyEventTypeChip(
     type: EventType,
     selected: Boolean,
     onClick: () -> Unit
 ) {
     val backgroundColor = when (type) {
-        EventType.STUDY -> if (selected) Color(0xFF2196F3) else Color(0xFF2196F3).copy(alpha = 0.2f)
-        EventType.PARTY -> if (selected) Color(0xFF9C27B0) else Color(0xFF9C27B0).copy(alpha = 0.2f)
-        EventType.BUSINESS -> if (selected) Color(0xFFFF9800) else Color(0xFFFF9800).copy(alpha = 0.2f)
-        EventType.OTHER -> if (selected) Color(0xFF607D8B) else Color(0xFF607D8B).copy(alpha = 0.2f)
+        EventType.STUDY -> if (selected) Color(0xFF007AFF) else Color(0xFF007AFF).copy(alpha = 0.2f)
+        EventType.PARTY -> if (selected) Color(0xFFAF52DE) else Color(0xFFAF52DE).copy(alpha = 0.2f)
+        EventType.BUSINESS -> if (selected) Color(0xFF5856D6) else Color(0xFF5856D6).copy(alpha = 0.2f)
+        EventType.CULTURAL -> if (selected) Color(0xFFFF9500) else Color(0xFFFF9500).copy(alpha = 0.2f)
+        EventType.ACADEMIC -> if (selected) Color(0xFF34C759) else Color(0xFF34C759).copy(alpha = 0.2f)
+        EventType.NETWORKING -> if (selected) Color(0xFFFF2D92) else Color(0xFFFF2D92).copy(alpha = 0.2f)
+        EventType.SOCIAL -> if (selected) Color(0xFFFF3B30) else Color(0xFFFF3B30).copy(alpha = 0.2f)
+        EventType.LANGUAGE_EXCHANGE -> if (selected) Color(0xFF5AC8FA) else Color(0xFF5AC8FA).copy(alpha = 0.2f)
+        EventType.OTHER -> if (selected) Color(0xFF8E8E93) else Color(0xFF8E8E93).copy(alpha = 0.2f)
     }
     
     val textColor = if (selected) Color.White else Color.Black

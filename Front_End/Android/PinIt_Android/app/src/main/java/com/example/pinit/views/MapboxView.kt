@@ -22,7 +22,7 @@ import com.mapbox.maps.*
 import android.util.Log
 
 /**
- * A simple view that displays a Mapbox map centered on Vienna.
+ * A simple view that displays a Mapbox map centered on Buenos Aires.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,8 +30,8 @@ fun MapboxView(
     accountManager: UserAccountManager,
     onDismiss: () -> Unit
 ) {
-    // Coordinates for Vienna, Austria
-    val viennaCoordinates = Point.fromLngLat(16.3738, 48.2082)
+    // Coordinates for Buenos Aires, Argentina
+    val buenosAiresCoordinates = Point.fromLngLat(-58.3816, -34.6037)
     
     // Track map loading state
     var isMapReady by remember { mutableStateOf(false) }
@@ -107,7 +107,7 @@ fun MapboxView(
                             
                             // Configure the camera
                             val cameraOptions = CameraOptions.Builder()
-                                .center(viennaCoordinates)
+                                .center(buenosAiresCoordinates)
                                 .zoom(12.0)
                                 .build()
                             
@@ -177,7 +177,7 @@ fun MapboxView(
             
             // Information text
             Text(
-                text = "This is a simple Mapbox map centered on Vienna, Austria.",
+                text = "This is a simple Mapbox map centered on Buenos Aires, Argentina.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
                 textAlign = TextAlign.Center,

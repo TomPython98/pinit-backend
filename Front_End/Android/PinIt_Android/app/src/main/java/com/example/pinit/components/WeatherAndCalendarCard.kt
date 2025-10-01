@@ -153,7 +153,7 @@ fun WeatherOverlay() {
                 )
                 
                 Text(
-                    text = "Vienna",
+                    text = "Buenos Aires",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     color = Color.White

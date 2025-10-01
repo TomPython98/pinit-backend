@@ -141,11 +141,16 @@ class EventAnnotationView(context: Context) : FrameLayout(context) {
      */
     private fun getColorForEventType(eventType: EventType?): Int {
         return when (eventType) {
-            EventType.STUDY -> Color.parseColor("#2196F3") // Blue
-            EventType.PARTY -> Color.parseColor("#9C27B0") // Purple
-            EventType.BUSINESS -> Color.parseColor("#FF9800") // Orange
-            EventType.OTHER -> Color.parseColor("#607D8B") // Gray
-            null -> Color.parseColor("#607D8B") // Default gray
+            EventType.STUDY -> Color.parseColor("#007AFF")      // iOS Blue
+            EventType.PARTY -> Color.parseColor("#AF52DE")      // iOS Purple
+            EventType.BUSINESS -> Color.parseColor("#5856D6")  // iOS Indigo
+            EventType.CULTURAL -> Color.parseColor("#FF9500")  // iOS Orange
+            EventType.ACADEMIC -> Color.parseColor("#34C759")  // iOS Green
+            EventType.NETWORKING -> Color.parseColor("#FF2D92") // iOS Pink
+            EventType.SOCIAL -> Color.parseColor("#FF3B30")    // iOS Red
+            EventType.LANGUAGE_EXCHANGE -> Color.parseColor("#5AC8FA") // iOS Teal
+            EventType.OTHER -> Color.parseColor("#8E8E93")     // iOS Gray
+            else -> Color.parseColor("#8E8E93") // Default iOS Gray
         }
     }
     
@@ -157,8 +162,13 @@ class EventAnnotationView(context: Context) : FrameLayout(context) {
             EventType.STUDY -> R.drawable.ic_study
             EventType.PARTY -> R.drawable.ic_party
             EventType.BUSINESS -> R.drawable.ic_business
+            EventType.CULTURAL -> R.drawable.ic_cultural
+            EventType.ACADEMIC -> R.drawable.ic_academic
+            EventType.NETWORKING -> R.drawable.ic_networking
+            EventType.SOCIAL -> R.drawable.ic_social
+            EventType.LANGUAGE_EXCHANGE -> R.drawable.ic_language_exchange
             EventType.OTHER -> R.drawable.ic_other
-            null -> R.drawable.ic_other
+            else -> R.drawable.ic_other
         }
         
         try {

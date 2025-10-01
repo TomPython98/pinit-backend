@@ -12,7 +12,12 @@ enum class EventType(val displayName: String) {
     STUDY("Study"),
     PARTY("Party"),
     BUSINESS("Business"),
-    OTHER("Other");
+    OTHER("Other"),
+    CULTURAL("Cultural"),
+    ACADEMIC("Academic"),
+    NETWORKING("Networking"),
+    SOCIAL("Social"),
+    LANGUAGE_EXCHANGE("Language Exchange");
     
     companion object {
         fun fromString(value: String): EventType {
@@ -20,6 +25,12 @@ enum class EventType(val displayName: String) {
                 "study" -> STUDY
                 "party" -> PARTY
                 "business" -> BUSINESS
+                "other" -> OTHER
+                "cultural" -> CULTURAL
+                "academic" -> ACADEMIC
+                "networking" -> NETWORKING
+                "social" -> SOCIAL
+                "language_exchange" -> LANGUAGE_EXCHANGE
                 else -> OTHER
             }
         }
@@ -76,7 +87,9 @@ class StudyEventMap(
     val interestTags: List<String> = emptyList(),
     val maxParticipants: Int = 10,
     val autoMatchingEnabled: Boolean = false,
-    val isAutoMatched: Boolean = false
+    val isAutoMatched: Boolean = false,
+    val matchedUsers: List<String> = emptyList(),
+    val eventImages: List<String> = emptyList()
 ) {
     /**
      * Checks if the event has expired (ended in the past)
@@ -105,7 +118,9 @@ class StudyEventMap(
         interestTags: List<String> = this.interestTags,
         maxParticipants: Int = this.maxParticipants,
         autoMatchingEnabled: Boolean = this.autoMatchingEnabled,
-        isAutoMatched: Boolean = this.isAutoMatched
+        isAutoMatched: Boolean = this.isAutoMatched,
+        matchedUsers: List<String> = this.matchedUsers,
+        eventImages: List<String> = this.eventImages
     ): StudyEventMap {
         return StudyEventMap(
             id = id,
@@ -124,7 +139,9 @@ class StudyEventMap(
             interestTags = interestTags,
             maxParticipants = maxParticipants,
             autoMatchingEnabled = autoMatchingEnabled,
-            isAutoMatched = isAutoMatched
+            isAutoMatched = isAutoMatched,
+            matchedUsers = matchedUsers,
+            eventImages = eventImages
         )
     }
 } 

@@ -26,7 +26,7 @@ data class Cluster(
                     return CoordinateConverter.fromPair(singleCoord)
                 } else {
                     Log.w(TAG, "Single event has null coordinate, using default")
-                    return Point.fromLngLat(16.3738, 48.2082) // Vienna as default
+                    return Point.fromLngLat(-58.3816, -34.6037) // Buenos Aires as default
                 }
             }
             
@@ -34,7 +34,7 @@ data class Cluster(
             val validEvents = events.filter { it.coordinate != null }
             if (validEvents.isEmpty()) {
                 Log.w(TAG, "No valid coordinates in cluster, using default")
-                return Point.fromLngLat(16.3738, 48.2082) // Vienna as default
+                return Point.fromLngLat(-58.3816, -34.6037) // Buenos Aires as default
             }
             
             val sumLat = validEvents.sumOf { it.coordinate!!.second }

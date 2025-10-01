@@ -28,8 +28,8 @@ fun SimpleFullMapView(onDismiss: () -> Unit) {
     var mapError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     
-    // Vienna coordinates
-    val viennaCoordinates = Point.fromLngLat(16.3738, 48.2082)
+    // Buenos Aires coordinates
+    val buenosAiresCoordinates = Point.fromLngLat(-58.3816, -34.6037)
     
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -88,7 +88,7 @@ fun SimpleFullMapView(onDismiss: () -> Unit) {
                             
                             // Set camera position
                             val cameraOptions = CameraOptions.Builder()
-                                .center(viennaCoordinates)
+                                .center(buenosAiresCoordinates)
                                 .zoom(12.0)
                                 .build()
                             mapboxMap.setCamera(cameraOptions)
@@ -149,7 +149,7 @@ fun SimpleFullMapView(onDismiss: () -> Unit) {
             
             // Information text
             Text(
-                text = "This is a simple Mapbox map centered on Vienna, Austria.",
+                text = "This is a simple Mapbox map centered on Buenos Aires, Argentina.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
                 textAlign = TextAlign.Center,

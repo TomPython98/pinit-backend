@@ -234,7 +234,7 @@ fun PinItApp() {
     
     // Fetch weather data
     LaunchedEffect(key1 = Unit) {
-        weatherViewModel.fetchWeather("Vienna")
+        weatherViewModel.fetchWeather("Buenos Aires")
     }
     
     // Fetch calendar events when logged in

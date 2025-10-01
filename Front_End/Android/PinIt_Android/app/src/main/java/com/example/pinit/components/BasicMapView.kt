@@ -44,12 +44,12 @@ fun BasicMapView() {
                     // Create the MapView using the simplest constructor
                     val mapView = MapView(ctx)
                     
-                    // Vienna coordinates
-                    val viennaCoordinates = com.mapbox.geojson.Point.fromLngLat(16.3738, 48.2082)
+                    // Buenos Aires coordinates
+                    val buenosAiresCoordinates = com.mapbox.geojson.Point.fromLngLat(-58.3816, -34.6037)
                     
                     // Configure camera position
                     val cameraPosition = CameraOptions.Builder()
-                        .center(viennaCoordinates)
+                        .center(buenosAiresCoordinates)
                         .zoom(13.5) // Higher zoom level for better city view
                         .pitch(45.0) // Add some tilt for a more engaging view  
                         .bearing(10.0) // Slight rotation for better orientation

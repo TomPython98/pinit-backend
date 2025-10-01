@@ -38,15 +38,20 @@ object MapAnnotationUtils {
      * @param eventType The type of event
      * @return Color for the event type
      */
-    fun getEventTypeColor(eventType: EventType?): Color {
-        return when (eventType) {
-            EventType.STUDY -> Color(0xFF4CAF50)    // Green
-            EventType.PARTY -> Color(0xFFF44336)    // Red  
-            EventType.BUSINESS -> Color(0xFF2196F3) // Blue
-            EventType.OTHER -> Color(0xFFFF9800)    // Orange
-            null -> Color.Gray
-        }
+fun getEventTypeColor(eventType: EventType?): Color {
+    return when (eventType) {
+        EventType.STUDY -> Color(0xFF007AFF)      // iOS Blue
+        EventType.PARTY -> Color(0xFFAF52DE)      // iOS Purple
+        EventType.BUSINESS -> Color(0xFF5856D6)  // iOS Indigo
+        EventType.CULTURAL -> Color(0xFFFF9500)  // iOS Orange
+        EventType.ACADEMIC -> Color(0xFF34C759)  // iOS Green
+        EventType.NETWORKING -> Color(0xFFFF2D92) // iOS Pink
+        EventType.SOCIAL -> Color(0xFFFF3B30)    // iOS Red
+        EventType.LANGUAGE_EXCHANGE -> Color(0xFF5AC8FA) // iOS Teal
+        EventType.OTHER -> Color(0xFF8E8E93)     // iOS Gray
+        null -> Color.Gray
     }
+}
     
     /**
      * Create a bitmap icon for an event
@@ -57,20 +62,30 @@ object MapAnnotationUtils {
      */
     fun createEventIcon(context: Context, event: StudyEventMap): Bitmap {
         // Get vector drawable resource based on event type
-        val resourceId = when (event.eventType) {
-            EventType.STUDY -> R.drawable.ic_study
-            EventType.PARTY -> R.drawable.ic_party
-            EventType.BUSINESS -> R.drawable.ic_business
-            EventType.OTHER -> R.drawable.ic_other
-            null -> R.drawable.ic_other
-        }
+    val resourceId = when (event.eventType) {
+        EventType.STUDY -> R.drawable.ic_study
+        EventType.PARTY -> R.drawable.ic_party
+        EventType.BUSINESS -> R.drawable.ic_business
+        EventType.CULTURAL -> R.drawable.ic_cultural
+        EventType.ACADEMIC -> R.drawable.ic_academic
+        EventType.NETWORKING -> R.drawable.ic_networking
+        EventType.SOCIAL -> R.drawable.ic_social
+        EventType.LANGUAGE_EXCHANGE -> R.drawable.ic_language_exchange
+        EventType.OTHER -> R.drawable.ic_other
+        null -> R.drawable.ic_other
+    }
         
-        // Get background color based on event type with improved color scheme
+        // Get background color based on event type with iOS colors
         val bgColor = when (event.eventType) {
-            EventType.STUDY -> android.graphics.Color.parseColor("#4CAF50")    // Green
-            EventType.PARTY -> android.graphics.Color.parseColor("#E91E63")    // Pink
-            EventType.BUSINESS -> android.graphics.Color.parseColor("#3F51B5") // Indigo
-            EventType.OTHER -> android.graphics.Color.parseColor("#FF9800")    // Orange
+            EventType.STUDY -> android.graphics.Color.parseColor("#007AFF")      // iOS Blue
+            EventType.PARTY -> android.graphics.Color.parseColor("#AF52DE")      // iOS Purple
+            EventType.BUSINESS -> android.graphics.Color.parseColor("#5856D6")  // iOS Indigo
+            EventType.CULTURAL -> android.graphics.Color.parseColor("#FF9500")  // iOS Orange
+            EventType.ACADEMIC -> android.graphics.Color.parseColor("#34C759")  // iOS Green
+            EventType.NETWORKING -> android.graphics.Color.parseColor("#FF2D92") // iOS Pink
+            EventType.SOCIAL -> android.graphics.Color.parseColor("#FF3B30")    // iOS Red
+            EventType.LANGUAGE_EXCHANGE -> android.graphics.Color.parseColor("#5AC8FA") // iOS Teal
+            EventType.OTHER -> android.graphics.Color.parseColor("#8E8E93")     // iOS Gray
             null -> android.graphics.Color.GRAY
         }
         
@@ -260,19 +275,29 @@ object MapAnnotationUtils {
      */
     private fun createClusterIcon(context: Context, size: Int, eventType: EventType): Bitmap {
         // For clusters, we use a distinct visual appearance
-        val resourceId = when (eventType) {
-            EventType.STUDY -> R.drawable.ic_study
-            EventType.PARTY -> R.drawable.ic_party  
-            EventType.BUSINESS -> R.drawable.ic_business
-            EventType.OTHER -> R.drawable.ic_mixed_types
-        }
+    val resourceId = when (eventType) {
+        EventType.STUDY -> R.drawable.ic_study
+        EventType.PARTY -> R.drawable.ic_party
+        EventType.BUSINESS -> R.drawable.ic_business
+        EventType.CULTURAL -> R.drawable.ic_cultural
+        EventType.ACADEMIC -> R.drawable.ic_academic
+        EventType.NETWORKING -> R.drawable.ic_networking
+        EventType.SOCIAL -> R.drawable.ic_social
+        EventType.LANGUAGE_EXCHANGE -> R.drawable.ic_language_exchange
+        EventType.OTHER -> R.drawable.ic_other
+    }
         
-        // Get background color based on event type with improved contrast for clusters
+        // Get background color based on event type with darker iOS colors for clusters
         val bgColor = when (eventType) {
-            EventType.STUDY -> android.graphics.Color.parseColor("#388E3C")    // Darker Green
-            EventType.PARTY -> android.graphics.Color.parseColor("#C2185B")    // Darker Pink
-            EventType.BUSINESS -> android.graphics.Color.parseColor("#303F9F") // Darker Indigo
-            EventType.OTHER -> android.graphics.Color.parseColor("#EF6C00")    // Darker Orange
+            EventType.STUDY -> android.graphics.Color.parseColor("#0056CC")      // Darker iOS Blue
+            EventType.PARTY -> android.graphics.Color.parseColor("#8E44AD")      // Darker iOS Purple
+            EventType.BUSINESS -> android.graphics.Color.parseColor("#4A4AB8")  // Darker iOS Indigo
+            EventType.CULTURAL -> android.graphics.Color.parseColor("#E67E00")  // Darker iOS Orange
+            EventType.ACADEMIC -> android.graphics.Color.parseColor("#2E8B47")  // Darker iOS Green
+            EventType.NETWORKING -> android.graphics.Color.parseColor("#E91E63") // Darker iOS Pink
+            EventType.SOCIAL -> android.graphics.Color.parseColor("#E53E3E")    // Darker iOS Red
+            EventType.LANGUAGE_EXCHANGE -> android.graphics.Color.parseColor("#4A9FD1") // Darker iOS Teal
+            EventType.OTHER -> android.graphics.Color.parseColor("#6B7280")     // Darker iOS Gray
         }
         
         // Get the drawable

@@ -547,7 +547,7 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
             StudyEventMap(
                 id = "1",
                 title = "Mathematics Study Group",
-                coordinate = Pair(16.3738, 48.2082), // Vienna
+                coordinate = Pair(-58.3816, -34.6037), // Buenos Aires
                 time = LocalDateTime.now().plusHours(1),
                 endTime = LocalDateTime.now().plusHours(3),
                 description = "Join our study group to prepare for the math exam",
@@ -562,7 +562,7 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
             StudyEventMap(
                 id = "2",
                 title = "Physics Study Session",
-                coordinate = Pair(16.3758, 48.2102), // Near Vienna
+                coordinate = Pair(-58.3796, -34.6017), // Near Buenos Aires
                 time = LocalDateTime.now().plusHours(2),
                 endTime = LocalDateTime.now().plusHours(4),
                 description = "Physics study session focusing on mechanics",
@@ -577,7 +577,7 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
             StudyEventMap(
                 id = "3",
                 title = "Startup Networking",
-                coordinate = Pair(16.3718, 48.2062), // Also near Vienna
+                coordinate = Pair(-58.3836, -34.6057), // Also near Buenos Aires
                 time = LocalDateTime.now().plusHours(5),
                 endTime = LocalDateTime.now().plusHours(7),
                 description = "Connect with other entrepreneurs",
@@ -592,7 +592,7 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
             StudyEventMap(
                 id = "4",
                 title = "Weekend Party",
-                coordinate = Pair(16.3768, 48.2042), // Also near Vienna
+                coordinate = Pair(-58.3786, -34.6077), // Also near Buenos Aires
                 time = LocalDateTime.now().plusDays(1),
                 endTime = LocalDateTime.now().plusDays(1).plusHours(4),
                 description = "Come join our weekend party!",
@@ -607,7 +607,7 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
             StudyEventMap(
                 id = "5",
                 title = "Language Exchange",
-                coordinate = Pair(16.3708, 48.2052), // Also near Vienna
+                coordinate = Pair(-58.3846, -34.6047), // Also near Buenos Aires
                 time = LocalDateTime.now().plusDays(2),
                 endTime = LocalDateTime.now().plusDays(2).plusHours(2),
                 description = "Practice your language skills",
@@ -623,7 +623,7 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
             StudyEventMap(
                 id = "6",
                 title = "AI Research Group",
-                coordinate = Pair(16.3788, 48.2092), // Near Vienna
+                coordinate = Pair(-58.3766, -34.6027), // Near Buenos Aires
                 time = LocalDateTime.now().plusHours(6),
                 endTime = LocalDateTime.now().plusHours(9),
                 description = "Discuss recent advances in AI research",
@@ -640,7 +640,7 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
             StudyEventMap(
                 id = "7",
                 title = "UX Design Workshop",
-                coordinate = Pair(16.3728, 48.2030), // Also near Vienna
+                coordinate = Pair(-58.3826, -34.6087), // Also near Buenos Aires
                 time = LocalDateTime.now().plusDays(1).plusHours(2),
                 endTime = LocalDateTime.now().plusDays(1).plusHours(5),
                 description = "Learn about the latest UX design trends",
@@ -753,8 +753,8 @@ fun FullScreenMapView(
     
     val coroutineScope = rememberCoroutineScope()
     
-    // Vienna coordinates as default
-    val viennaPoint = Point.fromLngLat(16.3738, 48.2082)
+    // Buenos Aires coordinates as default
+    val buenosAiresPoint = Point.fromLngLat(-58.3816, -34.6037)
     
     // Animate search bar expansion
     val searchBarWidth by animateDpAsState(
@@ -889,7 +889,7 @@ fun FullScreenMapView(
                                 mapboxMap.apply {
                                     // Set initial camera position
                                     setCamera(CameraOptions.Builder()
-                                        .center(viennaPoint)
+                                        .center(buenosAiresPoint)
                                         .zoom(14.0)
                                         .pitch(45.0)
                                         .bearing(15.0)
@@ -1113,7 +1113,7 @@ fun FullScreenMapView(
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = "Vienna, Austria",
+                            text = "Buenos Aires, Argentina",
                             color = Color.Black,
                             fontWeight = FontWeight.Bold
                         )

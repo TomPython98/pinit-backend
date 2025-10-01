@@ -28,14 +28,14 @@ import androidx.compose.foundation.layout.Box
 import kotlinx.coroutines.delay
 
 /**
- * A compact Mapbox map view for the main screen, showing Vienna.
+ * A compact Mapbox map view for the main screen, showing Buenos Aires.
  */
 @Composable
 fun MiniMapView(
     onMapClick: () -> Unit
 ) {
-    // Vienna coordinates
-    val viennaCoordinates = Point.fromLngLat(16.3738, 48.2082)
+    // Buenos Aires coordinates
+    val buenosAiresCoordinates = Point.fromLngLat(-58.3816, -34.6037)
     
     // Track map loading state
     var isMapReady by remember { mutableStateOf(false) }
@@ -87,7 +87,7 @@ fun MiniMapView(
                             
                             // Configure the camera
                             val cameraOptions = CameraOptions.Builder()
-                                .center(viennaCoordinates)
+                                .center(buenosAiresCoordinates)
                                 .zoom(13.0)
                                 .build()
                             
@@ -175,7 +175,7 @@ fun MiniMapView(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Vienna, Austria",
+                                text = "Buenos Aires, Argentina",
                                 color = Color.White,
                                 style = MaterialTheme.typography.labelMedium
                             )

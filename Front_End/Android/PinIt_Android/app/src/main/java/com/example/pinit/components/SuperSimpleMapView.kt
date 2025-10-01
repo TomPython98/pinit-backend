@@ -50,7 +50,7 @@ fun SuperSimpleMapView() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Vienna, Austria",
+                text = "Buenos Aires, Argentina",
                 color = Color.White,
                 style = MaterialTheme.typography.bodyLarge
             )

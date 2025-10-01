@@ -23,7 +23,9 @@ data class EventCreateRequest(
     @SerializedName("invited_friends") val invitedFriends: List<String> = emptyList(),
     @SerializedName("max_participants") val maxParticipants: Int = 10,
     @SerializedName("interest_tags") val interestTags: List<String> = emptyList(),
-    @SerializedName("auto_matching_enabled") val autoMatchingEnabled: Boolean = false
+    @SerializedName("auto_matching_enabled") val autoMatchingEnabled: Boolean = false,
+    @SerializedName("matched_users") val matchedUsers: List<String> = emptyList(),
+    @SerializedName("event_images") val eventImages: List<String> = emptyList()
 ) {
     companion object {
         /**
@@ -49,7 +51,9 @@ data class EventCreateRequest(
                 invitedFriends = event.invitedFriends ?: emptyList(),
                 interestTags = event.interestTags,
                 maxParticipants = event.maxParticipants,
-                autoMatchingEnabled = event.autoMatchingEnabled
+                autoMatchingEnabled = event.autoMatchingEnabled,
+                matchedUsers = event.matchedUsers,
+                eventImages = event.eventImages
             )
         }
     }

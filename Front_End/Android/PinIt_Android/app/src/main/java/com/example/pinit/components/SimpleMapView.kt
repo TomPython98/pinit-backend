@@ -27,8 +27,8 @@ fun SimpleMapView() {
     var mapError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     
-    // Vienna coordinates 
-    val viennaCoordinates = Point.fromLngLat(16.3738, 48.2082)
+    // Buenos Aires coordinates 
+    val buenosAiresCoordinates = Point.fromLngLat(-58.3816, -34.6037)
     
     // Map container
     Box(
@@ -54,7 +54,7 @@ fun SimpleMapView() {
                     
                     // Set camera position
                     val cameraOptions = CameraOptions.Builder()
-                        .center(viennaCoordinates)
+                        .center(buenosAiresCoordinates)
                         .zoom(12.0)
                         .build()
                     mapboxMap.setCamera(cameraOptions)

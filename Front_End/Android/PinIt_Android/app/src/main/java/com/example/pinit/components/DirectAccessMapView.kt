@@ -31,8 +31,8 @@ fun DirectAccessMapView() {
     var mapError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     
-    // Vienna coordinates
-    val viennaCoordinates = Point.fromLngLat(16.3738, 48.2082)
+    // Buenos Aires coordinates
+    val buenosAiresCoordinates = Point.fromLngLat(-58.3816, -34.6037)
     
     // The direct token
     val directToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
@@ -59,7 +59,7 @@ fun DirectAccessMapView() {
                     
                     // Configure camera position
                     val cameraPosition = CameraOptions.Builder()
-                        .center(viennaCoordinates)
+                        .center(buenosAiresCoordinates)
                         .zoom(13.5) // Slightly higher zoom level for better city view
                         .pitch(45.0) // Add some tilt for a more engaging view
                         .bearing(10.0) // Slight rotation for better orientation
@@ -136,7 +136,7 @@ fun DirectAccessMapView() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Vienna, Austria",
+                    text = "Buenos Aires, Argentina",
                     color = Color.White,
                     style = MaterialTheme.typography.bodyLarge
                 )

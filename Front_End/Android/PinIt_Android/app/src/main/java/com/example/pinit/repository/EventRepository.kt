@@ -720,12 +720,12 @@ class EventRepository {
      */
     fun createTestAutoMatchedEvent(username: String): Flow<Result<StudyEventMap>> = flow {
         try {
-            // Generate an event near Vienna
-            val vienna = Pair(16.3738, 48.2082)
+            // Generate an event near Buenos Aires
+            val buenosAires = Pair(-58.3816, -34.6037)
             // Add small random offset to display separately
-            val longitude = vienna.first + (Math.random() * 0.01 - 0.005)
+            val longitude = buenosAires.first + (Math.random() * 0.01 - 0.005)
             val longitude2dp = (longitude * 10000).toInt() / 10000.0
-            val latitude = vienna.second + (Math.random() * 0.01 - 0.005)
+            val latitude = buenosAires.second + (Math.random() * 0.01 - 0.005)
             val latitude2dp = (latitude * 10000).toInt() / 10000.0
             
             // Create a unique title

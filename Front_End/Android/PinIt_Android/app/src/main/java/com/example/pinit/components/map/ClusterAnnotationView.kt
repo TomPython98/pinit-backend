@@ -201,10 +201,16 @@ class ClusterAnnotationView(context: Context) : FrameLayout(context) {
         
         // Determine color based on dominant event type
         val color = when (dominantType) {
-            EventType.STUDY -> Color.parseColor("#2196F3") // Blue
-            EventType.PARTY -> Color.parseColor("#9C27B0") // Purple
-            EventType.BUSINESS -> Color.parseColor("#FF9800") // Orange
-            EventType.OTHER -> Color.parseColor("#607D8B") // Gray
+            EventType.STUDY -> Color.parseColor("#007AFF")      // iOS Blue
+            EventType.PARTY -> Color.parseColor("#AF52DE")      // iOS Purple
+            EventType.BUSINESS -> Color.parseColor("#5856D6")  // iOS Indigo
+            EventType.CULTURAL -> Color.parseColor("#FF9500")  // iOS Orange
+            EventType.ACADEMIC -> Color.parseColor("#34C759")  // iOS Green
+            EventType.NETWORKING -> Color.parseColor("#FF2D92") // iOS Pink
+            EventType.SOCIAL -> Color.parseColor("#FF3B30")    // iOS Red
+            EventType.LANGUAGE_EXCHANGE -> Color.parseColor("#5AC8FA") // iOS Teal
+            EventType.OTHER -> Color.parseColor("#8E8E93")     // iOS Gray
+            else -> Color.parseColor("#8E8E93") // Default iOS Gray
         }
         
         return Pair(size, color)
