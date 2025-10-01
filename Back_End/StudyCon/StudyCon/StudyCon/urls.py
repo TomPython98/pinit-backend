@@ -58,7 +58,7 @@ urlpatterns = [
     #path('api/auto_match_event/', views.auto_match_event, name='auto_match_event'),
     path('api/advanced_auto_match/', views.advanced_auto_match, name='advanced_auto_match'),
 
-    path('api/invite_to_event/', views.invite_to_event, name='invite_to_event'),
+    path('invite_to_event/', views.invite_to_event, name='invite_to_event'),
      path('api/get_auto_matched_users/<str:event_id>/', views.get_auto_matched_users, name='get_auto_matched_users'),
 
     # NEW: User Rating and Reputation endpoints for Bandura's social learning theory implementation
