@@ -116,29 +116,38 @@ class EventRepository {
                              "Coordinates: ${event.coordinate}, Type: ${event.eventType}")
                     }
                     
-                    // Filter events based on access rules:
+                    // Filter events based on access rules (matching iOS CalendarManager logic):
                     // Events are visible if:
-                    // 1. Public events
-                    // 2. Events where the user is the host
-                    // 3. Events where the user is attending (has explicitly accepted an invitation)
-                    // 4. Private events are only visible if user is host or attendee
+                    // 1. User is the host, OR
+                    // 2. User is attending (has explicitly accepted an invitation), OR
+                    // 3. User is auto-matched to the event, OR
+                    // 4. User is invited to the event (even if not yet accepted)
+                    // 5. Event has not expired (endTime > current time) - matching iOS behavior
                     val filteredEvents = allEvents.filter { event ->
                         val userIsHost = event.host == username
-                        val isPublic = event.isPublic
                         val userIsAttending = event.isUserAttending
-                        
-                        // Check if user is in invitedFriends list (but may not have accepted yet)
                         val userIsInvited = event.invitedFriends.contains(username)
+                        val isAutoMatched = event.isAutoMatched == true
                         
-                        // An event should be visible if:
-                        // - It's public (and user is not specifically invited but not attending), OR
-                        // - User is the host, OR
-                        // - User is attending (has accepted an invitation)
-                        val isVisible = (isPublic && (!userIsInvited || userIsAttending)) || userIsHost || userIsAttending
+                        // Check if event has expired (matching iOS CalendarManager logic)
+                        val isExpired = event.isExpired()
+                        
+                        // Match iOS CalendarManager filtering logic:
+                        // Include events where user is host, attending, auto-matched, OR invited
+                        // AND event has not expired
+                        val isVisible = !isExpired && (userIsHost || userIsAttending || isAutoMatched || userIsInvited)
                         
                         if (!isVisible) {
-                            Log.d(TAG, "Filtered out event ${event.id} - ${event.title}: " +
-                                 "public=$isPublic, host=$userIsHost, attending=$userIsAttending, invited=$userIsInvited")
+                            if (isExpired) {
+                                Log.d(TAG, "Filtered out expired event ${event.id} - ${event.title}: " +
+                                     "endTime=${event.endTime}")
+                            } else {
+                                Log.d(TAG, "Filtered out event ${event.id} - ${event.title}: " +
+                                     "host=$userIsHost, attending=$userIsAttending, invited=$userIsInvited, autoMatched=$isAutoMatched")
+                            }
+                        } else {
+                            Log.d(TAG, "Showing event ${event.id} - ${event.title}: " +
+                                 "host=$userIsHost, attending=$userIsAttending, invited=$userIsInvited, autoMatched=$isAutoMatched, expired=$isExpired")
                         }
                         
                         isVisible

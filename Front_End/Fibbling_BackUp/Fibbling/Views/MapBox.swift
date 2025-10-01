@@ -641,23 +641,18 @@ struct Cluster: Equatable {
 
 /// Clusters events based on a distance threshold that scales with the current map region.
 func clusterEvents(_ events: [StudyEvent], region: MKCoordinateRegion) -> [Cluster] {
-    // First, deduplicate events by ID and by content (title/location)
+    // First, deduplicate events by ID only
     var uniqueEvents: [StudyEvent] = []
     var seenIDs = Set<UUID>()
-    var seenSignatures = Set<String>()
     
     for event in events {
-        // Create a signature that combines title and location
-        let signature = "\(event.title)|\(Int(event.coordinate.latitude * 10000))|\(Int(event.coordinate.longitude * 10000))"
-        
-        if !seenIDs.contains(event.id) && !seenSignatures.contains(signature) {
+        // Only deduplicate by ID, not by content signature
+        // Multiple events can have the same title and location
+        if !seenIDs.contains(event.id) {
             uniqueEvents.append(event)
             seenIDs.insert(event.id)
-            seenSignatures.insert(signature)
-        } else if seenIDs.contains(event.id) {
-            print("🗺️ Map prevented duplicate event by ID: \(event.title) (ID: \(event.id))")
         } else {
-            print("🗺️ Map prevented duplicate event by content: \(event.title)")
+            print("🗺️ Map prevented duplicate event by ID: \(event.title) (ID: \(event.id))")
         }
     }
     
@@ -891,8 +886,8 @@ struct StudyMapView: View {
                 
             case .autoMatched:
                 // Show only auto-matched events that user hasn't RSVPed to
-                guard let isAutoMatched = event.isAutoMatched, isAutoMatched else { return false }
-                return !event.attendees.contains(username) // User hasn't RSVPed
+                let isAutoMatched = event.isAutoMatched ?? false
+                return isAutoMatched && !event.attendees.contains(username) // User hasn't RSVPed
                 
             case .rsvpedOnly:
                 // Show events the user has RSVPed to OR is hosting
@@ -908,6 +903,15 @@ struct StudyMapView: View {
         
         // Apply standard filtering
         let events = eventsFilteredByType.filter { event in
+            // If no filters are applied, show all events (matching CalendarManager behavior)
+            let hasActiveFilters = !lowercaseQuery.isEmpty || filterPrivateOnly || filterCertifiedOnly || filterEventType != nil
+            
+            if !hasActiveFilters {
+                // No filters applied - show all events from CalendarManager
+                return true
+            }
+            
+            // Apply filters only when they are actively set
             let queryMatches = lowercaseQuery.isEmpty || mathematicsRelatedTerms.contains(lowercaseQuery)
             let titleMatches = queryMatches ||
                 mathematicsRelatedTerms.contains { term in

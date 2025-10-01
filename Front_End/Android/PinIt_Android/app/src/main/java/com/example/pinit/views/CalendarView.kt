@@ -957,7 +957,8 @@ fun generateWeekDays(date: LocalDate): List<LocalDate> {
 fun eventsForDate(date: LocalDate, events: List<StudyEvent>): List<StudyEvent> {
     return events.filter { event ->
         val eventDate = event.time.toLocalDate()
-        eventDate == date
+        val isExpired = event.endTime?.isBefore(LocalDateTime.now()) ?: false
+        eventDate == date && !isExpired
     }
 }
 
@@ -965,6 +966,10 @@ fun getEventSpans(date: LocalDate, events: List<StudyEvent>): List<EventSpan> {
     return events.mapNotNull { event ->
         val startDate = event.time.toLocalDate()
         val endDate = event.endTime?.toLocalDate() ?: return@mapNotNull null
+        
+        // Skip expired events (matching iOS CalendarManager logic)
+        val isExpired = event.endTime?.isBefore(LocalDateTime.now()) ?: false
+        if (isExpired) return@mapNotNull null
         
         // Skip events that don't span multiple days
         if (startDate == endDate) return@mapNotNull null

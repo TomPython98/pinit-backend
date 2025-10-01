@@ -77,6 +77,11 @@ struct StudyEvent: Identifiable, Codable, Equatable {
         invitedFriends = (try? container.decode([String].self, forKey: .invitedFriends)) ?? []
         attendees = (try? container.decode([String].self, forKey: .attendees)) ?? []
         isAutoMatched = try? container.decodeIfPresent(Bool.self, forKey: .isAutoMatched)
+        if let autoMatched = isAutoMatched {
+            print("DEBUG: Parsed isAutoMatched: \(autoMatched) for event: \(title)")
+        } else {
+            print("DEBUG: isAutoMatched field missing or nil for event: \(title)")
+        }
         interestTags = try? container.decodeIfPresent([String].self, forKey: .interestTags)
         matchedUsers = try? container.decodeIfPresent([String].self, forKey: .matchedUsers)
         

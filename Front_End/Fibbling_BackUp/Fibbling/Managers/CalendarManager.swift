@@ -317,7 +317,7 @@ class CalendarManager: ObservableObject {
                                           event.attendees.contains(self.username)
                         
                         // Check if this is an auto-matched event for the user
-                        let isAutoMatchedEvent = event.isAutoMatched == true
+                        let isAutoMatchedEvent = event.isAutoMatched ?? false
                         
                         // Check if the user is invited to this event
                         let isInvitedEvent = event.invitedFriends.contains(self.username)
@@ -349,6 +349,10 @@ class CalendarManager: ObservableObject {
                             print("⏰ [CalendarManager] Skipping past event: \(event.title)")
                         } else {
                             print("👤 [CalendarManager] Skipping unrelated event: \(event.title)")
+                            print("   📊 Debug - host: \(event.host), username: \(self.username)")
+                            print("   📊 Debug - attendees: \(event.attendees)")
+                            print("   📊 Debug - isAutoMatched: \(event.isAutoMatched ?? false)")
+                            print("   📊 Debug - invitedFriends: \(event.invitedFriends)")
                         }
                         
                         return include
@@ -358,6 +362,33 @@ class CalendarManager: ObservableObject {
                     
                     self.events = filteredEvents
                     print("📊 [CalendarManager] Final event count: \(self.events.count)")
+                    
+                    // Print summary of included events
+                    var hostCount = 0
+                    var attendingCount = 0
+                    var autoMatchedCount = 0
+                    var invitedCount = 0
+                    
+                    for event in self.events {
+                        if event.host == self.username {
+                            hostCount += 1
+                        }
+                        if event.attendees.contains(self.username) {
+                            attendingCount += 1
+                        }
+                        if event.isAutoMatched ?? false {
+                            autoMatchedCount += 1
+                        }
+                        if event.invitedFriends.contains(self.username) {
+                            invitedCount += 1
+                        }
+                    }
+                    
+                    print("📊 [CalendarManager] Event breakdown:")
+                    print("   🏠 Hosting: \(hostCount)")
+                    print("   👤 Attending: \(attendingCount)")
+                    print("   🎯 Auto-matched: \(autoMatchedCount)")
+                    print("   📩 Invited: \(invitedCount)")
                     
                     // Print all events ID and attendees for debugging
                     for event in self.events {

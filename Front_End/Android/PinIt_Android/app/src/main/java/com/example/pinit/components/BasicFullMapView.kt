@@ -538,46 +538,37 @@ private fun applyFilters(
     username: String
 ): List<StudyEventMap> {
     return events.filter { event ->
-        // Event visibility check - critical security filter
-        // 1. Keep events where current user is the host
-        // 2. Keep public events that are not auto-matched
-        // 3. Keep events where current user is specifically auto-matched
+        // Event visibility check - matching iOS CalendarManager logic
+        // Events are visible if:
+        // 1. User is the host, OR
+        // 2. User is attending (has explicitly accepted an invitation), OR
+        // 3. User is auto-matched to the event, OR
+        // 4. User is invited to the event (even if not yet accepted)
+        // 5. Event has not expired (endTime > current time) - matching iOS behavior
         
-        // Check if the event is auto-matched for ANY user
-        val isAutoMatchedEvent = event.isAutoMatched || 
-            (event.id?.let { PotentialMatchRegistry.isEventPotentialMatch(it) } ?: false)
-            
-        val isVisibleToUser = when {
-            // Current user is the host - always show
-            event.host == username -> {
-                Log.d("BasicFullMapView", "👤 Showing event '${event.title}' to host: $username")
-                true
-            }
-            
-            // Auto-matched events - only show if current user is matched
-            isAutoMatchedEvent -> {
-                // Check if user is in invitedFriends (which contains matched users)
-                val userIsMatched = username in event.invitedFriends
-                
-                if (userIsMatched) {
-                    Log.d("BasicFullMapView", "✨ Showing auto-matched event '${event.title}' to matched user: $username")
-                } else {
-                    Log.d("BasicFullMapView", "⛔ Hiding auto-matched event '${event.title}' from user: $username (not matched)")
-                }
-                
-                userIsMatched
-            }
-            
-            // Regular public events (not auto-matched) - show to everyone
-            event.isPublic -> {
-                Log.d("BasicFullMapView", "🌐 Showing public event '${event.title}' to user: $username")
-                true
-            }
-            
-            // Default case - don't show private events to non-hosts, non-matched users
-            else -> {
-                Log.d("BasicFullMapView", "🔒 Hiding private event '${event.title}' from user: $username")
-                false
+        val userIsHost = event.host == username
+        val userIsAttending = event.isUserAttending
+        val userIsInvited = username in event.invitedFriends
+        val isAutoMatched = event.isAutoMatched == true
+        
+        // Check if event has expired (matching iOS CalendarManager logic)
+        val isExpired = event.isExpired()
+        
+        // Match iOS CalendarManager filtering logic:
+        // Include events where user is host, attending, auto-matched, OR invited
+        // AND event has not expired
+        val isVisibleToUser = !isExpired && (userIsHost || userIsAttending || isAutoMatched || userIsInvited)
+        
+        if (isVisibleToUser) {
+            Log.d("BasicFullMapView", "✅ Showing event '${event.title}' to user: $username " +
+                 "(host=$userIsHost, attending=$userIsAttending, invited=$userIsInvited, autoMatched=$isAutoMatched, expired=$isExpired)")
+        } else {
+            if (isExpired) {
+                Log.d("BasicFullMapView", "⏰ Hiding expired event '${event.title}' from user: $username " +
+                     "(endTime=${event.endTime})")
+            } else {
+                Log.d("BasicFullMapView", "⛔ Hiding event '${event.title}' from user: $username " +
+                     "(host=$userIsHost, attending=$userIsAttending, invited=$userIsInvited, autoMatched=$isAutoMatched)")
             }
         }
         
@@ -593,7 +584,7 @@ private fun applyFilters(
         // Filter by match status if showOnlyMatched is enabled
         val matchStatus = if (showOnlyMatched) {
             // Only show events that are auto-matched for this user
-            val isMatched = isAutoMatchedEvent && username in event.invitedFriends
+            val isMatched = isAutoMatched && username in event.invitedFriends
             
             if (!isMatched) {
                 Log.d("BasicFullMapView", "🔍 Filtering out event '${event.title}' - 'matched only' filter is on")
@@ -613,7 +604,7 @@ private fun applyFilters(
         // Event must pass all filters
         val passesAllFilters = matchStatus && typeStatus
         if (passesAllFilters) {
-            Log.d("BasicFullMapView", "✅ Showing event '${event.title}' (type: ${event.eventType}, matched: ${isAutoMatchedEvent})")
+            Log.d("BasicFullMapView", "✅ Showing event '${event.title}' (type: ${event.eventType}, matched: ${isAutoMatched})")
         }
         
         passesAllFilters

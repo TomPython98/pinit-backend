@@ -444,6 +444,13 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
             Log.d("MapViewModel", "🔍 FILTER MODE: Showing only potential matches")
             
             val matches = events.filter { event ->
+                // Check if event has expired (matching iOS CalendarManager logic)
+                val isExpired = event.isExpired()
+                if (isExpired) {
+                    Log.d("MapViewModel", "⏰ Filtering out expired potential match: '${event.title}'")
+                    return@filter false
+                }
+                
                 // Get basic event details
                 val userIsHost = event.host == currentUser
                 val userIsAttending = event.isUserAttending
@@ -532,8 +539,11 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
                 }
             }
             
-            // Apply all filters
-            typeFilter && visibilityFilter && showBasedOnStatus
+            // Check if event has expired (matching iOS CalendarManager logic)
+            val isExpired = event.isExpired()
+            
+            // Apply all filters including date filtering
+            !isExpired && typeFilter && visibilityFilter && showBasedOnStatus
         }
     }
     
