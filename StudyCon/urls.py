@@ -4,6 +4,9 @@ from django.contrib import admin
 
 
 urlpatterns = [
+    # Health check endpoint
+    path("health/", views.health_check, name="health_check"),
+    
     # User endpoints
     path("api/register/", views.register_user, name="register"),
     path("api/login/", views.login_user, name="login"),

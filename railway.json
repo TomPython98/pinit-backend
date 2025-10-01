@@ -5,7 +5,7 @@
   },
   "deploy": {
     "startCommand": "python manage.py migrate && gunicorn StudyCon.wsgi --log-file - --bind 0.0.0.0:$PORT",
-    "healthcheckPath": "/api/get_all_users/",
+    "healthcheckPath": "/health/",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
