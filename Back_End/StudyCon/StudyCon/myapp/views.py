@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 import json
 from .models import FriendRequest, UserProfile, StudyEvent, EventInvitation, DeclinedInvitation, Device, UserRating, UserReputationStats, UserTrustLevel
 from django.utils import timezone
