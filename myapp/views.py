@@ -109,7 +109,6 @@ def logout_user(request):
 from django.contrib.auth.models import User
 
 
-@csrf_exempt
 def health_check(request):
     """Simple health check endpoint that doesn't require database"""
     return JsonResponse({"status": "healthy", "message": "PinIt API is running - Railway deployment test"}, status=200)
