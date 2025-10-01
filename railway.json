@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn StudyCon.wsgi --log-file - --bind 0.0.0.0:$PORT",
+    "startCommand": "./start.sh",
     "healthcheckPath": "/health/",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
