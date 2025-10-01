@@ -109,6 +109,12 @@ from django.contrib.auth.models import User
 
 
 @csrf_exempt
+def health_check(request):
+    """Simple health check endpoint that doesn't require database"""
+    return JsonResponse({"status": "healthy", "message": "PinIt API is running"}, status=200)
+
+
+@csrf_exempt
 def get_all_users(request):
     if request.method == "GET":
         users = list(User.objects.values_list("username", flat=True))  # Get all usernames

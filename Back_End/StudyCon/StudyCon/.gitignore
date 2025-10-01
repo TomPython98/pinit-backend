@@ -1,0 +1,28 @@
+# Django
+*.pyc
+__pycache__/
+db.sqlite3
+*.log
+.env
+local_settings.py
+
+# Virtual environment
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Production files
+local_data_export.json
+database_schema.json
+
+# Docker
+.dockerignore

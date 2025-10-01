@@ -1,0 +1,27 @@
+# Production Environment Variables
+# Copy this file to .env and fill in your actual values
+
+# Django Settings
+SECRET_KEY=your-super-secret-key-here-make-it-long-and-random
+DEBUG=False
+ALLOWED_HOSTS=pin-it.net,www.pin-it.net,api.pin-it.net
+
+# Database (PostgreSQL)
+DB_NAME=pinit_production
+DB_USER=pinit_user
+DB_PASSWORD=your-secure-database-password
+DB_HOST=localhost
+DB_PORT=5432
+
+# Redis (for WebSockets)
+REDIS_URL=redis://localhost:6379/0
+
+# Push Notifications
+APNS_CERTIFICATE_PATH=/path/to/your/production/certificate.pem
+APNS_TOPIC=com.pinit.app
+
+# Email (if you plan to use email features)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
