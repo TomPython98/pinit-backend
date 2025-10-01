@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'myapp',
     'corsheaders',
     'rest_framework',
+    'push_notifications',
 ]
 
 MIDDLEWARE = [
@@ -82,3 +83,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Push Notifications Settings
+PUSH_NOTIFICATIONS_SETTINGS = {
+    "APNS_CERTIFICATE": "/path/to/your/certificate.pem",  # Replace with actual path for production
+    "APNS_TOPIC": "com.yourdomain.studycon",  # Replace with your app bundle ID
+    "APNS_USE_SANDBOX": True,  # Set to False for production
+}
