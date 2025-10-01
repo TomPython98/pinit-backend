@@ -2116,7 +2116,6 @@ def perform_auto_matching(event_id, max_invites=10, radius_km=10.0, min_interest
     """Helper function to perform auto-matching logic with better performance"""
     from myapp.models import StudyEvent, UserProfile, EventInvitation
     from django.db.models import Q, F
-    from django.db import transaction
     
     try:
         # Get the event with a prefetch for existing invitations
