@@ -496,7 +496,7 @@ fun PinItApp() {
 @Composable
 fun BackgroundWithPatterns(isAnimating: Boolean) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // Base gradient background
+        // Base gradient background (matching iOS)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -507,23 +507,20 @@ fun BackgroundWithPatterns(isAnimating: Boolean) {
                 )
         )
         
-        // Subtle pattern elements with soft shadows
+        // Enhanced subtle pattern elements (matching iOS)
         Box(
             modifier = Modifier
                 .size(120.dp)
                 .offset(x = 20.dp, y = 100.dp)
-                .shadow(
-                    elevation = 2.dp,
-                    shape = CircleShape,
-                    spotColor = Color.Black.copy(alpha = 0.1f)
-                )
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            BgAccent.copy(alpha = 0.1f),
+                            BrandPrimary.copy(alpha = 0.015f),
                             Color.Transparent
-                        )
-                    )
+                        ),
+                        radius = 60f
+                    ),
+                    shape = RoundedCornerShape(30.dp)
                 )
         )
         
@@ -531,18 +528,49 @@ fun BackgroundWithPatterns(isAnimating: Boolean) {
             modifier = Modifier
                 .size(80.dp)
                 .offset(x = 250.dp, y = 200.dp)
-                .shadow(
-                    elevation = 1.dp,
-                    shape = CircleShape,
-                    spotColor = Color.Black.copy(alpha = 0.05f)
-                )
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            BgSecondary.copy(alpha = 0.15f),
+                            BrandSecondary.copy(alpha = 0.03f),
                             Color.Transparent
-                        )
-                    )
+                        ),
+                        radius = 40f
+                    ),
+                    shape = RoundedCornerShape(40.dp)
+                )
+        )
+        
+        // Additional geometric patterns (matching iOS)
+        Box(
+            modifier = Modifier
+                .size(200.dp)
+                .offset(x = 300.dp, y = 50.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            BrandPrimary.copy(alpha = 0.02f),
+                            Color.Transparent
+                        ),
+                        radius = 100f
+                    ),
+                    shape = RoundedCornerShape(100.dp)
+                )
+        )
+        
+        // Larger colored accent circles (matching iOS)
+        Box(
+            modifier = Modifier
+                .size(350.dp)
+                .offset(x = 150.dp, y = 50.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            BrandPrimary.copy(alpha = 0.03f),
+                            Color.Transparent
+                        ),
+                        radius = 175f
+                    ),
+                    shape = CircleShape
                 )
         )
     }
@@ -661,7 +689,7 @@ fun CustomTopBar(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left profile button
+                // Left profile button (matching iOS)
                 IconButton(
                     onClick = onProfileClick,
                     modifier = Modifier
@@ -669,7 +697,7 @@ fun CustomTopBar(
                         .clip(CircleShape)
                         .background(BgCard)
                         .shadow(
-                            elevation = 4.dp,
+                            elevation = 8.dp,
                             shape = CircleShape,
                             spotColor = CardShadow
                         )
@@ -677,11 +705,12 @@ fun CustomTopBar(
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Profile",
-                        tint = BrandPrimary
+                        tint = BrandPrimary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 
-                // Center app logo and name
+                // Center app logo and name (matching iOS)
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -696,13 +725,13 @@ fun CustomTopBar(
                     
                     Text(
                         text = "PinIt",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
                 }
                 
-                // Right settings button
+                // Right settings button (matching iOS)
                 IconButton(
                     onClick = onSettingsClick,
                     modifier = Modifier
@@ -710,7 +739,7 @@ fun CustomTopBar(
                         .clip(CircleShape)
                         .background(BgCard)
                         .shadow(
-                            elevation = 4.dp,
+                            elevation = 8.dp,
                             shape = CircleShape,
                             spotColor = CardShadow
                         )
@@ -718,7 +747,8 @@ fun CustomTopBar(
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Settings",
-                        tint = BrandPrimary
+                        tint = BrandPrimary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }

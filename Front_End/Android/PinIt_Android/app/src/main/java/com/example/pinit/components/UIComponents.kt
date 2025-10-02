@@ -37,12 +37,27 @@ fun MapSection() {
 
 @Composable
 fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+        
+        Text(
+            text = "See All",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = BrandPrimary
+        )
+    }
 }
 
 @Composable
@@ -144,46 +159,75 @@ fun ToolCard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
-            // Icon with enhanced gradient and shadow
+            // Icon with enhanced gradient and shadow (matching iOS)
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(64.dp)
                     .background(
-                        color = backgroundColor,
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                backgroundColor,
+                                backgroundColor.copy(alpha = 0.85f)
+                            ),
+                            radius = 32f
+                        ),
                         shape = CircleShape
                     )
                     .shadow(
-                        elevation = 4.dp,
+                        elevation = 8.dp,
                         spotColor = backgroundColor.copy(alpha = 0.25f),
                         shape = CircleShape
                     )
             ) {
+                // Inner highlight (matching iOS)
+                Box(
+                    modifier = Modifier
+                        .size(62.dp)
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.6f),
+                                    Color.Transparent
+                                ),
+                                radius = 31f
+                            ),
+                            shape = CircleShape
+                        )
+                )
+                
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
                     tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(26.dp)
                 )
             }
             
-            // Title and description
-            Column(modifier = Modifier.padding(top = 8.dp)) {
+            // Title and description with refined typography (matching iOS)
+            Column(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
                 )
                 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
         }
@@ -241,30 +285,37 @@ fun QuickAccessButton(
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 12.dp)
     ) {
-        // Icon with refined gradient and shadow
+        // Icon with enhanced gradient and shadow (matching iOS)
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(48.dp)
-                .shadow(
-                    elevation = 6.dp,
-                    spotColor = CardShadow,
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                        colors = listOf(
+                            GradientStart,
+                            GradientMiddle,
+                            GradientEnd
+                        ),
+                        radius = 24f
+                    ),
                     shape = CircleShape
                 )
-                .background(
-                    color = BgCard,
+                .shadow(
+                    elevation = 8.dp,
+                    spotColor = ColoredShadow,
                     shape = CircleShape
                 )
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = iconTint,
-                modifier = Modifier.size(24.dp)
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
             )
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(14.dp))
         
         Text(
             text = title,
