@@ -10,7 +10,7 @@ struct PinItApp: App {
     @StateObject private var notificationManager = NotificationManager.shared
     
     // Handle push notification registration
-    @UIApplicationDelegateAdaptor(FibblingAppDelegate.self) private var appDelegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
         print("📱 [PinItApp] Initializing app...")

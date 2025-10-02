@@ -49,11 +49,11 @@ struct UserReputationView: View {
                 if reputationManager.userStats.totalRatings > 0 {
                     Text("Based on \(reputationManager.userStats.totalRatings) ratings")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 } else {
                     Text("No ratings yet")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 }
             }
             
@@ -100,7 +100,7 @@ struct UserReputationView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Progress to \(nextLevel.title):")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.textSecondary)
                         
                         HStack {
                             // Ratings progress
@@ -139,7 +139,7 @@ struct UserReputationView: View {
                         .fontWeight(.bold)
                     Text("Hosted")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 }
                 
                 VStack {
@@ -148,7 +148,7 @@ struct UserReputationView: View {
                         .fontWeight(.bold)
                     Text("Attended")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 }
                 
                 VStack {
@@ -157,7 +157,7 @@ struct UserReputationView: View {
                         .fontWeight(.bold)
                     Text("Reviews")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -183,7 +183,7 @@ struct UserReputationView: View {
             
             if reputationManager.userRatings.isEmpty {
                 Text("No reviews yet")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 10)
             } else {
@@ -275,7 +275,7 @@ struct RatingRowView: View {
                 
                 Text(formattedDate)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
             }
             
             HStack {
@@ -289,7 +289,7 @@ struct RatingRowView: View {
             if let reference = rating.reference, !reference.isEmpty {
                 Text(reference)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .padding(.top, 2)
             }
         }
@@ -320,7 +320,7 @@ struct ErrorView: View {
             
             Text(message)
                 .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding()

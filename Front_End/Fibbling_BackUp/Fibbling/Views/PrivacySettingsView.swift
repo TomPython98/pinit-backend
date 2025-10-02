@@ -35,21 +35,21 @@ struct PrivacySettingsView: View {
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
                                 Text("Let other users see when you are online.")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color.pinItTextSecondary)
                                     .multilineTextAlignment(.center)
 
                                 Toggle("Show Activity Status", isOn: $showActivityStatus)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
                                 Text("Display your recent activity, like events attended.")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color.pinItTextSecondary)
                                     .multilineTextAlignment(.center)
 
                                 Toggle("Share My Location", isOn: $shareLocation)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
                                 Text("Allow PinIt to use your location for event discovery and matching.")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color.pinItTextSecondary)
                                     .multilineTextAlignment(.center)
                             }
                         }
@@ -73,7 +73,7 @@ struct PrivacySettingsView: View {
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
                                 Text("Allow PinIt to share anonymized data with partners for app improvement.")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color.pinItTextSecondary)
                                     .multilineTextAlignment(.center)
 
                                 Toggle("Send Analytics Data", isOn: $analyticsEnabled)
@@ -91,10 +91,10 @@ struct PrivacySettingsView: View {
                                         Image(systemName: "square.and.arrow.up")
                                             .foregroundStyle(theme.primaryColor)
                                         Text("Export My Data")
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(Color.pinItTextPrimary)
                                         Spacer()
                                         Image(systemName: PinItIcons.chevronRight)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color.pinItTextSecondary)
                                     }
                                 }
                                 Button(action: { showDeleteDataAlert = true }) {
@@ -105,7 +105,7 @@ struct PrivacySettingsView: View {
                                             .foregroundStyle(Color.pinItError)
                                         Spacer()
                                         Image(systemName: PinItIcons.chevronRight)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color.pinItTextSecondary)
                                     }
                                 }
                             }
@@ -121,7 +121,7 @@ struct PrivacySettingsView: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: PinItIcons.close)
                             .font(.title2)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.pinItTextPrimary)
                     }
                 }
                 ToolbarItem(placement: .principal) {
@@ -130,7 +130,7 @@ struct PrivacySettingsView: View {
                             .foregroundStyle(Color.pinItPrimary)
                         Text("Privacy & Security")
                             .font(.title3.bold())
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.pinItTextPrimary)
                     }
                 }
             }
@@ -167,7 +167,7 @@ struct PrivacySettingsView: View {
                     .frame(width: 24, height: 24)
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.pinItTextPrimary)
             }
             
             content()

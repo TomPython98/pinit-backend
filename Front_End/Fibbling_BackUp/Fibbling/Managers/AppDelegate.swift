@@ -7,7 +7,7 @@ import UIKit
 
 #if os(iOS) || os(visionOS)
 // iOS or visionOS specific AppDelegate
-class FibblingAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     // Base server URL - this should match what's used in the rest of the app
     private let serverBaseURL = APIConfig.serverBaseURL
     

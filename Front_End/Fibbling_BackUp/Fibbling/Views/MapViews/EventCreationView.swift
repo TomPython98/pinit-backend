@@ -150,7 +150,7 @@ struct EventCreationView: View {
                                         .frame(width: 12, height: 12)
                                     
                                     Text(type.displayName)
-                                        .foregroundColor(.primary)
+                                        .foregroundColor(Color.textPrimary)
                                 }
                                 .tag(type)
                             }
@@ -1316,7 +1316,7 @@ struct EnhancedAutoMatchingResultsView: View {
                             .progressViewStyle(CircularProgressViewStyle())
                         Text("Analyzing interests, skills, location, and more...")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding()
                     }
@@ -1332,7 +1332,7 @@ struct EnhancedAutoMatchingResultsView: View {
                         
                         Text("Try adjusting your event tags or check back later when more users join.")
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     }
@@ -1406,28 +1406,28 @@ struct MatchRowView: View {
                     
                     Text("points")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 }
             }
             
             if !match.matchingInterests.isEmpty {
                 Text("🎯 \(match.matchingInterests.joined(separator: ", "))")
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
             }
             
             if let detail = autoMatchingManager.matchDetails[match.username],
                !detail.topFactors.isEmpty {
                 Text("⭐ \(detail.topFactors.joined(separator: ", "))")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
             }
             
             if let ratio = match.interestRatio, ratio > 0 {
                 HStack {
                     Text("Interest Match:")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                     
                     Text("\(Int(ratio * 100))%")
                         .font(.caption)
@@ -1573,7 +1573,7 @@ struct ScoreRow: View {
             HStack {
                 Text(title)
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 

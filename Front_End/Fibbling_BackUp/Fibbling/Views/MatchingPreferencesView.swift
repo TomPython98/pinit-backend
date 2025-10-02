@@ -56,7 +56,7 @@ struct MatchingPreferencesView: View {
                                 if allowAutoMatching {
                                     Text("PinIt will automatically suggest events and people based on your preferences")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color.pinItTextSecondary)
                                         .multilineTextAlignment(.center)
                                         .padding(.horizontal)
                                 }
@@ -70,10 +70,10 @@ struct MatchingPreferencesView: View {
                                     VStack(alignment: .leading, spacing: 8) {
                                         HStack {
                                             Text("Preferred Radius")
-                                                .foregroundStyle(.primary)
+                                                .foregroundStyle(Color.pinItTextPrimary)
                                             Spacer()
                                             Text("\(Int(preferredRadius)) km")
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(Color.pinItTextSecondary)
                                         }
                                         Slider(value: $preferredRadius, in: 1...50, step: 1)
                                             .accentColor(theme.primaryColor)
@@ -81,7 +81,7 @@ struct MatchingPreferencesView: View {
                                     
                                     Text("Events within this radius will be prioritized for matching")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color.pinItTextSecondary)
                                 }
                             }
                             
@@ -90,7 +90,7 @@ struct MatchingPreferencesView: View {
                                 VStack(alignment: .leading, spacing: 16) {
                                     HStack {
                                         Text("Your Interests")
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(Color.pinItTextPrimary)
                                         Spacer()
                                         Button("Add") {
                                             showAddInterest = true
@@ -101,18 +101,18 @@ struct MatchingPreferencesView: View {
                                     if matchingInterests.isEmpty {
                                         Text("No interests selected")
                                             .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color.pinItTextSecondary)
                                     } else {
                                         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
                                             ForEach(matchingInterests, id: \.self) { interest in
                                                 HStack {
                                                     Text(interest)
                                                         .font(.caption)
-                                                        .foregroundStyle(.primary)
+                                                        .foregroundStyle(Color.pinItTextPrimary)
                                                     Spacer()
                                                     Button(action: { removeInterest(interest) }) {
                                                         Image(systemName: "xmark.circle.fill")
-                                                            .foregroundStyle(.secondary)
+                                                            .foregroundStyle(Color.pinItTextSecondary)
                                                     }
                                                 }
                                                 .padding(.horizontal, 12)
@@ -131,7 +131,7 @@ struct MatchingPreferencesView: View {
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("Age Range")
                                             .font(.subheadline)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color.pinItTextSecondary)
                                         Picker("Age Range", selection: $matchingAgeRange) {
                                             ForEach(ageRanges, id: \.self) { range in
                                                 Text(range).tag(range)
@@ -143,7 +143,7 @@ struct MatchingPreferencesView: View {
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("University")
                                             .font(.subheadline)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color.pinItTextSecondary)
                                         TextField("Enter university", text: $matchingUniversity)
                                             .textFieldStyle(.roundedBorder)
                                     }
@@ -151,7 +151,7 @@ struct MatchingPreferencesView: View {
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("Degree Level")
                                             .font(.subheadline)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color.pinItTextSecondary)
                                         Picker("Degree Level", selection: $matchingYear) {
                                             ForEach(academicYears, id: \.self) { year in
                                                 Text(year).tag(year)
@@ -173,7 +173,7 @@ struct MatchingPreferencesView: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: PinItIcons.close)
                             .font(.title2)
-                            .foregroundStyle(.primary)
+                                                        .foregroundStyle(Color.pinItTextPrimary)
                     }
                 }
                 ToolbarItem(placement: .principal) {
@@ -182,7 +182,7 @@ struct MatchingPreferencesView: View {
                             .foregroundStyle(Color.pinItPrimary)
                         Text("Matching Preferences")
                             .font(.title3.bold())
-                            .foregroundStyle(.primary)
+                                                        .foregroundStyle(Color.pinItTextPrimary)
                     }
                 }
             }
@@ -206,7 +206,7 @@ struct MatchingPreferencesView: View {
                     .frame(width: 24, height: 24)
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(.primary)
+                                                        .foregroundStyle(Color.pinItTextPrimary)
             }
             
             content()

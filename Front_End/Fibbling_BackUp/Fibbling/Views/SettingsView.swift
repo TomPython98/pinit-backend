@@ -85,7 +85,7 @@ struct SettingsView: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: PinItIcons.close)
                             .font(.title2)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.pinItTextPrimary)
                     }
                 }
                 ToolbarItem(placement: .principal) {
@@ -94,7 +94,7 @@ struct SettingsView: View {
                             .foregroundStyle(Color.pinItPrimary)
                         Text("Settings")
                             .font(.title3.bold())
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.pinItTextPrimary)
                     }
                 }
             }
@@ -168,7 +168,7 @@ struct SettingsView: View {
             VStack(spacing: 8) {
                 Text(accountManager.currentUser ?? "Guest")
                     .font(.title2.bold())
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.pinItTextPrimary)
                 
                 if isEditingBio {
                     TextField("Bio", text: $bio, axis: .vertical)
@@ -177,7 +177,7 @@ struct SettingsView: View {
                         .onSubmit { isEditingBio = false }
                 } else {
                     Text(bio)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.pinItTextSecondary)
                         .multilineTextAlignment(.center)
                         .onTapGesture { isEditingBio = true }
                 }
@@ -210,7 +210,7 @@ struct SettingsView: View {
                 
                 Text(title)
                     .font(.title3.bold())
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.pinItTextPrimary)
                 
                 Spacer()
             }
@@ -240,19 +240,19 @@ struct SettingsView: View {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.pinItTextSecondary)
                     .frame(width: 24, height: 24)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color.pinItTextPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     if let subtitle = subtitle {
                         Text(subtitle)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.pinItTextSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
@@ -315,7 +315,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Show Online Status")
                         .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                     Toggle("", isOn: $showOnlineStatus)
                         .toggleStyle(SwitchToggleStyle(tint: Color.pinItAccent))
@@ -325,7 +325,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Allow Tagging")
                         .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                     Toggle("", isOn: $allowTagging)
                         .toggleStyle(SwitchToggleStyle(tint: Color.pinItAccent))
@@ -351,7 +351,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Enable Notifications")
                         .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                     Toggle("", isOn: $enableNotifications)
                         .toggleStyle(SwitchToggleStyle(tint: Color.pinItSecondary))
@@ -361,7 +361,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Show Activity Status")
                         .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                     Toggle("", isOn: $showActivityStatus)
                         .toggleStyle(SwitchToggleStyle(tint: Color.pinItSecondary))
@@ -376,7 +376,7 @@ struct SettingsView: View {
             HStack {
                 Text("Dark Mode")
                     .font(.body.weight(.medium))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.pinItTextPrimary)
                 Spacer()
                 Toggle("", isOn: $darkMode)
                     .toggleStyle(SwitchToggleStyle(tint: Color.pinItAcademic))
@@ -393,11 +393,11 @@ struct SettingsView: View {
                 HStack(spacing: 16) {
                     Image(systemName: "globe")
                         .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.pinItTextSecondary)
                         .frame(width: 24, height: 24)
                     Text("Language")
                         .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                 }
                 
@@ -436,15 +436,15 @@ struct SettingsView: View {
             HStack(spacing: 16) {
                 Image(systemName: "info.circle")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.pinItTextSecondary)
                     .frame(width: 24, height: 24)
                 Text("App Version")
                     .font(.body.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.pinItTextSecondary)
                 Spacer()
                 Text("1.0.0")
                     .font(.body.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.pinItTextSecondary)
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)

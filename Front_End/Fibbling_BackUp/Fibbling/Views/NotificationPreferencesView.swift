@@ -33,7 +33,7 @@ struct NotificationPreferencesView: View {
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
                                 Text("Turn off to disable all push notifications from PinIt.")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color.pinItTextSecondary)
                                     .multilineTextAlignment(.center)
                             }
                         }
@@ -51,7 +51,7 @@ struct NotificationPreferencesView: View {
 
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("Remind me before event")
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(Color.pinItTextPrimary)
                                         Picker("Reminder Time", selection: $reminderTime) {
                                             Text("5 minutes").tag(5.0)
                                             Text("15 minutes").tag(15.0)
@@ -84,12 +84,12 @@ struct NotificationPreferencesView: View {
 
                                     if quietHoursEnabled {
                                         DatePicker("Start Time", selection: $quietHoursStart, displayedComponents: .hourAndMinute)
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(Color.pinItTextPrimary)
                                         DatePicker("End Time", selection: $quietHoursEnd, displayedComponents: .hourAndMinute)
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(Color.pinItTextPrimary)
                                         Text("Notifications will be silenced during these hours.")
                                             .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color.pinItTextSecondary)
                                             .multilineTextAlignment(.center)
                                     }
                                 }
@@ -106,7 +106,7 @@ struct NotificationPreferencesView: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: PinItIcons.close)
                             .font(.title2)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.pinItTextPrimary)
                     }
                 }
                 ToolbarItem(placement: .principal) {
@@ -115,7 +115,7 @@ struct NotificationPreferencesView: View {
                             .foregroundStyle(Color.pinItPrimary)
                         Text("Notification Preferences")
                             .font(.title3.bold())
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.pinItTextPrimary)
                     }
                 }
             }
@@ -136,7 +136,7 @@ struct NotificationPreferencesView: View {
                     .frame(width: 24, height: 24)
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.pinItTextPrimary)
             }
             
             content()
