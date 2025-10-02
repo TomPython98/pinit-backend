@@ -49,3 +49,4 @@ ALLOWED_HOSTS=*.railway.app,pin-it.net,www.pin-it.net
 
 **Your PinIt backend will be LIVE in 2 minutes!** 🎉
 
+

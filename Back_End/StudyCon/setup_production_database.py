@@ -277,3 +277,4 @@ if __name__ == "__main__":
     print("4. Update DNS settings for pin-it.net")
     print("\n🌐 Your PinIt app is ready for production!")
 
+

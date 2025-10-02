@@ -67,41 +67,24 @@ class CalendarManager(private val accountManager: UserAccountManager) {
     var isLoading = false
     
     init {
-        println("📱 [CalendarManager] Initializing with accountManager")
     }
     
     fun addEvent(event: StudyEvent) {
-        println("➕ [CalendarManager] Adding/updating event: ${event.title} (ID: ${event.id})")
-        println("👥 [CalendarManager] Event attendees: ${event.attendees}")
-        
         // Check if event already exists (by ID)
         val existingIndex = events.indexOfFirst { it.id == event.id }
         
         if (existingIndex >= 0) {
             // Update existing event
             events[existingIndex] = event
-            println("🔄 [CalendarManager] Event updated: ${event.title}")
         } else {
             // Add new event
             events.add(event)
-            println("✅ [CalendarManager] Event added: ${event.title}")
         }
         
-        // Debug output to verify the event is in the list
-        println("📊 [CalendarManager] Current event count: ${events.size}")
     }
     
     fun removeEvent(eventId: UUID) {
-        println("🗑 [CalendarManager] Removing event with ID: $eventId")
-        
-        val originalCount = events.size
         events.removeIf { it.id == eventId }
-        
-        if (originalCount != events.size) {
-            println("✅ [CalendarManager] Event removed with id: $eventId")
-        } else {
-            println("⚠️ [CalendarManager] Event with id: $eventId was not found in the events array")
-        }
     }
     
     // Get demo invitations for testing
@@ -242,6 +225,8 @@ class CalendarManager(private val accountManager: UserAccountManager) {
             return
         }
         
+        println("👤 [CalendarManager] Current user: '$currentUser'")
+        
         isLoading = true
         
         // Always use real backend connection
@@ -250,12 +235,8 @@ class CalendarManager(private val accountManager: UserAccountManager) {
             method = "GET",
             onSuccess = { response ->
                 try {
-                    println("📦 [CalendarManager] Raw response: $response")
-                    
                     val jsonObject = JSONObject(response)
                     val eventsArray = jsonObject.getJSONArray("events")
-                    
-                    println("✅ [CalendarManager] Successfully decoded ${eventsArray.length()} events")
                     
                     // Clear existing events
                     events.clear()
@@ -298,8 +279,11 @@ class CalendarManager(private val accountManager: UserAccountManager) {
                         val isPublic = eventJson.optBoolean("isPublic", false)
                         val hostIsCertified = eventJson.optBoolean("hostIsCertified", false)
                         
-                        // Parse event type
-                        val eventType = eventJson.optString("eventType", "study")
+                        // Parse event type (backend sends "event_type" with underscore)
+                        val eventType = eventJson.optString("event_type", "study")
+                        
+                        // Parse auto-matched status
+                        val isAutoMatched = eventJson.optBoolean("isAutoMatched", false)
                         
                         // Create and add the event
                         val studyEvent = StudyEvent(
@@ -313,48 +297,44 @@ class CalendarManager(private val accountManager: UserAccountManager) {
                             isPublic = isPublic,
                             host = host,
                             hostIsCertified = hostIsCertified,
-                            eventType = eventType
+                            eventType = eventType,
+                            isAutoMatched = isAutoMatched
                         )
                         
                         // Only include events that:
-                        // 1. Haven't ended
-                        // 2. Aren't pending invitations
-                        // 3. Are related to the user (they're hosting, attending, or created it)
-                        val isPendingInvitation = invitedFriends.contains(currentUser) &&
-                                               !attendees.contains(currentUser) &&
-                                               host != currentUser
+                        // 1. Haven't ended (but be more lenient for hosting events)
+                        // 2. Are visible to the user (hosting, attending, invited, or auto-matched)
+                        val userIsHost = host == currentUser
+                        val userIsAttending = attendees.contains(currentUser)
+                        val userIsInvited = invitedFriends.contains(currentUser)
+                        val isAutoMatchedEvent = isAutoMatched
                         
-                        val isUserEvent = host == currentUser ||
-                                          attendees.contains(currentUser)
+                        // For hosting events, be more lenient with expiration (allow events that ended recently)
+                        val isExpired = if (userIsHost) {
+                            // For hosting events, only exclude if ended more than 1 hour ago
+                            endTime != null && endTime.isBefore(LocalDateTime.now().minusHours(1))
+                        } else {
+                            // For other events, exclude if ended
+                            endTime != null && endTime.isBefore(LocalDateTime.now())
+                        }
                         
-                        val include = (endTime == null || endTime.isAfter(LocalDateTime.now())) && 
-                                     !isPendingInvitation && 
-                                     isUserEvent
+                        // Include events where user is host, attending, invited, OR auto-matched
+                        // AND event has not expired (with lenient logic for hosting events)
+                        val include = !isExpired && (userIsHost || userIsAttending || userIsInvited || isAutoMatchedEvent)
                         
                         if (include) {
                             addEvent(studyEvent)
-                            println("✓ [CalendarManager] Including event: $title (ID: $id)")
-                        } else if (isPendingInvitation) {
-                            println("❗ [CalendarManager] Skipping pending invitation: $title")
-                        } else if (endTime != null && endTime.isBefore(LocalDateTime.now())) {
-                            println("⏰ [CalendarManager] Skipping past event: $title")
-                        } else if (!isUserEvent) {
-                            println("👤 [CalendarManager] Skipping unrelated public event: $title")
                         }
                     }
                     
-                    println("📊 [CalendarManager] Final event count: ${events.size}")
                     isLoading = false
                     
                 } catch (e: Exception) {
-                    println("❌ [CalendarManager] Parsing error: ${e.message}")
-                    e.printStackTrace()
                     isLoading = false
                     events.clear() // Clear events on error
                 }
             },
             onError = { error ->
-                println("❌ [CalendarManager] Error fetching events: $error")
                 isLoading = false
                 events.clear() // Clear events on error
             }

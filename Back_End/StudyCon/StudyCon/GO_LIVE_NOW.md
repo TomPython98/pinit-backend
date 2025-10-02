@@ -138,3 +138,4 @@ Your iOS app is already configured! Just:
 
 **Your PinIt app will be LIVE in 5 minutes!** 🎉
 
+

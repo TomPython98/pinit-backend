@@ -19,3 +19,4 @@ if __name__ == "__main__":
         print(f"❌ Migration failed: {e}")
         sys.exit(1)
 
+

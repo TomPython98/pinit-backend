@@ -262,34 +262,34 @@ final class AnimatedAnnotationView: UIView {
         let pinTintColor: UIColor
         switch eventType {
         case .study:
-            pinImageName = "book.fill"
+            pinImageName = "Study"
             pinTintColor = .systemBlue
         case .party:
-            pinImageName = "party.popper.fill"
+            pinImageName = "Party"
             pinTintColor = .systemPurple
         case .business:
-            pinImageName = "briefcase.fill"
+            pinImageName = "Business"
             pinTintColor = .systemIndigo
         case .cultural:
-            pinImageName = "theatermasks.fill"
+            pinImageName = "Cultural"
             pinTintColor = .systemOrange
         case .academic:
-            pinImageName = "graduationcap.fill"
+            pinImageName = "Academic"
             pinTintColor = .systemGreen
         case .networking:
-            pinImageName = "network"
+            pinImageName = "Networking"
             pinTintColor = .systemPink
         case .social:
-            pinImageName = "person.3.fill"
+            pinImageName = "Social"
             pinTintColor = .systemRed
         case .language_exchange:
-            pinImageName = "globe"
+            pinImageName = "LanguageExchange"
             pinTintColor = .systemTeal
         case .other:
-            pinImageName = "mappin.circle.fill"
+            pinImageName = "Other"
             pinTintColor = .systemGray
         }
-        if let image = UIImage(systemName: pinImageName) {
+        if let image = UIImage(named: pinImageName) {
             pinImageView.image = image
             pinImageView.tintColor = pinTintColor
         } else {

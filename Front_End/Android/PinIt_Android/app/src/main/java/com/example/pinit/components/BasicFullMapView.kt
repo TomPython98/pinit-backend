@@ -72,12 +72,21 @@ fun BasicFullMapView(
         EventType.STUDY to true,
         EventType.PARTY to true, 
         EventType.BUSINESS to true,
+        EventType.CULTURAL to true,
+        EventType.ACADEMIC to true,
+        EventType.NETWORKING to true,
+        EventType.SOCIAL to true,
+        EventType.LANGUAGE_EXCHANGE to true,
         EventType.OTHER to true
     )) }
     
     // Map state
     var pointAnnotationManager by remember { mutableStateOf<PointAnnotationManager?>(null) }
     var mapView by remember { mutableStateOf<MapView?>(null) }
+    
+    // Cluster bottom sheet state
+    var showClusterBottomSheet by remember { mutableStateOf(false) }
+    var clusterEvents by remember { mutableStateOf<List<StudyEventMap>>(emptyList()) }
     
     // Fetch events when the component is first displayed
     LaunchedEffect(key1 = username) {
@@ -260,6 +269,35 @@ fun BasicFullMapView(
                             val annotationsPlugin = mapViewInstance.annotations
                             pointAnnotationManager = annotationsPlugin.createPointAnnotationManager()
                             
+                            // Add click listener for annotations
+                            pointAnnotationManager?.addClickListener { annotation ->
+                                val eventTitle = annotation.textField
+                                Log.d("BasicFullMapView", "Clicked on annotation: $eventTitle")
+                                
+                                // Find the event(s) at this location
+                                val clickedEvents = filteredEvents.filter { event ->
+                                    event.coordinate?.let { coord ->
+                                        val annotationPoint = annotation.point
+                                        val eventPoint = Point.fromLngLat(coord.first, coord.second)
+                                        // Check if points are very close (within 0.0001 degrees ≈ 11m)
+                                        kotlin.math.abs(annotationPoint.longitude() - eventPoint.longitude()) < 0.0001 &&
+                                        kotlin.math.abs(annotationPoint.latitude() - eventPoint.latitude()) < 0.0001
+                                    } ?: false
+                                }
+                                
+                                if (clickedEvents.size > 1) {
+                                    // Multiple events at same location - show cluster bottom sheet
+                                    clusterEvents = clickedEvents
+                                    showClusterBottomSheet = true
+                                    Log.d("BasicFullMapView", "Showing cluster bottom sheet with ${clickedEvents.size} events")
+                                } else if (clickedEvents.size == 1) {
+                                    // Single event - handle normally (you can add event detail navigation here)
+                                    Log.d("BasicFullMapView", "Single event clicked: ${clickedEvents.first().title}")
+                                }
+                                
+                                true // Consume the click event
+                            }
+                            
                             // Load a basic map style
                             mapViewInstance.getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS) {
                                 // Ensure camera is still correctly positioned after style loads
@@ -395,6 +433,19 @@ fun BasicFullMapView(
                 showViewModeSelector = false
             },
             onDismiss = { showViewModeSelector = false }
+        )
+    }
+    
+    // Cluster Bottom Sheet
+    if (showClusterBottomSheet) {
+        EventClusterBottomSheet(
+            events = clusterEvents,
+            onEventClick = { event ->
+                // Handle individual event click (you can add navigation here)
+                Log.d("BasicFullMapView", "Event clicked from cluster: ${event.title}")
+                showClusterBottomSheet = false
+            },
+            onDismiss = { showClusterBottomSheet = false }
         )
     }
 }

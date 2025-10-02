@@ -91,22 +91,22 @@ object MapClusteringUtils {
         mapWidth: Int = 1080, // Default to typical screen width
         mapHeight: Int = 1920 // Default to typical screen height
     ): Double {
-        // Base threshold scaled by zoom level
+        // Base threshold scaled by zoom level - Extremely minimal clustering
         val baseThreshold = when {
-            zoomLevel >= 18.0 -> 0.0003  // Very close (about 33m)
-            zoomLevel >= 16.0 -> 0.0008  // Close (about 88m)
-            zoomLevel >= 14.0 -> 0.0020  // Medium (about 220m)
-            zoomLevel >= 12.0 -> 0.0045  // Far (about 500m)
-            zoomLevel >= 10.0 -> 0.0100  // Very far (about 1.1km)
-            zoomLevel >= 8.0 -> 0.0180   // Extremely far (about 2km)
-            else -> 0.0300               // Ultra far (about 3.3km)
+            zoomLevel >= 18.0 -> 0.00001 // Very close (about 1m) - almost no clustering
+            zoomLevel >= 16.0 -> 0.00002 // Close (about 2m) - minimal clustering
+            zoomLevel >= 14.0 -> 0.00005 // Medium (about 5m) - light clustering
+            zoomLevel >= 12.0 -> 0.0001  // Far (about 11m) - moderate clustering
+            zoomLevel >= 10.0 -> 0.0003  // Very far (about 33m) - more clustering
+            zoomLevel >= 8.0 -> 0.0008   // Extremely far (about 88m) - heavy clustering
+            else -> 0.0020               // Ultra far (about 220m) - maximum clustering
         }
         
-        // Density factor: more events = larger clusters (within reason)
+        // Density factor: more events = larger clusters (much less aggressive)
         val densityFactor = when {
-            eventCount > 100 -> 1.5      // Many events
-            eventCount > 50 -> 1.3       // Lots of events
-            eventCount > 20 -> 1.1       // Moderate number of events
+            eventCount > 100 -> 1.2      // Many events (reduced from 1.5)
+            eventCount > 50 -> 1.1       // Lots of events (reduced from 1.3)
+            eventCount > 20 -> 1.05      // Moderate number of events (reduced from 1.1)
             else -> 1.0                  // Few events
         }
         
@@ -143,6 +143,33 @@ object MapClusteringUtils {
         if (events.isEmpty()) {
             Log.d(TAG, "No events to cluster")
             return emptyList()
+        }
+        
+        // At high zoom levels (16+), don't cluster at all - show individual events
+        if (zoomLevel >= 16.0) {
+            Log.d(TAG, "High zoom level ($zoomLevel) - showing individual events without clustering")
+            return events.map { Cluster(listOf(it)) }
+        }
+        
+        // First, handle events at exact same coordinates (always cluster these)
+        val exactLocationClusters = createExactLocationClusters(events)
+        val remainingEvents = events.filter { event ->
+            !exactLocationClusters.any { cluster -> 
+                cluster.events.any { clusterEvent -> clusterEvent.id == event.id }
+            }
+        }
+        
+        Log.d(TAG, "Created ${exactLocationClusters.size} exact location clusters")
+        Log.d(TAG, "Remaining events for proximity clustering: ${remainingEvents.size}")
+        
+        // Debug: Check for events at exact same location
+        val coordinateGroups = events.groupBy { it.coordinate }
+        val duplicateLocations = coordinateGroups.filter { it.value.size > 1 }
+        if (duplicateLocations.isNotEmpty()) {
+            Log.d(TAG, "Found ${duplicateLocations.size} locations with multiple events:")
+            duplicateLocations.forEach { (coord, eventList) ->
+                Log.d(TAG, "  Location ($coord): ${eventList.size} events - ${eventList.map { "${it.title} (${it.eventType})" }}")
+            }
         }
         
         // Check for events with invalid coordinates
@@ -288,5 +315,38 @@ object MapClusteringUtils {
         
         // Convert back to degrees for consistency with other methods
         return c * (180 / Math.PI) / Math.PI
+    }
+    
+    /**
+     * Create clusters for events at exact same coordinates
+     * These clusters will always show a list when clicked
+     */
+    private fun createExactLocationClusters(events: List<StudyEventMap>): List<Cluster> {
+        val coordinateGroups = events.groupBy { event ->
+            // Round to 6 decimal places (about 0.1m precision) to group very close events
+            val lat = event.coordinate?.first ?: 0.0
+            val lng = event.coordinate?.second ?: 0.0
+            Pair(roundToDecimalPlaces(lat, 6), roundToDecimalPlaces(lng, 6))
+        }
+        
+        val exactLocationClusters = mutableListOf<Cluster>()
+        
+        coordinateGroups.forEach { (coord, eventList) ->
+            if (eventList.size > 1) {
+                // Multiple events at same location - create cluster
+                exactLocationClusters.add(Cluster(eventList))
+                Log.d(TAG, "Created exact location cluster at ($coord) with ${eventList.size} events")
+            }
+        }
+        
+        return exactLocationClusters
+    }
+    
+    /**
+     * Round a double to specified decimal places
+     */
+    private fun roundToDecimalPlaces(value: Double, decimalPlaces: Int): Double {
+        val multiplier = Math.pow(10.0, decimalPlaces.toDouble())
+        return Math.round(value * multiplier) / multiplier
     }
 } 

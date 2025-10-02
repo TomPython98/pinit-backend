@@ -15,3 +15,4 @@ python manage.py collectstatic --noinput
 echo "🌐 Starting Gunicorn server..."
 exec gunicorn StudyCon.wsgi --log-file - --bind 0.0.0.0:$PORT
 
+

@@ -54,26 +54,26 @@ fun getEventTypeColor(eventType: EventType?): Color {
 }
     
     /**
-     * Create a bitmap icon for an event
+     * Create a bitmap icon for an event - iOS style
      * 
      * @param context Android context
      * @param event The event to create an icon for
      * @return Bitmap representing the event
      */
     fun createEventIcon(context: Context, event: StudyEventMap): Bitmap {
-        // Get vector drawable resource based on event type
-    val resourceId = when (event.eventType) {
-        EventType.STUDY -> R.drawable.ic_study
-        EventType.PARTY -> R.drawable.ic_party
-        EventType.BUSINESS -> R.drawable.ic_business
-        EventType.CULTURAL -> R.drawable.ic_cultural
-        EventType.ACADEMIC -> R.drawable.ic_academic
-        EventType.NETWORKING -> R.drawable.ic_networking
-        EventType.SOCIAL -> R.drawable.ic_social
-        EventType.LANGUAGE_EXCHANGE -> R.drawable.ic_language_exchange
-        EventType.OTHER -> R.drawable.ic_other
-        null -> R.drawable.ic_other
-    }
+        // Get PNG drawable resource based on event type
+        val resourceId = when (event.eventType) {
+            EventType.STUDY -> R.drawable.ic_study
+            EventType.PARTY -> R.drawable.ic_party
+            EventType.BUSINESS -> R.drawable.ic_business
+            EventType.CULTURAL -> R.drawable.ic_cultural
+            EventType.ACADEMIC -> R.drawable.ic_academic
+            EventType.NETWORKING -> R.drawable.ic_networking
+            EventType.SOCIAL -> R.drawable.ic_social
+            EventType.LANGUAGE_EXCHANGE -> R.drawable.ic_language_exchange
+            EventType.OTHER -> R.drawable.ic_other
+            null -> R.drawable.ic_other
+        }
         
         // Get background color based on event type with iOS colors
         val bgColor = when (event.eventType) {
@@ -89,86 +89,48 @@ fun getEventTypeColor(eventType: EventType?): Color {
             null -> android.graphics.Color.GRAY
         }
         
-        // Get the drawable and set appropriate background color
-        val drawable = ContextCompat.getDrawable(context, resourceId)?.mutate()
-            ?: createDefaultBitmap(context)
-        
-        // Create bitmap from drawable with enhanced styling
-        val bitmap = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
+        // Create bigger markers for better visibility
+        val markerWidth = 120
+        val markerHeight = 84
+        val bitmap = Bitmap.createBitmap(markerWidth, markerHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         
-        // Draw shadow first (slight offset)
-        val shadowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        shadowPaint.color = android.graphics.Color.parseColor("#33000000") // Translucent black
-        shadowPaint.style = android.graphics.Paint.Style.FILL
-        canvas.drawCircle(48f + 2f, 48f + 2f, 44f, shadowPaint)
+        val centerX = markerWidth / 2f
+        val centerY = markerHeight / 2f
+        val radius = 34f // Bigger radius
         
-        // Draw main circle
+        // Draw subtle shadow (iOS style)
+        val shadowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        shadowPaint.color = android.graphics.Color.parseColor("#20000000") // Very subtle shadow
+        shadowPaint.style = android.graphics.Paint.Style.FILL
+        canvas.drawCircle(centerX + 1f, centerY + 1f, radius, shadowPaint)
+        
+        // Draw main circle with iOS colors
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         paint.color = bgColor
         paint.style = android.graphics.Paint.Style.FILL
-        canvas.drawCircle(48f, 48f, 44f, paint)
+        canvas.drawCircle(centerX, centerY, radius, paint)
         
-        // Draw white border with drop shadow effect
+        // Draw clean white border (iOS style)
         val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         borderPaint.color = android.graphics.Color.WHITE
         borderPaint.style = android.graphics.Paint.Style.STROKE
         borderPaint.strokeWidth = 3f
-        canvas.drawCircle(48f, 48f, 43f, borderPaint)
+        canvas.drawCircle(centerX, centerY, radius - 1f, borderPaint)
         
-        // Determine the event's status for the current user
-        val currentUser = ApiClient.getCurrentUsername()
-        val userIsHost = event.host == currentUser
-        val userIsAttending = event.isUserAttending
-        val userIsInvited = currentUser != null && event.invitedFriends.contains(currentUser)
-        val isPendingInvitation = userIsInvited && !userIsAttending && !userIsHost
-        
-        // Check both the direct isAutoMatched flag AND the registry
-        val isInRegistry = event.id?.let { com.example.pinit.utils.PotentialMatchRegistry.isEventPotentialMatch(it) } ?: false
-        val isPotentialMatch = (event.isAutoMatched || isInRegistry) && !userIsAttending && !userIsHost
-        
-        // Log debug info about potential matches for every event rendered
-        if (isInRegistry || event.isAutoMatched) {
-            Log.d("MapAnnotationUtils", "🔍 Event ${event.id} - ${event.title} status:")
-            Log.d("MapAnnotationUtils", "  - isAutoMatched: ${event.isAutoMatched}")
-            Log.d("MapAnnotationUtils", "  - isInRegistry: $isInRegistry")
-            Log.d("MapAnnotationUtils", "  - userIsHost: $userIsHost")
-            Log.d("MapAnnotationUtils", "  - userIsAttending: $userIsAttending")
-            Log.d("MapAnnotationUtils", "  - isPotentialMatch: $isPotentialMatch")
+        // Get the PNG drawable and center it properly
+        val drawable = ContextCompat.getDrawable(context, resourceId)
+        if (drawable != null) {
+            // Center the icon perfectly in the circle
+            val iconSize = 32 // Bigger icon size
+            val left = (markerWidth - iconSize) / 2
+            val top = (markerHeight - iconSize) / 2
+            val right = left + iconSize
+            val bottom = top + iconSize
+            
+            drawable.setBounds(left, top, right, bottom)
+            drawable.draw(canvas)
         }
-        
-        // Add special border for pending invitations (dashed blue)
-        if (isPendingInvitation) {
-            val invitationPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-            invitationPaint.color = android.graphics.Color.parseColor("#2196F3") // Blue
-            invitationPaint.style = android.graphics.Paint.Style.STROKE
-            invitationPaint.strokeWidth = 4f
-            invitationPaint.pathEffect = android.graphics.DashPathEffect(floatArrayOf(8f, 4f), 0f)
-            canvas.drawCircle(48f, 48f, 46f, invitationPaint)
-        }
-        
-        // Add special border for potential matches (dotted purple)
-        if (isPotentialMatch) {
-            val matchPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-            matchPaint.color = android.graphics.Color.parseColor("#9C27B0") // Purple
-            matchPaint.style = android.graphics.Paint.Style.STROKE
-            matchPaint.strokeWidth = 4f
-            matchPaint.pathEffect = android.graphics.DashPathEffect(floatArrayOf(3f, 3f), 0f)
-            canvas.drawCircle(48f, 48f, 46f, matchPaint)
-        }
-        
-        // Certified event gets a star outline (keep this after the invitation/match borders)
-        if (event.hostIsCertified) {
-            val certifiedPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-            certifiedPaint.color = android.graphics.Color.YELLOW
-            certifiedPaint.style = android.graphics.Paint.Style.STROKE
-            certifiedPaint.strokeWidth = 3f
-            canvas.drawCircle(48f, 48f, 46f, certifiedPaint)
-        }
-        
-        // Draw the icon in the center of the bitmap with proper scaling
-        drawable.setBounds(24, 20, 72, 68)
-        drawable.draw(canvas)
         
         return bitmap
     }
@@ -274,19 +236,6 @@ fun getEventTypeColor(eventType: EventType?): Color {
      * @return Bitmap representing the cluster
      */
     private fun createClusterIcon(context: Context, size: Int, eventType: EventType): Bitmap {
-        // For clusters, we use a distinct visual appearance
-    val resourceId = when (eventType) {
-        EventType.STUDY -> R.drawable.ic_study
-        EventType.PARTY -> R.drawable.ic_party
-        EventType.BUSINESS -> R.drawable.ic_business
-        EventType.CULTURAL -> R.drawable.ic_cultural
-        EventType.ACADEMIC -> R.drawable.ic_academic
-        EventType.NETWORKING -> R.drawable.ic_networking
-        EventType.SOCIAL -> R.drawable.ic_social
-        EventType.LANGUAGE_EXCHANGE -> R.drawable.ic_language_exchange
-        EventType.OTHER -> R.drawable.ic_other
-    }
-        
         // Get background color based on event type with darker iOS colors for clusters
         val bgColor = when (eventType) {
             EventType.STUDY -> android.graphics.Color.parseColor("#0056CC")      // Darker iOS Blue
@@ -300,105 +249,53 @@ fun getEventTypeColor(eventType: EventType?): Color {
             EventType.OTHER -> android.graphics.Color.parseColor("#6B7280")     // Darker iOS Gray
         }
         
-        // Get the drawable
-        val drawable = ContextCompat.getDrawable(context, resourceId)?.mutate()
-            ?: createDefaultBitmap(context)
-        
-        // Create a larger bitmap for clustering
-        val bitmapSize = 120 // Increased size for better visibility
-        val bitmap = Bitmap.createBitmap(
-            bitmapSize,
-            bitmapSize,
-            Bitmap.Config.ARGB_8888
-        )
-        
+        // Create iOS-style cluster: exact iOS size (40x40 base, grows with count)
+        val clusterSize = when {
+            size >= 15 -> 65 // Large clusters
+            size >= 8 -> 55  // Medium clusters  
+            size >= 3 -> 45  // Small clusters
+            else -> 40       // Base size (matches iOS)
+        }
+        val bitmap = Bitmap.createBitmap(clusterSize, clusterSize, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         
-        // Draw drop shadow
-        val shadowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        shadowPaint.color = android.graphics.Color.parseColor("#40000000") // Translucent black
-        shadowPaint.style = android.graphics.Paint.Style.FILL
-        val shadowCenterX = bitmapSize / 2f + 3f
-        val shadowCenterY = bitmapSize / 2f + 3f
-        val shadowRadius = bitmapSize / 2f - 10f
-        canvas.drawCircle(shadowCenterX, shadowCenterY, shadowRadius, shadowPaint)
+        val centerX = clusterSize / 2f
+        val centerY = clusterSize / 2f
+        val radius = clusterSize / 2f - 2f
         
-        // Draw circular background
+        // Draw subtle shadow (iOS style)
+        val shadowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        shadowPaint.color = android.graphics.Color.parseColor("#30000000") // Subtle shadow
+        shadowPaint.style = android.graphics.Paint.Style.FILL
+        canvas.drawCircle(centerX + 1f, centerY + 1f, radius, shadowPaint)
+        
+        // Draw main circle with darker color
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         paint.color = bgColor
         paint.style = android.graphics.Paint.Style.FILL
-        
-        // Draw a circle in the center of the bitmap
-        val centerX = bitmapSize / 2f
-        val centerY = bitmapSize / 2f
-        val radius = bitmapSize / 2f - 8f  // Slightly smaller than half the width for padding
         canvas.drawCircle(centerX, centerY, radius, paint)
         
-        // Add gradient overlay for 3D effect
-        val gradientPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        val gradient = android.graphics.RadialGradient(
-            centerX, centerY, radius,
-            android.graphics.Color.parseColor("#FFFFFF"),
-            android.graphics.Color.parseColor("#00FFFFFF"),
-            android.graphics.Shader.TileMode.CLAMP
-        )
-        gradientPaint.shader = gradient
-        gradientPaint.alpha = 80 // Translucent white center
-        canvas.drawCircle(centerX, centerY, radius, gradientPaint)
-        
-        // Draw white border
+        // Draw clean white border (iOS style)
         val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         borderPaint.color = android.graphics.Color.WHITE
         borderPaint.style = android.graphics.Paint.Style.STROKE
-        borderPaint.strokeWidth = 5f
-        canvas.drawCircle(centerX, centerY, radius, borderPaint)
+        borderPaint.strokeWidth = 2f
+        canvas.drawCircle(centerX, centerY, radius - 1f, borderPaint)
         
-        // Add a second, inner white circle for visual interest
-        val innerCirclePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        innerCirclePaint.color = android.graphics.Color.parseColor("#22FFFFFF") // Translucent white
-        innerCirclePaint.style = android.graphics.Paint.Style.STROKE
-        innerCirclePaint.strokeWidth = 3f
-        canvas.drawCircle(centerX, centerY, radius - 10f, innerCirclePaint)
-        
-        // Calculate padding for the drawable to make it smaller to fit the count text
-        val drawablePadding = bitmapSize / 4
-        drawable.setBounds(
-            drawablePadding, 
-            drawablePadding - 12, // Move up a bit to make room for the count
-            bitmapSize - drawablePadding, 
-            bitmapSize - drawablePadding - 12
-        )
-        
-        // Draw the icon
-        drawable.draw(canvas)
-        
-        // Draw the count with a nicer visual style
+        // Draw count text in center
         val textPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         textPaint.color = android.graphics.Color.WHITE
-        textPaint.textSize = 40f
+        textPaint.textSize = when {
+            size >= 15 -> 20f
+            size >= 8 -> 18f
+            size >= 3 -> 16f
+            else -> 14f
+        }
         textPaint.textAlign = android.graphics.Paint.Align.CENTER
         textPaint.isFakeBoldText = true
         
-        // Add strong shadow/glow effect to make text visible on any background
-        textPaint.setShadowLayer(6f, 0f, 0f, android.graphics.Color.parseColor("#80000000"))
-        
-        // Display count as a badge in the bottom part
         val countText = size.toString()
-        val xPos = centerX
-        val yPos = centerY + radius - 10f
-        
-        // Use small white highlight circle instead of black badge
-        val highlightPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        highlightPaint.color = android.graphics.Color.WHITE
-        highlightPaint.alpha = 120 // Semi-transparent
-        highlightPaint.style = android.graphics.Paint.Style.FILL
-        
-        val textWidth = textPaint.measureText(countText)
-        val highlightRadius = textWidth / 2 + 6
-        canvas.drawCircle(xPos, yPos, highlightRadius, highlightPaint)
-        
-        // Draw count text
-        canvas.drawText(countText, xPos, yPos + 15f, textPaint)
+        canvas.drawText(countText, centerX, centerY + 6f, textPaint)
         
         return bitmap
     }

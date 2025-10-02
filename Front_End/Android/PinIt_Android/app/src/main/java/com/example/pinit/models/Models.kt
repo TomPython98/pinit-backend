@@ -1533,4 +1533,4 @@ class ChatManager {
             .firstOrNull { it.participants == chatKey }
             ?.messages ?: emptyList()
     }
-} 
+}

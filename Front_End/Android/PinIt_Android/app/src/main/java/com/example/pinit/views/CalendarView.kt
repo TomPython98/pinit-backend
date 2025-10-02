@@ -24,9 +24,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.pinit.models.CalendarManager
 import com.example.pinit.models.StudyEvent
+import com.example.pinit.models.EventType
 import com.example.pinit.models.UserAccountManager
 import com.example.pinit.ui.theme.*
 import java.time.DayOfWeek
@@ -42,6 +44,10 @@ import androidx.compose.foundation.border
 
 enum class CalendarViewMode {
     MONTH, WEEK
+}
+
+enum class EventViewMode {
+    ALL, AUTO_MATCHED, MY_EVENTS
 }
 
 data class EventSpan(
@@ -66,7 +72,44 @@ fun CalendarView(
     var showEventCreation by remember { mutableStateOf(false) }
     var selectedDayEvents by remember { mutableStateOf<List<StudyEvent>>(emptyList()) }
     
+    // iOS-style filtering
+    var eventViewMode by remember { mutableStateOf(EventViewMode.ALL) }
+    var showViewModeSelector by remember { mutableStateOf(false) }
+    
     val todayDate = LocalDate.now()
+    
+    // Filter events based on view mode (iOS-style filtering)
+    // Note: calendarManager.events are already filtered by CalendarManager.fetchEvents()
+    // We need to apply additional filtering based on view mode
+    val filteredEvents = remember(calendarManager.events, eventViewMode, accountManager.currentUser) {
+        val username = accountManager.currentUser ?: ""
+        
+        // Debug: Check what username we're using
+        println("🔍 [CalendarView] Filtering for username: '$username'")
+        println("📊 [CalendarView] Total events from CalendarManager: ${calendarManager.events.size}")
+        
+        when (eventViewMode) {
+            EventViewMode.ALL -> {
+                calendarManager.events
+            }
+            EventViewMode.AUTO_MATCHED -> {
+                calendarManager.events.filter { event ->
+                    event.isAutoMatched == true && !event.attendees.contains(username)
+                }
+            }
+            EventViewMode.MY_EVENTS -> {
+                val hostingCount = calendarManager.events.count { it.host == username }
+                val attendingCount = calendarManager.events.count { it.attendees.contains(username) }
+                
+                println("🏠 [CalendarView] Events where user is host: $hostingCount")
+                println("👤 [CalendarView] Events where user is attending: $attendingCount")
+                
+                calendarManager.events.filter { event ->
+                    event.attendees.contains(username) || event.host == username
+                }
+            }
+        }
+    }
     
     // Fetch events when the view appears
     LaunchedEffect(Unit) {
@@ -99,6 +142,32 @@ fun CalendarView(
                             navigationIconContentColor = Color.White
                         ),
                         actions = {
+                            // iOS-style filter button (top-left)
+                            TextButton(
+                                onClick = { showViewModeSelector = true },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = when (eventViewMode) {
+                                        EventViewMode.ALL -> Icons.Default.List
+                                        EventViewMode.AUTO_MATCHED -> Icons.Default.AutoAwesome
+                                        EventViewMode.MY_EVENTS -> Icons.Default.CheckCircle
+                                    },
+                                    contentDescription = "Filter Events"
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = when (eventViewMode) {
+                                        EventViewMode.ALL -> "All Events (${filteredEvents.size})"
+                                        EventViewMode.AUTO_MATCHED -> "Auto-Matched (${filteredEvents.size})"
+                                        EventViewMode.MY_EVENTS -> "My Events (${filteredEvents.size})"
+                                    },
+                                    fontSize = 14.sp
+                                )
+                            }
+                            
                             // Add "Create" button
                             TextButton(
                                 onClick = { showEventCreation = true },
@@ -228,8 +297,8 @@ fun CalendarView(
                             val isCurrentMonth = date.month == displayedMonth.month
                             val isToday = date.equals(todayDate)
                             val isSelected = date.equals(selectedDate)
-                            val dayEvents = eventsForDate(date, calendarManager.events)
-                            val eventSpans = getEventSpans(date, calendarManager.events)
+                            val dayEvents = eventsForDate(date, filteredEvents)
+                            val eventSpans = getEventSpans(date, filteredEvents)
                             
                             DayCell(
                                 date = date,
@@ -262,7 +331,7 @@ fun CalendarView(
                         weekDays.forEach { date ->
                             val isToday = date.equals(todayDate)
                             val isSelected = date.equals(selectedDate)
-                            val dayEvents = eventsForDate(date, calendarManager.events)
+                            val dayEvents = eventsForDate(date, filteredEvents)
                             
                             WeekDayRow(
                                 date = date,
@@ -311,7 +380,7 @@ fun CalendarView(
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        val todayEvents = eventsForDate(todayDate, calendarManager.events)
+                        val todayEvents = eventsForDate(todayDate, filteredEvents)
                         
                         if (todayEvents.isEmpty()) {
                             Column(
@@ -374,6 +443,27 @@ fun CalendarView(
                 calendarManager.addEvent(event)
             },
             username = accountManager.currentUser ?: ""
+        )
+    }
+    
+    // iOS-style View Mode Selector Dialog
+    if (showViewModeSelector) {
+        ViewModeSelectorDialog(
+            currentMode = eventViewMode,
+            onModeSelected = { mode ->
+                eventViewMode = mode
+                showViewModeSelector = false
+            },
+            onDismiss = { showViewModeSelector = false },
+            filteredEvents = filteredEvents,
+            autoMatchCount = filteredEvents.count { event ->
+                val username = accountManager.currentUser ?: ""
+                event.isAutoMatched == true && !event.attendees.contains(username)
+            },
+            myEventsCount = filteredEvents.count { event ->
+                val username = accountManager.currentUser ?: ""
+                event.attendees.contains(username) || event.host == username
+            }
         )
     }
 }
@@ -680,7 +770,7 @@ fun DayEventsSheet(
                             )
                             
                             Text(
-                                text = "Attendees: ${event.attendees.joinToString(", ")}",
+                                text = "Attendees: ${event.attendees}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary
                             )
@@ -899,11 +989,12 @@ fun EventCreationSheet(
                             endTime = endDateTime,
                             description = eventDescription.takeIf { it.isNotEmpty() },
                             invitedFriends = emptyList(),
-                            attendees = listOf(username),
+                            attendees = listOf(username), // Host is attending
                             isPublic = isPublicEvent,
                             host = username,
                             hostIsCertified = false,
-                            eventType = "study"
+                            eventType = "study",
+                            isAutoMatched = false
                         )
                         
                         // Pass to caller
@@ -1004,20 +1095,101 @@ fun formatTimeRange(startTime: LocalDateTime, endTime: LocalDateTime?): String {
     }
 }
 
+@Composable
+fun ViewModeSelectorDialog(
+    currentMode: EventViewMode,
+    onModeSelected: (EventViewMode) -> Unit,
+    onDismiss: () -> Unit,
+    filteredEvents: List<StudyEvent>,
+    autoMatchCount: Int,
+    myEventsCount: Int
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Select View Mode",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                EventViewMode.values().forEach { mode ->
+                    val (icon, label, count) = when (mode) {
+                        EventViewMode.ALL -> Triple("list.bullet", "All Events", filteredEvents.size)
+                        EventViewMode.AUTO_MATCHED -> Triple("sparkles", "Auto-Matched", autoMatchCount)
+                        EventViewMode.MY_EVENTS -> Triple("checkmark.circle", "My Events", myEventsCount)
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onModeSelected(mode) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = when (icon) {
+                                "list.bullet" -> Icons.Default.List
+                                "sparkles" -> Icons.Default.AutoAwesome
+                                "checkmark.circle" -> Icons.Default.CheckCircle
+                                else -> Icons.Default.List
+                            },
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 12.dp),
+                            tint = if (mode == currentMode) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                        Text(
+                            text = label,
+                            fontSize = 16.sp,
+                            fontWeight = if (mode == currentMode) FontWeight.Bold else FontWeight.Normal,
+                            color = if (mode == currentMode) MaterialTheme.colorScheme.primary else Color.Black
+                        )
+                        if (count != null && count > 0) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "($count)",
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                        }
+                        if (mode == currentMode) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Done")
+            }
+        }
+    )
+}
+
 fun formatTime(time: java.time.LocalDateTime): String {
     val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
     return time.format(formatter)
 }
 
+@Composable
 fun eventColor(event: StudyEvent): Color {
-    // Convert string to EventType when possible
-    val eventTypeString = event.eventType?.lowercase() ?: "other"
-    
-    return when (eventTypeString) {
-        "study" -> Color(0xFF1E88E5) // Blue
-        "party" -> Color(0xFF8E24AA) // Purple
-        "business" -> Color(0xFFF57C00) // Orange
-        "other", null -> Color(0xFF757575) // Gray
-        else -> Color(0xFF757575) // Default gray for any other type
+    return when (event.eventType?.lowercase()) {
+        "study" -> Color(0xFF007AFF).copy(alpha = 0.9f)      // iOS Blue
+        "party" -> Color(0xFFAF52DE).copy(alpha = 0.9f)      // iOS Purple
+        "business" -> Color(0xFF5856D6).copy(alpha = 0.9f)  // iOS Indigo
+        "cultural" -> Color(0xFFFF9500).copy(alpha = 0.9f)  // iOS Orange
+        "academic" -> Color(0xFF34C759).copy(alpha = 0.9f)  // iOS Green
+        "networking" -> Color(0xFFFF2D92).copy(alpha = 0.9f) // iOS Pink
+        "social" -> Color(0xFFFF3B30).copy(alpha = 0.9f)    // iOS Red
+        "language_exchange" -> Color(0xFF5AC8FA).copy(alpha = 0.9f) // iOS Teal
+        "other" -> Color(0xFF8E8E93).copy(alpha = 0.9f)     // iOS Gray
+        else -> Color.Gray.copy(alpha = 0.9f)
     }
 } 

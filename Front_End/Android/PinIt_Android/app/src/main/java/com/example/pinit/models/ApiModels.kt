@@ -61,7 +61,16 @@ data class EventResponse(
                 "study" -> EventType.STUDY
                 "party" -> EventType.PARTY
                 "business" -> EventType.BUSINESS
-                else -> EventType.OTHER
+                "cultural" -> EventType.CULTURAL
+                "academic" -> EventType.ACADEMIC
+                "networking" -> EventType.NETWORKING
+                "social" -> EventType.SOCIAL
+                "language_exchange" -> EventType.LANGUAGE_EXCHANGE
+                "other" -> EventType.OTHER
+                else -> {
+                    android.util.Log.w("ApiModels", "Unknown event type: '$eventType' for event '$title' - defaulting to OTHER")
+                    EventType.OTHER
+                }
             },
             isUserAttending = isUserAttending,
             isAutoMatched = isAutoMatched

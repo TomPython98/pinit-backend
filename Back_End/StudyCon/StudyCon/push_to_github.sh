@@ -39,3 +39,4 @@ echo "5. Add PostgreSQL database"
 echo ""
 echo "🎉 Your PinIt backend is ready to go live!"
 
+

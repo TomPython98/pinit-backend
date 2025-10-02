@@ -76,6 +76,11 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
         EventType.STUDY to true,
         EventType.PARTY to true,
         EventType.BUSINESS to true,
+        EventType.CULTURAL to true,
+        EventType.ACADEMIC to true,
+        EventType.NETWORKING to true,
+        EventType.SOCIAL to true,
+        EventType.LANGUAGE_EXCHANGE to true,
         EventType.OTHER to true
     )
     
@@ -168,6 +173,12 @@ class MapViewModel(private val accountManager: UserAccountManager) : ViewModel()
                                                     "study" -> EventType.STUDY
                                                     "party" -> EventType.PARTY
                                                     "business" -> EventType.BUSINESS
+                                                    "cultural" -> EventType.CULTURAL
+                                                    "academic" -> EventType.ACADEMIC
+                                                    "networking" -> EventType.NETWORKING
+                                                    "social" -> EventType.SOCIAL
+                                                    "language_exchange" -> EventType.LANGUAGE_EXCHANGE
+                                                    "other" -> EventType.OTHER
                                                     else -> EventType.OTHER
                                                 },
                                                 isUserAttending = false,
@@ -901,8 +912,8 @@ fun FullScreenMapView(
                                     setCamera(CameraOptions.Builder()
                                         .center(buenosAiresPoint)
                                         .zoom(14.0)
-                                        .pitch(45.0)
-                                        .bearing(15.0)
+                                        .pitch(0.0) // Flat view like iOS
+                                        .bearing(0.0) // No rotation like iOS
                                         .build()
                                     )
                                     
@@ -1267,6 +1278,81 @@ fun FullScreenMapView(
                                     checked = viewModel.showEventTypes[EventType.BUSINESS] ?: true,
                                     onCheckedChange = { 
                                         viewModel.showEventTypes[EventType.BUSINESS] = it
+                                    }
+                                )
+                            }
+                            
+                            // Cultural events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Cultural Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showEventTypes[EventType.CULTURAL] ?: true,
+                                    onCheckedChange = { 
+                                        viewModel.showEventTypes[EventType.CULTURAL] = it
+                                    }
+                                )
+                            }
+                            
+                            // Academic events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Academic Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showEventTypes[EventType.ACADEMIC] ?: true,
+                                    onCheckedChange = { 
+                                        viewModel.showEventTypes[EventType.ACADEMIC] = it
+                                    }
+                                )
+                            }
+                            
+                            // Networking events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Networking Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showEventTypes[EventType.NETWORKING] ?: true,
+                                    onCheckedChange = { 
+                                        viewModel.showEventTypes[EventType.NETWORKING] = it
+                                    }
+                                )
+                            }
+                            
+                            // Social events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Social Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showEventTypes[EventType.SOCIAL] ?: true,
+                                    onCheckedChange = { 
+                                        viewModel.showEventTypes[EventType.SOCIAL] = it
+                                    }
+                                )
+                            }
+                            
+                            // Language Exchange events toggle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Language Exchange Events")
+                                Spacer(modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = viewModel.showEventTypes[EventType.LANGUAGE_EXCHANGE] ?: true,
+                                    onCheckedChange = { 
+                                        viewModel.showEventTypes[EventType.LANGUAGE_EXCHANGE] = it
                                     }
                                 )
                             }
