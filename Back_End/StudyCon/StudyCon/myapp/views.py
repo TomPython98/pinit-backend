@@ -12,7 +12,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from push_notifications.models import Device
+from push_notifications.models import APNSDevice
 
 
 
@@ -109,7 +109,6 @@ def logout_user(request):
 from django.contrib.auth.models import User
 
 
-@csrf_exempt
 def health_check(request):
     """Simple health check endpoint that doesn't require database"""
     return JsonResponse({"status": "healthy", "message": "PinIt API is running - Railway deployment test"}, status=200)
@@ -1014,6 +1013,142 @@ def rsvp_study_event(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def update_study_event(request):
+    """
+    PUT/POST request with JSON:
+    {
+      "username": "Alice",
+      "event_id": "<UUID-string>",
+      "title": "Updated Event Title",
+      "description": "Updated description",
+      "latitude": 40.7128,
+      "longitude": -74.0060,
+      "time": "2025-01-15T18:00:00",
+      "end_time": "2025-01-15T20:00:00",
+      "is_public": true,
+      "event_type": "study",
+      "max_participants": 15,
+      "interest_tags": ["programming", "networking"]
+    }
+    Only the host of the event can update it.
+    """
+    if request.method in ["PUT", "POST"]:
+        try:
+            data = json.loads(request.body)
+            username = data.get("username")
+            event_id = data.get("event_id")
+
+            try:
+                event_uuid = uuid.UUID(event_id)
+            except ValueError:
+                return JsonResponse({"error": "Invalid event_id format"}, status=400)
+
+            try:
+                event = StudyEvent.objects.get(id=event_uuid)
+            except StudyEvent.DoesNotExist:
+                return JsonResponse({"error": "Event not found"}, status=404)
+
+            # Check if the user is actually the host
+            if event.host.username != username:
+                return JsonResponse({"error": "Only the host can update this event"}, status=403)
+
+            # Store old values for notification
+            old_title = event.title
+            old_time = event.time
+            old_location = f"{event.latitude},{event.longitude}"
+            
+            # Update event fields
+            if "title" in data:
+                event.title = data.get("title", event.title)
+            if "description" in data:
+                event.description = data.get("description", event.description)
+            if "latitude" in data:
+                event.latitude = data.get("latitude", event.latitude)
+            if "longitude" in data:
+                event.longitude = data.get("longitude", event.longitude)
+            if "time" in data:
+                event.time = datetime.fromisoformat(data.get("time"))
+            if "end_time" in data:
+                event.end_time = datetime.fromisoformat(data.get("end_time"))
+            if "is_public" in data:
+                event.is_public = data.get("is_public", event.is_public)
+            if "event_type" in data:
+                event.event_type = data.get("event_type", event.event_type)
+            if "max_participants" in data:
+                event.max_participants = data.get("max_participants", event.max_participants)
+            if "interest_tags" in data:
+                event.set_interest_tags(data.get("interest_tags", []))
+
+            # Save the updated event
+            event.save()
+            
+            # Get all users to notify (attendees + invited friends)
+            attendees = [u.username for u in event.attendees.all()]
+            invited_friends = [u.username for u in event.invited_friends.all()]
+            all_notified_users = list(set(attendees + invited_friends))
+            
+            # Broadcast event update to all relevant users
+            broadcast_event_update(
+                event_id=str(event.id),
+                event_type="update",
+                usernames=all_notified_users
+            )
+            
+            # Send push notifications about the changes
+            send_event_update_notifications(
+                event=event,
+                old_title=old_title,
+                old_time=old_time,
+                old_location=old_location,
+                notified_users=all_notified_users
+            )
+            
+            print(f"✅ Event {event.id} updated by {username}")
+            return JsonResponse({
+                "success": True, 
+                "message": "Event updated successfully",
+                "event_id": str(event.id)
+            }, status=200)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        except Exception as e:
+            print(f"❌ Error updating event: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+def send_event_update_notifications(event, old_title, old_time, old_location, notified_users):
+    """Send push notifications about event updates"""
+    try:
+        from myapp.views import send_push_notification
+        
+        # Determine what changed
+        changes = []
+        if event.title != old_title:
+            changes.append(f"Title: '{old_title}' → '{event.title}'")
+        if event.time != old_time:
+            changes.append(f"Time: {old_time} → {event.time}")
+        if f"{event.latitude},{event.longitude}" != old_location:
+            changes.append("Location changed")
+        
+        if changes:
+            change_text = "; ".join(changes)
+            message = f"Event '{event.title}' was updated: {change_text}"
+            
+            for username in notified_users:
+                if username != event.host.username:  # Don't notify the host
+                    send_push_notification(
+                        user_id=User.objects.get(username=username).id,
+                        notification_type="event_updated",
+                        event_id=str(event.id),
+                        event_title=event.title,
+                        message=message
+                    )
+    except Exception as e:
+        print(f"❌ Error sending update notifications: {e}")
 
 @csrf_exempt
 def delete_study_event(request):
@@ -2851,7 +2986,7 @@ def send_push_notification(user_id, notification_type, **kwargs):
         for device in devices:
             if device.device_type == 'ios':
                 try:
-                    from push_notifications.models import APNSDevice
+                    # APNSDevice is already imported at the top
                     apns_device, created = APNSDevice.objects.get_or_create(
                         registration_id=device.token,
                         defaults={'user_id': user_id}
@@ -3811,4 +3946,3 @@ def update_matching_preferences(request, username):
         return JsonResponse({"error": str(e)}, status=500)
 
 # Auto-matching fix deployed Wed Oct  1 12:27:33 -03 2025
-DEPLOYMENT_TEST_1759333270
