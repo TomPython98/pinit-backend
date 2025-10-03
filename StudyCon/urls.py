@@ -11,6 +11,7 @@ urlpatterns = [
     path("api/register/", views.register_user, name="register"),
     path("api/login/", views.login_user, name="login"),
     path("api/logout/", views.logout_user, name="logout"),
+    path("api/change_password/", views.change_password, name="change_password"),
     path("api/get_all_users/", views.get_all_users, name="get_all_users"),
     
     # Friend requests
