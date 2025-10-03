@@ -1,1 +1,0 @@
-This script should be inserted into the get_invitations function in views.py to debug auto-match issues

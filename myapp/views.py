@@ -148,8 +148,6 @@ from django.contrib.auth.models import User
 
 def get_friends(request, username):
     try:
-        # Log the request
-        print(f"🔍 Fetching friends for user: {username}")
         
         # Get the user
         user = User.objects.get(username=username)
@@ -157,15 +155,11 @@ def get_friends(request, username):
         # Get the user's friends
         friends = list(user.userprofile.friends.values_list("user__username", flat=True))
         
-        # Log the found friends
-        print(f"✅ Found {len(friends)} friends for {username}: {friends}")
         
         return JsonResponse({"friends": friends})
     except User.DoesNotExist:
-        print(f"❌ User not found: {username}")
         return JsonResponse({"friends": []})
     except Exception as e:
-        print(f"❌ Error fetching friends for {username}: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
         
 from django.http import JsonResponse
@@ -178,7 +172,6 @@ def get_pending_requests(request, username):
 
         # ✅ Filter only requests that are **still pending**
         pending_requests = FriendRequest.objects.filter(to_user=user).values_list("from_user__username", flat=True)
-        print("Pending Requests",pending_requests)
         return JsonResponse({"pending_requests": list(pending_requests)})
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found."}, status=404)
@@ -229,7 +222,6 @@ def accept_friend_request(request):
             from_username = data.get("from_user")
             to_username = data.get("to_user")
 
-            print(f"🔍 Processing friend request acceptance: {from_username} -> {to_username}")
 
             # Validate input
             if not from_username or not to_username:
@@ -259,7 +251,6 @@ def accept_friend_request(request):
             # Delete the friend request
             friend_request.delete()
 
-            print(f"✅ Friend request accepted: {from_username} <-> {to_username}")
 
             return JsonResponse({
                 "success": True, 
@@ -269,7 +260,6 @@ def accept_friend_request(request):
         except json.JSONDecodeError:
             return JsonResponse({"success": False, "message": "Invalid JSON format"}, status=400)
         except Exception as e:
-            print(f"❌ Error accepting friend request: {str(e)}")
             return JsonResponse({"success": False, "message": f"Server error: {str(e)}"}, status=500)
 
     return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
@@ -326,11 +316,7 @@ def create_study_event(request):
                 event.set_interest_tags(interest_tags)
             
             # IMPORTANT: Add the host to attendees automatically
-            print(f"🔍 DEBUG: About to add host {host.username} to attendees for event {event.id}")
-            print(f"🔍 DEBUG: Current attendees: {list(event.attendees.all())}")
             event.attendees.add(host)
-            print(f"✅ Added host {host.username} to attendees for event {event.id}")
-            print(f"🔍 DEBUG: Attendees after adding: {list(event.attendees.all())}")
             
             # Add invited friends
             invited_friends = data.get("invited_friends", [])
@@ -348,7 +334,6 @@ def create_study_event(request):
             event.save()
             
             # IMPORTANT: Log the created event ID for verification
-            print(f"✅ Created event with ID: {event.id}")
             
             # Broadcast event creation to WebSocket clients
             broadcast_event_created(
@@ -362,7 +347,6 @@ def create_study_event(request):
             invites_sent = 0
             
             if auto_matching_enabled:
-                print(f"🔍 Auto-matching for event {event.id}...")
                 try:
                     # Use the enhanced auto-matching algorithm for better results
                     # Define scoring weights for different factors
@@ -724,12 +708,9 @@ def create_study_event(request):
                                 user_ids = [user.id for user in users_to_invite]
                                 send_bulk_invitation_notifications(user_ids, event)
                             except Exception as e:
-                                print(f"Failed to send notifications: {str(e)}")
-                    
-                    print(f"✅ Enhanced auto-matched and invited {invites_sent} users")
+                                pass
                     
                 except Exception as e:
-                    print(f"❌ Error during enhanced auto-matching: {str(e)}")
                     import traceback
                     traceback.print_exc()
             
@@ -744,7 +725,6 @@ def create_study_event(request):
             }, status=201)
 
         except Exception as e:
-            print(f"❌ Error creating event: {str(e)}")
             import traceback
             traceback.print_exc()
             return JsonResponse({"error": str(e)}, status=500)
@@ -843,15 +823,12 @@ def get_study_events(request, username):
         # Sort events by time (nearest first)
         event_data.sort(key=lambda x: x['time'])
         
-        print(f"✅ [get_study_events] Found {len(event_data)} events for user {username}")
         
         return JsonResponse({"events": event_data}, safe=False)
         
     except User.DoesNotExist:
-        print(f"❌ [get_study_events] User not found: {username}")
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        print(f"❌ [get_study_events] Error: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 def _should_include_event(event, user, username):
@@ -917,7 +894,6 @@ from .models import StudyEvent, User
 @csrf_exempt
 def rsvp_study_event(request):
     if request.method == "POST":
-        print("Request Body:", request.body.decode('utf-8'))
         try:
             data = json.loads(request.body)
             username = data.get("username")
@@ -926,26 +902,20 @@ def rsvp_study_event(request):
             # Convert the event_id to lowercase and ensure it's a valid UUID
             try:
                 event_uuid = uuid.UUID(event_id.lower())
-                print(f"Converted event_id: {event_uuid}")
             except ValueError:
-                print("Invalid event_id format")
                 return JsonResponse({"error": "Invalid event_id format"}, status=400)
 
             # Try to fetch the event using the UUID
             try:
                 event = StudyEvent.objects.get(id=event_uuid)
-                print(f"Fetched event: {event}")
             except StudyEvent.DoesNotExist:
-                print(f"StudyEvent with ID {event_uuid} not found.")
                 return JsonResponse({"error": "Event not found"}, status=404)
 
             # Fetch user
             user = User.objects.get(username=username)
-            print(f"Fetched user: {user.username}")
 
             # Check if the user is already an attendee
             if user in event.attendees.all():
-                print(f"{user.username} is already attending the event, removing...")
                 event.attendees.remove(user)  # Leave event
                 event.save() # ADDED: Explicitly save the event after removing attendee
                 event_data = {
@@ -969,7 +939,6 @@ def rsvp_study_event(request):
                 })
             else:
                 # Join event
-                print(f"{user.username} is joining the event...")
                 event.attendees.add(user)
                 
                 # If there was an invitation, mark it as accepted
@@ -1003,13 +972,10 @@ def rsvp_study_event(request):
                 })
 
         except User.DoesNotExist:
-            print("User not found.")
             return JsonResponse({"error": "User not found"}, status=404)
         except ValueError:
-            print("Invalid event_id format.")
             return JsonResponse({"error": "Invalid event_id format"}, status=400)
         except Exception as e:
-            print(f"❌ Error in RSVP: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
@@ -1108,7 +1074,6 @@ def get_user_profile(request, username):
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        print(f"❌ Error getting user profile: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
@@ -1162,7 +1127,6 @@ try:
 except ImportError:
     SEMANTIC_SEARCH_AVAILABLE = False
     MODEL = None
-    print("WARNING: sentence_transformers package not found. Semantic search will be disabled.")
 
 def semantic_search(query, events):
     """
@@ -1170,7 +1134,6 @@ def semantic_search(query, events):
     Returns the top 5 events ranked by cosine similarity.
     """
     if not SEMANTIC_SEARCH_AVAILABLE:
-        print("Semantic search not available. Returning the first 5 events.")
         return events[:5]
     
     global MODEL
@@ -1242,7 +1205,7 @@ def enhanced_search_events(request):
                     semantic_ids = [str(event.id) for event in semantic_results]
                     qs = StudyEvent.objects.filter(id__in=semantic_ids)
             except Exception as e:
-                print(f"Semantic search error: {e}")
+                pass
 
         # Build JSON response data
         data = []
@@ -1303,7 +1266,6 @@ def decline_invitation(request):
             username = data.get("username")
             event_id = data.get("event_id")
             
-            print(f"🔍 Processing decline request: username={username}, event_id={event_id}")
             
             user = User.objects.get(username=username)
             event = StudyEvent.objects.get(id=event_id)
@@ -1311,16 +1273,15 @@ def decline_invitation(request):
             # First, remove the user from invited_friends
             if user in event.invited_friends.all():
                 event.invited_friends.remove(user)
-                print(f"✅ Removed {username} from invited_friends")
             else:
-                print(f"⚠️ {username} was not in invited_friends for this event")
+                pass
             
             # Then, create a DeclinedInvitation record
             declined, created = DeclinedInvitation.objects.get_or_create(user=user, event=event)
             if created:
-                print(f"✅ Created new decline record for {username} on event {event.id}")
+                pass
             else:
-                print(f"ℹ️ {username} had already declined event {event.id}")
+                pass
                 
             event.save()
             
@@ -1330,13 +1291,10 @@ def decline_invitation(request):
                 "event_id": str(event.id)
             }, status=200)
         except User.DoesNotExist:
-            print(f"❌ User not found: {username}")
             return JsonResponse({"error": "User not found"}, status=404)
         except StudyEvent.DoesNotExist:
-            print(f"❌ Event not found: {event_id}")
             return JsonResponse({"error": "Event not found"}, status=404)
         except Exception as e:
-            print(f"❌ Error processing decline: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
@@ -1366,7 +1324,6 @@ def get_invitations(request, username):
         all_event_ids = set(direct_events.values_list('id', flat=True)) | set(auto_matched_events.values_list('id', flat=True))
         all_events = StudyEvent.objects.filter(id__in=all_event_ids)
         
-        print(f"✅ Found {direct_events.count()} direct invitations and {auto_matched_events.count()} auto-matched invitations for {username}")
         
         invitation_data = []
         for event in all_events:
@@ -1399,7 +1356,6 @@ def get_invitations(request, username):
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        print(f"❌ Error getting invitations: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -1429,14 +1385,12 @@ def add_event_comment(request):
     if request.method == "POST":
         # Log the raw request body for debugging
         raw_body = request.body.decode('utf-8')
-        print(f"RAW REQUEST BODY: {raw_body}")
         
         try:
             # Parse JSON with error handling
             try:
                 data = json.loads(raw_body)
             except json.JSONDecodeError as e:
-                print(f"JSON Parse Error: {e}")
                 return JsonResponse({"error": f"Invalid JSON: {str(e)}"}, status=400)
                 
             # Extract and validate required fields
@@ -1445,7 +1399,6 @@ def add_event_comment(request):
             text = data.get("text")
             parent_id = data.get("parent_id")
             
-            print(f"Comment data: username={username}, event_id={event_id}, text={text}, parent_id={parent_id}")
             
             if not all([username, event_id, text]):
                 return JsonResponse({
@@ -1461,21 +1414,18 @@ def add_event_comment(request):
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
-                print(f"User not found: {username}")
                 return JsonResponse({"error": f"User '{username}' not found"}, status=404)
             
             # Parse event UUID
             try:
                 event_uuid = uuid.UUID(event_id)
             except ValueError:
-                print(f"Invalid UUID format: {event_id}")
                 return JsonResponse({"error": f"Invalid event ID format: {event_id}"}, status=400)
             
             # Find event
             try:
                 event = StudyEvent.objects.get(id=event_uuid)
             except StudyEvent.DoesNotExist:
-                print(f"Event not found: {event_uuid}")
                 return JsonResponse({"error": f"Event with ID {event_id} not found"}, status=404)
             
             # Handle parent comment if provided
@@ -1484,10 +1434,8 @@ def add_event_comment(request):
                 try:
                     parent = EventComment.objects.get(id=parent_id)
                 except EventComment.DoesNotExist:
-                    print(f"Parent comment not found: {parent_id}")
                     return JsonResponse({"error": f"Parent comment {parent_id} not found"}, status=404)
                 except ValueError:
-                    print(f"Invalid parent ID format: {parent_id}")
                     return JsonResponse({"error": f"Invalid parent ID format: {parent_id}"}, status=400)
             
             # Create the comment
@@ -1498,9 +1446,7 @@ def add_event_comment(request):
                     text=text,
                     parent=parent
                 )
-                print(f"Created comment with ID: {comment.id}")
             except Exception as e:
-                print(f"Error creating comment: {e}")
                 traceback.print_exc()
                 return JsonResponse({"error": f"Error creating comment: {str(e)}"}, status=500)
             
@@ -1521,7 +1467,6 @@ def add_event_comment(request):
         
         except Exception as e:
             # Catch-all for any other errors
-            print(f"Unexpected error in add_event_comment: {e}")
             traceback.print_exc()
             return JsonResponse({"error": f"Server error: {str(e)}"}, status=500)
     
@@ -1536,7 +1481,6 @@ def toggle_event_like(request):
     if request.method == "POST":
         # Enhanced logging of raw request
         raw_body = request.body.decode('utf-8')
-        print(f"🔍 FULL LIKE REQUEST: {raw_body}")
         
         try:
             data = json.loads(raw_body)
@@ -1546,7 +1490,6 @@ def toggle_event_like(request):
 
             # Comprehensive input validation
             if not username or not event_id:
-                print("❌ Missing required username or event_id")
                 return JsonResponse({
                     "error": "Missing required fields", 
                     "details": {
@@ -1560,10 +1503,8 @@ def toggle_event_like(request):
                 user = User.objects.get(username=username)
                 event = StudyEvent.objects.get(id=uuid.UUID(event_id))
             except User.DoesNotExist:
-                print(f"❌ User not found: {username}")
                 return JsonResponse({"error": "User not found"}, status=404)
             except StudyEvent.DoesNotExist:
-                print(f"❌ Event not found: {event_id}")
                 return JsonResponse({"error": "Event not found"}, status=404)
 
             # Like/Unlike Logic
@@ -1596,10 +1537,8 @@ def toggle_event_like(request):
                         comment=comment
                     ).count()
                     
-                    print(f"✅ Comment Like: liked={liked}, total_likes={total_likes}")
                     
                 except EventComment.DoesNotExist:
-                    print(f"❌ Comment not found: {post_id}")
                     return JsonResponse({"error": "Comment not found"}, status=404)
                 
             else:
@@ -1628,7 +1567,6 @@ def toggle_event_like(request):
                     comment__isnull=True
                 ).count()
                 
-                print(f"✅ Event Like: liked={liked}, total_likes={total_likes}")
 
             # Detailed response with likes information
             return JsonResponse({
@@ -1640,10 +1578,8 @@ def toggle_event_like(request):
             })
 
         except json.JSONDecodeError:
-            print("❌ Invalid JSON data")
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            print(f"❌ Unexpected error in toggle_event_like: {e}")
             import traceback
             traceback.print_exc()
             return JsonResponse({"error": str(e)}, status=500)
@@ -1724,7 +1660,6 @@ def get_event_interactions(request, event_id):
                 ).count()
                 
                 # Debug print for comment likes
-                print(f"🔍 Comment {comment.id} Likes: {comment_likes}")
                 
                 comment_data = {
                     "id": comment.id,
@@ -1743,7 +1678,6 @@ def get_event_interactions(request, event_id):
 
         # Event-level likes (without comments)
         event_likes = EventLike.objects.filter(event=event, comment__isnull=True).count()
-        print(f"🌟 Event {event_id} Total Likes: {event_likes}")
 
         # Detailed likes tracking
         likes_by_user = {}
@@ -1761,9 +1695,8 @@ def get_event_interactions(request, event_id):
                 likes_by_user[username]["event_likes"] += 1
 
         # Debug print for likes breakdown
-        print("📊 Likes Breakdown:")
         for username, likes in likes_by_user.items():
-            print(f"   {username}: Event Likes = {likes['event_likes']}, Comment Likes = {likes['comment_likes']}")
+            pass
 
         # Shares breakdown
         shares_breakdown = {}
@@ -1787,7 +1720,6 @@ def get_event_interactions(request, event_id):
     except StudyEvent.DoesNotExist:
         return JsonResponse({"error": "Event not found"}, status=404)
     except Exception as e:
-        print(f"❌ Error in get_event_interactions: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 # Add these functions to your views.py file
@@ -1817,7 +1749,6 @@ def get_event_feed(request, event_id):
         
         # Check if this is an auto-matched event
         if event.auto_matching_enabled:
-            print(f"[DEBUG] Checking visibility of auto-matched event '{event.title}' (ID: {event.id}) for user {current_username}")
             
             # Get the list of matched users for this event
             auto_matched_invitations = EventInvitation.objects.filter(
@@ -1825,7 +1756,6 @@ def get_event_feed(request, event_id):
                 is_auto_matched=True
             )
             matched_users = [invitation.user.username for invitation in auto_matched_invitations]
-            print(f"[DEBUG] Event '{event.title}' matched_users: {matched_users}")
             
             # Check if the current user is in the matched users list
             is_matched = current_username in matched_users
@@ -1838,18 +1768,16 @@ def get_event_feed(request, event_id):
             # If this is an auto-matched event AND user is not in matched_users list,
             # AND user is not host, attendee, or directly invited, then deny access
             if (not is_matched and not is_host and not is_attendee and not is_invited):
-                print(f"⛔ DENYING ACCESS to auto-matched event '{event.title}' - user {current_username} not in matched_users")
                 return JsonResponse({"error": "You do not have access to this event"}, status=403)
             else:
-                print(f"✅ ALLOWING ACCESS to auto-matched event '{event.title}' for user {current_username}")
                 if is_matched:
-                    print(f"   - Reason: User is in matched_users list")
+                    pass
                 elif is_host:
-                    print(f"   - Reason: User is the host")
+                    pass
                 elif is_attendee:
-                    print(f"   - Reason: User is an attendee")
+                    pass
                 elif is_invited:
-                    print(f"   - Reason: User is directly invited")
+                    pass
         
         # Get all comments (sorted by newest first)
         comments = EventComment.objects.filter(event=event, parent=None).order_by('-created_at')
@@ -2297,7 +2225,6 @@ def advanced_auto_match(request):
         min_score = float(data.get("min_score", 30.0))  # Increased default minimum
         potentials_only = data.get("potentials_only", False)
         
-        print(f"🔍 Enhanced auto-matching for event {event_id}, max_invites={max_invites}")
         
         if not event_id:
             return JsonResponse({"error": "Event ID is required"}, status=400)
@@ -2605,7 +2532,6 @@ def advanced_auto_match(request):
                     })
                     
             except Exception as e:
-                print(f"❌ Error processing user {user.username}: {str(e)}")
                 continue
         
         # Sort by match score (highest first)
@@ -2614,7 +2540,6 @@ def advanced_auto_match(request):
         # Limit to max_invites
         top_matches = matched_users[:max_invites]
         
-        print(f"✅ Enhanced matching found {len(top_matches)} potential matches")
         
         # If potentials_only, just return the matches
         if potentials_only:
@@ -2649,7 +2574,6 @@ def advanced_auto_match(request):
                         successful_invites += 1
                         
                     except Exception as e:
-                        print(f"❌ Failed to invite {match['username']}: {str(e)}")
                         match["invited"] = False
                         match["error"] = str(e)
                 
@@ -2666,7 +2590,6 @@ def advanced_auto_match(request):
         })
         
     except Exception as e:
-        print(f"❌ Enhanced auto-matching error: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -2728,10 +2651,9 @@ def send_bulk_invitation_notifications(user_ids, event):
                     **notification_data
                 )
             except Exception as e:
-                print(f"Failed to send push notification to user {user_id}: {str(e)}")
+                pass
                 
     except Exception as e:
-        print(f"Error in bulk notification sending: {str(e)}")
         # Continue execution even if notifications fail
         pass
 
@@ -2837,7 +2759,6 @@ def send_push_notification(user_id, notification_type, **kwargs):
         devices = Device.objects.filter(user_id=user_id, is_active=True)
         
         if not devices.exists():
-            print(f"No active devices found for user ID {user_id}")
             return
         
         # Prepare notification payload
@@ -2881,17 +2802,16 @@ def send_push_notification(user_id, notification_type, **kwargs):
                         sound="default",
                         badge=1
                     )
-                    print(f"✅ Sent iOS notification to {device.user.username}")
                     
                 except Exception as e:
-                    print(f"❌ Error sending iOS notification: {str(e)}")
+                    pass
             
             elif device.device_type == 'android':
                 # Implementation for FCM (Android) would go here
                 pass
                 
     except Exception as e:
-        print(f"Error in send_push_notification: {str(e)}")
+        pass
 
 # Update the accept_invitation function to send notification to event host
 
@@ -2925,7 +2845,7 @@ def accept_invitation(request, invitation_id):
                 attendee_name=request.user.username
             )
         except Exception as e:
-            print(f"Failed to send push notification: {str(e)}")
+            pass
         
         return JsonResponse({
             'success': True,
@@ -2951,7 +2871,6 @@ def invite_to_event(request):
             username = data.get("username")
             is_auto_matched = data.get("mark_as_auto_matched", False)  # Get auto-matched flag
             
-            print(f"🔍 Processing invitation: username={username}, event_id={event_id}, auto-matched={is_auto_matched}")
             
             # Get the event and user
             try:
@@ -2984,7 +2903,7 @@ def invite_to_event(request):
                     inviter=request.user.username
                 )
             except Exception as e:
-                print(f"Failed to send push notification: {str(e)}")
+                pass
             
             return JsonResponse({
                 "success": True,
@@ -2995,7 +2914,6 @@ def invite_to_event(request):
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            print(f"❌ Error inviting user: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
@@ -3037,19 +2955,11 @@ def update_user_interests(request):
             auto_invite_preference = data.get("auto_invite_preference", True)
             preferred_radius = data.get("preferred_radius", 10.0)
             
-            print(f"🔍 Updating profile for user: {username}")
-            print(f"  Basic info: {full_name}, {university}, {degree}, {year}")
-            print(f"  Bio length: {len(bio)} characters")
-            print(f"  Interests: {interests}")
-            print(f"  Skills: {skills}")
-            print(f"  Auto-invite: {auto_invite_preference}")
-            print(f"  Preferred radius: {preferred_radius}")
             
             # Find the user
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
-                print(f"❌ User not found: {username}")
                 return JsonResponse({"error": "User not found"}, status=404)
             
             # Get or create the user profile
@@ -3078,7 +2988,6 @@ def update_user_interests(request):
             # Save the profile
             profile.save()
             
-            print(f"✅ Successfully updated profile for {username}")
             
             return JsonResponse({
                 "success": True,
@@ -3086,10 +2995,8 @@ def update_user_interests(request):
             })
             
         except json.JSONDecodeError:
-            print("❌ Invalid JSON data")
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            print(f"❌ Error updating user profile: {str(e)}")
             import traceback
             traceback.print_exc()
             return JsonResponse({"error": str(e)}, status=500)
@@ -3119,14 +3026,9 @@ def submit_user_rating(request):
             rating = data.get("rating")
             reference = data.get("reference", "")
             
-            print(f"🔍 Submitting user rating: {from_username} -> {to_username}")
-            print(f"  Rating: {rating}/5")
-            print(f"  Event: {event_id}")
-            print(f"  Reference: {reference}")
             
             # Validate required fields
             if not from_username or not to_username or rating is None:
-                print("❌ Missing required fields")
                 return JsonResponse({"error": "Missing required fields"}, status=400)
             
             # Validate rating value
@@ -3135,7 +3037,6 @@ def submit_user_rating(request):
                 if rating < 1 or rating > 5:
                     raise ValueError("Rating must be between 1 and 5")
             except (ValueError, TypeError):
-                print("❌ Invalid rating value")
                 return JsonResponse({"error": "Rating must be a number between 1 and 5"}, status=400)
             
             # Find the users
@@ -3143,12 +3044,10 @@ def submit_user_rating(request):
                 from_user = User.objects.get(username=from_username)
                 to_user = User.objects.get(username=to_username)
             except User.DoesNotExist:
-                print("❌ User not found")
                 return JsonResponse({"error": "User not found"}, status=404)
             
             # Prevent self-rating
             if from_user == to_user:
-                print("❌ Cannot rate yourself")
                 return JsonResponse({"error": "You cannot rate yourself"}, status=400)
             
             # Find the event if an ID was provided
@@ -3157,7 +3056,6 @@ def submit_user_rating(request):
                 try:
                     event = StudyEvent.objects.get(id=event_id)
                 except StudyEvent.DoesNotExist:
-                    print(f"❌ Event not found: {event_id}")
                     return JsonResponse({"error": "Event not found"}, status=404)
             
             # Create or update the rating
@@ -3173,7 +3071,6 @@ def submit_user_rating(request):
                 )
                 
                 # The save method in UserRating will handle stat updates
-                print(f"✅ {'Created' if created else 'Updated'} rating successfully")
                 
                 return JsonResponse({
                     "success": True,
@@ -3182,16 +3079,13 @@ def submit_user_rating(request):
                 })
                 
             except Exception as e:
-                print(f"❌ Error saving rating: {str(e)}")
                 import traceback
                 traceback.print_exc()
                 return JsonResponse({"error": str(e)}, status=500)
         
         except json.JSONDecodeError:
-            print("❌ Invalid JSON data")
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            print(f"❌ Error processing request: {str(e)}")
             import traceback
             traceback.print_exc()
             return JsonResponse({"error": str(e)}, status=500)
@@ -3204,7 +3098,6 @@ def get_user_reputation(request, username):
     This supports Bandura's social learning theory by providing visible feedback.
     """
     try:
-        print(f"🔍 Fetching reputation for user: {username}")
         user = User.objects.get(username=username)
         
         # Get or create reputation stats
@@ -3228,14 +3121,11 @@ def get_user_reputation(request, username):
             }
         }
         
-        print(f"✅ Retrieved reputation data for {username}: {data}")
         return JsonResponse(data)
         
     except User.DoesNotExist:
-        print(f"❌ User not found: {username}")
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        print(f"❌ Error retrieving reputation: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
@@ -3246,7 +3136,6 @@ def get_user_ratings(request, username):
     This supports Bandura's social learning theory by providing feedback and modeling.
     """
     try:
-        print(f"🔍 Fetching ratings for user: {username}")
         user = User.objects.get(username=username)
         
         # Get ratings received and given by the user
@@ -3275,14 +3164,11 @@ def get_user_ratings(request, username):
             "total_given": ratings_given.count()
         }
         
-        print(f"✅ Retrieved ratings for {username}")
         return JsonResponse(data)
         
     except User.DoesNotExist:
-        print(f"❌ User not found: {username}")
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        print(f"❌ Error retrieving ratings: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
@@ -3293,7 +3179,6 @@ def get_trust_levels(request):
     This provides visibility to Bandura's social learning reinforcement mechanism.
     """
     try:
-        print(f"🔍 Fetching trust levels")
         trust_levels = UserTrustLevel.objects.all().order_by('level')
         
         data = [{
@@ -3303,11 +3188,9 @@ def get_trust_levels(request):
             "min_average_rating": level.min_average_rating
         } for level in trust_levels]
         
-        print(f"✅ Retrieved {len(data)} trust levels")
         return JsonResponse({"trust_levels": data})
         
     except Exception as e:
-        print(f"❌ Error retrieving trust levels: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
@@ -3330,11 +3213,9 @@ def schedule_rating_reminder(request):
             event_id = data.get("event_id")
             username = data.get("username")
             
-            print(f"🔍 Scheduling rating reminder for user: {username}, event: {event_id}")
             
             # Validate required fields
             if not event_id or not username:
-                print("❌ Missing required fields")
                 return JsonResponse({"error": "Missing required fields"}, status=400)
             
             # Find the user and event
@@ -3342,12 +3223,10 @@ def schedule_rating_reminder(request):
                 user = User.objects.get(username=username)
                 event = StudyEvent.objects.get(id=event_id)
             except (User.DoesNotExist, StudyEvent.DoesNotExist):
-                print("❌ User or event not found")
                 return JsonResponse({"error": "User or event not found"}, status=404)
             
             # In a real implementation, this would schedule a delayed notification
             # For now, we'll just log it and pretend it's scheduled
-            print(f"✅ Rating reminder scheduled for {username} for event: {event.title}")
             
             # Simulate sending a notification right away (for demo purposes)
             # In production, this would be handled by a task scheduler
@@ -3360,10 +3239,8 @@ def schedule_rating_reminder(request):
             })
             
         except json.JSONDecodeError:
-            print("❌ Invalid JSON data")
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            print(f"❌ Error scheduling reminder: {str(e)}")
             import traceback
             traceback.print_exc()
             return JsonResponse({"error": str(e)}, status=500)
@@ -3500,7 +3377,6 @@ def get_profile_completion(request, username):
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        print(f"❌ Error getting profile completion: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -3597,7 +3473,6 @@ def get_user_preferences(request, username):
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        print(f"❌ Error getting user preferences: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -3689,7 +3564,6 @@ def update_user_preferences(request, username):
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
-        print(f"❌ Error updating user preferences: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -3732,7 +3606,6 @@ def get_matching_preferences(request, username):
     except User.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
-        print(f"❌ Error getting matching preferences: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -3801,7 +3674,6 @@ def update_matching_preferences(request, username):
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
-        print(f"❌ Error updating matching preferences: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 # Auto-matching fix deployed Wed Oct  1 12:27:33 -03 2025

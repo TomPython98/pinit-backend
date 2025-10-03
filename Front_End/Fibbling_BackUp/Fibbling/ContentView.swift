@@ -64,7 +64,6 @@ struct ContentView: View {
     @State private var showNotesView = false
     @State private var showFlashcardsView = false
     @State private var showProfileView = false
-    @State private var showDebugView = false
     @State private var selectedEvent: StudyEvent? = nil
     @State private var showEventDetailSheet = false
     @AppStorage("isLoggedIn") private var isLoggedIn = true
@@ -280,27 +279,6 @@ struct ContentView: View {
             
             Spacer()
             
-            // Debug button for testing push notifications
-            Button(action: {
-                // Navigate to debug view
-                showDebugView = true
-            }) {
-                Image(systemName: "ladybug.fill")
-                    .font(.title2)
-                    .foregroundColor(.brandSecondary)
-                    .frame(width: 40, height: 40)
-                    .background(
-                        Circle()
-                            .fill(Color.bgCard)
-                            .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 3)
-                    )
-            }
-            .buttonStyle(ScaleButtonStyle())
-            .sheet(isPresented: $showDebugView) {
-                NavigationView {
-                    DebugView()
-                }
-            }
             
             // Settings Button with enhanced animation
             Button(action: {

@@ -34,16 +34,16 @@
 			<key>text-context</key>
 			<dict>
 				<key>focused</key>
-				<string>                                Text("Complete Your Profile")
+				<string>                    }
 </string>
 				<key>leading</key>
-				<string>                            
-                            VStack(alignment: .leading, spacing: 2) {
+				<string>                        )
+                        .foregroundColor(profileCompletionColor)
 </string>
 				<key>trailing</key>
-				<string>                                    .font(.subheadline.weight(.semibold))
-                                
-                                Text("\(effectiveMissingItems.count) item(s) remaining")
+				<string>                    .buttonStyle(PlainButtonStyle())
+                    .padding(.top, 6)
+                }
 </string>
 			</dict>
 			<key>type</key>
