@@ -736,9 +736,10 @@ struct StudyMapBoxView: UIViewRepresentable {
             }
             .store(in: &context.coordinator.cancelables)
         
-        // Center map on user location when available
+        // Center map on user location only once when first detected
+        var hasCenteredOnLocation = false
         mapView.location.onLocationChange.observe { [weak mapView] locations in
-            guard let mapView = mapView, let location = locations.first else { return }
+            guard let mapView = mapView, let location = locations.first, !hasCenteredOnLocation else { return }
             DispatchQueue.main.async {
                 let cameraOptions = CameraOptions(
                     center: location.coordinate,
@@ -747,6 +748,7 @@ struct StudyMapBoxView: UIViewRepresentable {
                     pitch: 0
                 )
                 mapView.mapboxMap.setCamera(to: cameraOptions)
+                hasCenteredOnLocation = true
             }
         }.store(in: &context.coordinator.cancelables)
         
@@ -1150,8 +1152,8 @@ struct StudyMapView: View {
                 }
             }
             .onChange(of: locationManager.location) { newLocation in
-                // Update map region when user location is available
-                if let location = newLocation {
+                // Only update region once when location is first detected
+                if let location = newLocation, region.center.latitude == -34.6037 && region.center.longitude == -58.3816 {
                     withAnimation(.easeInOut(duration: 1.0)) {
                         region.center = location.coordinate
                         region.span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05) // Zoom in closer
