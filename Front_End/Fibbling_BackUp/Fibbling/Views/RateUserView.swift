@@ -251,7 +251,7 @@ struct RateUserView: View {
     RateUserView(
         event: PreviewEvent(
             title: "Sample Study Event",
-            coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+            coordinate: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816),
             time: Date(),
             endTime: Date().addingTimeInterval(3600),
             description: "A sample event for preview",

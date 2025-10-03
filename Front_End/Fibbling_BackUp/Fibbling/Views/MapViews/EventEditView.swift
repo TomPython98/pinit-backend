@@ -522,7 +522,7 @@ struct EventEditView_Previews: PreviewProvider {
     static var previews: some View {
         let sampleEvent = StudyEvent(
             title: "Sample Study Session",
-            coordinate: CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060),
+            coordinate: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816),
             time: Date(),
             endTime: Date().addingTimeInterval(3600),
             description: "A sample study session",

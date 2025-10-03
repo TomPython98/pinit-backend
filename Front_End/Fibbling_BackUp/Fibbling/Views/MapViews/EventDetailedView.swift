@@ -87,6 +87,10 @@ struct EventDetailView: View {
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var showShareSheet = false
+    @State private var showSocialFeedSheet = false
+    @State private var showFeedView = false
+    @State private var showUserProfileSheet = false
+    @State private var selectedUserProfile: String? = nil
     @State private var showEditSheet = false
 
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>, onRSVP: @escaping (UUID) -> Void) {
@@ -198,6 +202,22 @@ struct EventDetailView: View {
                 .environmentObject(accountManager)
                 .environmentObject(calendarManager)
         }
+        .sheet(isPresented: $showSocialFeedSheet) {
+            SocialFeedShareView(event: localEvent)
+                .environmentObject(accountManager)
+        }
+        .sheet(isPresented: $showFeedView) {
+            EventFeedView(event: localEvent)
+                .environmentObject(accountManager)
+        }
+        .sheet(isPresented: $showUserProfileSheet, onDismiss: {
+            selectedUserProfile = nil
+        }) {
+            if let selectedUser = selectedUserProfile {
+                UserProfileView(username: selectedUser)
+                    .environmentObject(accountManager)
+            }
+        }
         .alert("Calendar Access Required", isPresented: $showCalendarError) {
             Button("Open Settings", role: .none) { openSettings() }
             Button("Cancel", role: .cancel) { }
@@ -241,17 +261,48 @@ struct EventDetailView: View {
     }
     
     private var contentView: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                eventInfoCard
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 24) {
+                // Event Header Card - matching ContentView style
+                eventHeaderCard
+                    .padding(.horizontal)
+                
+                // Event Details Card
+                eventDetailsCard
+                    .padding(.horizontal)
+                
+                // Attendees Card
                 attendeesCard
-                actionButtons
-                socialFeedButton
+                    .padding(.horizontal)
+                
+                // Action Buttons Card
+                actionButtonsCard
+                    .padding(.horizontal)
+                
+                // Social Feed Card
+                socialFeedCard
+                    .padding(.horizontal)
             }
-            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
             .padding(.bottom, 40)
         }
-        .background(Color.bgSurface.ignoresSafeArea())
+        .background(
+            ZStack {
+                // Refined background with subtle pattern - matching ContentView
+                Color.bgSurface.ignoresSafeArea()
+                
+                // Enhanced layered background for depth
+                LinearGradient(
+                    colors: [
+                        Color.gradientStart.opacity(0.05),
+                        Color.gradientEnd.opacity(0.02)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+            }
+        )
         .sheet(isPresented: $showRateUserSheet, onDismiss: {
             selectedUserToRate = nil
         }) {
@@ -305,7 +356,7 @@ struct EventDetailView: View {
                 .foregroundColor(.white)
                 .padding()
                 .frame(maxWidth: .infinity)
-                .background(Color.socialDark)
+                .background(Color.brandPrimary)
                 .cornerRadius(12)
         }
         .padding(.horizontal)
@@ -638,7 +689,7 @@ extension EventDetailView {
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
-                gradient: Gradient(colors: [Color.socialDark, Color.socialDark]),
+                gradient: Gradient(colors: [Color.brandPrimary, Color.brandPrimary]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -648,242 +699,639 @@ extension EventDetailView {
     }
 }
 
-// MARK: - Event Info Card
+// MARK: - Event Header Card - ContentView Style
 extension EventDetailView {
-    private var eventInfoCard: some View {
+    private var eventHeaderCard: some View {
         VStack(spacing: 20) {
-            timeSection
-            hostSection
+            // Event Title with enhanced styling
+            VStack(spacing: 12) {
+                HStack {
+                    // Event Type Icon with gradient background
+                    Image(systemName: eventTypeIcon)
+                        .font(.system(size: 24))
+                        .foregroundColor(.textLight)
+                        .frame(width: 48, height: 48)
+                        .background(
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [eventTypeColor, eventTypeColor.opacity(0.85)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .shadow(color: eventTypeColor.opacity(0.25), radius: 8, x: 0, y: 4)
+                                
+                                // Subtle inner highlight
+                                Circle()
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.6), .clear],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1
+                                    )
+                                    .frame(width: 46, height: 46)
+                            }
+                        )
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(localEvent.title)
+                            .font(.system(.title2, design: .rounded).weight(.bold))
+                            .foregroundColor(.textPrimary)
+                            .multilineTextAlignment(.leading)
+                        
+                        Text(localEvent.eventType.displayName)
+                            .font(.subheadline)
+                            .foregroundColor(.textSecondary)
+                    }
+                    
+                    Spacer()
+                }
+                
+                // Event Status Badge
+                HStack {
+                    if isHosting {
+                        HStack(spacing: 6) {
+                            Image(systemName: "crown.fill")
+                                .font(.caption)
+                                .foregroundColor(.textLight)
+                            Text("Hosting")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.textLight)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.brandWarning)
+                                .shadow(color: Color.brandWarning.opacity(0.25), radius: 4, x: 0, y: 2)
+                        )
+                    } else if isAttending {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.caption)
+                                .foregroundColor(.textLight)
+                            Text("Attending")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.textLight)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.brandPrimary)
+                                .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                        )
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Event Details Card
+    private var eventDetailsCard: some View {
+        VStack(spacing: 20) {
+            // Time Section
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.textLight)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(Color.brandPrimary)
+                                .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                        )
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Event Schedule")
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.textPrimary)
+                        
+                        Text("Start: \(localEvent.time.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.subheadline)
+                            .foregroundColor(.textSecondary)
+                        
+                        Text("End: \(localEvent.endTime.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.subheadline)
+                            .foregroundColor(.textSecondary)
+                    }
+                    
+                    Spacer()
+                }
+            }
             
-            // Auto-matching section - display only for auto-matched events
+            // Host Section
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: "person.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.textLight)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(Color.brandSecondary)
+                                .shadow(color: Color.brandSecondary.opacity(0.25), radius: 4, x: 0, y: 2)
+                        )
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Event Host")
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.textPrimary)
+                        
+                        HStack(spacing: 6) {
+                            Text(localEvent.host)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.textPrimary)
+                            
+                            if localEvent.hostIsCertified {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.textLight)
+                                    .padding(2)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.brandPrimary)
+                                    )
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                }
+            }
+            
+            // Description Section
+            if let description = localEvent.description, !description.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "text.alignleft")
+                            .font(.system(size: 20))
+                            .foregroundColor(.textLight)
+                            .frame(width: 40, height: 40)
+                            .background(
+                                Circle()
+                                    .fill(Color.brandPrimary)
+                                    .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                            )
+                        
+                        Text("Description")
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.textPrimary)
+                        
+                        Spacer()
+                    }
+                    
+                    Text(description)
+                        .font(.body)
+                        .foregroundColor(.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.leading, 52)
+                }
+            }
+            
+            // Auto-matching section
             if localEvent.isAutoMatched ?? false {
-                VStack(alignment: .leading, spacing: 10) {
+                autoMatchingSection
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Auto-matching Section
+    private var autoMatchingSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Image(systemName: "sparkles")
-                            .foregroundColor(Color.brandPrimary)
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandSuccess)
+                            .shadow(color: Color.brandSuccess.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
                         Text("Auto-Matched Event")
-                            .font(.headline)
-                            .foregroundColor(Color.textPrimary)
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
                         
                         Spacer()
                         
-                        // Add a refresh button for debugging purposes
                         Button(action: {
                             fetchEventTags()
                         }) {
                             Image(systemName: "arrow.clockwise")
-                                .foregroundColor(Color.brandPrimary)
                                 .font(.caption)
-                        }
-                        .accessibilityLabel("Refresh tags")
-                        .accessibilityHint("Refresh interest tags for this event")
+                        .foregroundColor(.textLight)
+                        .padding(6)
+                        .background(
+                            Circle()
+                                .fill(Color.brandPrimary)
+                        )
+                }
                     }
                     
                     Text("This event uses interest matching to connect people with similar interests.")
                         .font(.subheadline)
-                        .foregroundColor(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                .foregroundColor(.textSecondary)
+                .padding(.leading, 52)
                     
-                    // Display real interest tags if available
                     if let tags = localEvent.interestTags, !tags.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text("Interest Tags")
                                     .font(.caption.weight(.bold))
-                                    .foregroundColor(.gray)
+                            .foregroundColor(.textSecondary)
                                 
                                 Spacer()
                                 
                                 Text("\(tags.count) tags")
                                     .font(.caption)
-                                    .foregroundColor(.gray.opacity(0.7))
+                            .foregroundColor(.textMuted)
                             }
+                    .padding(.leading, 52)
                             
-                            FlowLayout(spacing: 6) {
+                    FlowLayout(spacing: 8) {
                                 ForEach(tags, id: \.self) { tag in
                                     Text(tag)
-                                        .font(.system(.caption2, design: .rounded))
-                                        .fontWeight(.semibold)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 5)
+                                .font(.system(.caption, design: .rounded))
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
                                         .background(
                                             Capsule()
-                                                .fill(Color.blue.opacity(0.12))
+                                        .fill(Color.brandPrimary.opacity(0.1))
                                         )
                                         .overlay(
                                             Capsule()
-                                                .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                                        .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1)
                                         )
                                         .foregroundColor(Color.brandPrimary)
-                                        .onAppear {
-                                        }
-                                }
-                            }
-                        }
-                        .onAppear {
-                        }
-                    } else {
-                        // If no tags are available, show a static message instead of auto-refreshing
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Interest tags not available")
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.gray)
-                            
-                            // Manual refresh button instead of automatic refreshing
-                            Button(action: {
-                                fetchEventTags()
-                            }) {
-                                Label("Refresh Tags", systemImage: "arrow.clockwise")
-                                    .font(.caption)
-                                    .foregroundColor(Color.brandPrimary)
-                            }
-                            .padding(.vertical, 4)
-                            
-                            // Debug output showing the EventID for troubleshooting
-                            Text("Event ID: \(localEvent.id.uuidString.prefix(8))...")
-                                .font(.system(size: 8))
-                                .foregroundColor(.gray.opacity(0.5))
-                        }
-                        .onAppear {
-                            // Don't auto-fetch tags to prevent refresh loops
                         }
                     }
-                }
-                .padding(15)
-                .background(Color.bgCard.opacity(0.7))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                )
-                .onAppear {
+                    .padding(.leading, 52)
                 }
             }
-            
-            if let description = localEvent.description, !description.isEmpty {
-                Text(description)
-                    .font(.body)
-                    .foregroundColor(Color.textPrimary)
-            }
+        }
+    }
+    
+    // MARK: - Helper Properties
+    private var eventTypeIcon: String {
+        switch localEvent.eventType {
+        case .study: return "book.fill"
+        case .party: return "party.popper.fill"
+        case .business: return "briefcase.fill"
+        case .cultural: return "theatermasks.fill"
+        case .academic: return "graduationcap.fill"
+        case .networking: return "person.2.fill"
+        case .social: return "heart.fill"
+        case .language_exchange: return "globe"
+        case .other: return "calendar"
+        }
+    }
+    
+    private var eventTypeColor: Color {
+        switch localEvent.eventType {
+        case .study: return Color.brandPrimary
+        case .party: return Color.brandWarning
+        case .business: return Color.brandSecondary
+        case .cultural: return Color.brandWarning
+        case .academic: return Color.brandSuccess
+        case .networking: return Color.brandPrimary
+        case .social: return Color.brandSuccess
+        case .language_exchange: return Color.brandSecondary
+        case .other: return Color.textSecondary
         }
     }
     
     private var timeSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Time")
-                .font(.caption.weight(.bold))
-                .foregroundColor(.gray)
-            
-            HStack(spacing: 6) {
-                Label(localEvent.time.formatted(date: .abbreviated, time: .shortened),
-                      systemImage: "clock.fill")
-                    .font(.subheadline)
-                    .foregroundColor(.socialDark)
-                
-                Image(systemName: "arrow.right")
-                    .foregroundColor(.gray.opacity(0.6))
-                
-                Label(localEvent.endTime.formatted(date: .abbreviated, time: .shortened),
-                      systemImage: "clock.badge.checkmark.fill")
-                    .font(.subheadline)
-                    .foregroundColor(.socialDark)
-            }
-        }
-    }
-    
-    private var hostSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Hosted By")
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Event Schedule")
                 .font(.caption.weight(.bold))
                 .foregroundColor(Color.textSecondary)
             
-            HStack {
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Image(systemName: "clock.fill")
+                        .foregroundColor(Color.brandPrimary)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Start Time")
+                            .font(.caption)
+                            .foregroundColor(Color.textMuted)
+                        Text(localEvent.time.formatted(date: .abbreviated, time: .shortened))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(Color.textPrimary)
+                    }
+                    
+                    Spacer()
+                }
+                
+                HStack(spacing: 12) {
+                    Image(systemName: "clock.badge.checkmark.fill")
+                        .foregroundColor(Color.brandPrimary)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("End Time")
+                            .font(.caption)
+                            .foregroundColor(Color.textMuted)
+                        Text(localEvent.endTime.formatted(date: .abbreviated, time: .shortened))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(Color.textPrimary)
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.cardStroke, lineWidth: 1)
+        )
+        .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+    }
+    
+    private var hostSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Event Host")
+                .font(.caption.weight(.bold))
+                .foregroundColor(Color.textSecondary)
+            
+            HStack(spacing: 12) {
+                Image(systemName: "person.circle.fill")
+                    .foregroundColor(Color.brandPrimary)
+                    .font(.title2)
+                
+                VStack(alignment: .leading, spacing: 2) {
                 Text(localEvent.host)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(Color.textPrimary)
                 
+                    HStack(spacing: 4) {
                 if localEvent.hostIsCertified {
                     Image(systemName: "checkmark.seal.fill")
-                        .foregroundColor(.green)
+                                .foregroundColor(Color.brandPrimary)
                         .font(.caption)
+                            Text("Verified Host")
+                                .font(.caption)
+                                .foregroundColor(Color.brandPrimary)
+                        } else {
+                            Text("Host")
+                                .font(.caption)
+                                .foregroundColor(Color.textMuted)
+                        }
+                    }
                 }
+                
+                Spacer()
             }
         }
+        .padding(16)
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.cardStroke, lineWidth: 1)
+        )
+        .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
     }
 }
 
 // MARK: - Attendees Card
 extension EventDetailView {
     private var attendeesCard: some View {
-        EventCard {
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 20) {
+            // Header with icon - ContentView style
                 HStack {
-                    Label("Attendees", systemImage: "person.2.fill")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundColor(Color.socialDark)
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandPrimary)
+                            .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Event Attendees")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("\(localEvent.attendees.count) attending")
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                }
                     
                     Spacer()
                     
-                    // Show host badge if user is hosting
+                // Host badge if user is hosting
                     if isHosting {
-                        HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                             Image(systemName: "crown.fill")
                                 .font(.caption)
-                                .foregroundColor(.yellow)
+                            .foregroundColor(.textLight)
                             Text("Host")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.textLight)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.brandWarning)
+                            .shadow(color: Color.brandWarning.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                }
+            }
+            
+            // Host Section
+            HStack {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.textLight)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        Circle()
+                            .fill(Color.brandWarning)
+                            .shadow(color: Color.brandWarning.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(localEvent.host)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.textPrimary)
+                        
+                        if localEvent.hostIsCertified {
+                            Image(systemName: "checkmark.seal.fill")
                                 .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color.textPrimary)
+                                .foregroundColor(.textLight)
+                                .padding(2)
+                                .background(
+                                    Circle()
+                                        .fill(Color.brandPrimary)
+                                )
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.yellow.opacity(0.2))
-                        .cornerRadius(6)
                     }
                     
-                    Text("\(localEvent.attendees.count)")
-                        .font(.subheadline)
-                        .foregroundColor(Color.textSecondary)
+                    Text("Event Host")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
                 }
                 
-                if localEvent.attendees.isEmpty {
-                    Text("Be the first to join!")
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
-                        .padding(.vertical, 4)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
+                Spacer()
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.bgCard)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.cardStroke, lineWidth: 1)
+                    )
+            )
+            
+            // Attendees List - Better readability
+            if !localEvent.attendees.isEmpty {
+                VStack(spacing: 12) {
                             ForEach(Array(localEvent.attendees.enumerated()), id: \.offset) { index, attendee in
-                                HStack {
-                                    AttendeeChip(name: attendee)
+                        HStack(spacing: 12) {
+                            // Profile picture with enhanced styling
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.brandPrimary.opacity(0.2), Color.brandPrimary.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 50, height: 50)
+                                .overlay(
+                                    Text(String(attendee.prefix(1)).uppercased())
+                                        .font(.headline.weight(.bold))
+                                        .foregroundColor(Color.brandPrimary)
+                                )
+                                .shadow(color: Color.brandPrimary.opacity(0.15), radius: 4, x: 0, y: 2)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 8) {
+                                    Text(attendee)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundColor(.textPrimary)
+                                        .lineLimit(1)
                                     
-                                    // Show host indicator
                                     if attendee == localEvent.host {
+                                        HStack(spacing: 4) {
                                         Image(systemName: "crown.fill")
                                             .font(.caption2)
-                                            .foregroundColor(.yellow)
+                                                .foregroundColor(.textLight)
+                                            Text("Host")
+                                                .font(.caption2.weight(.semibold))
+                                                .foregroundColor(.textLight)
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(
+                                            Capsule()
+                                                .fill(Color.brandWarning)
+                                        )
                                     }
                                     
-                                    // Don't show rate button for yourself
+                                    if localEvent.hostIsCertified && attendee == localEvent.host {
+                                        Image(systemName: "checkmark.seal.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.textLight)
+                                            .padding(2)
+                                            .background(
+                                                Circle()
+                                                    .fill(Color.brandPrimary)
+                                            )
+                                    }
+                                }
+                                
+                                Text("Tap to view profile")
+                                    .font(.caption)
+                                    .foregroundColor(.textSecondary)
+                            }
+                            
+                            Spacer()
+                            
+                            // Action buttons
+                            HStack(spacing: 8) {
+                                // Profile button
+                                Button(action: {
+                                    selectedUserProfile = attendee
+                                    showUserProfileSheet = true
+                                }) {
+                                    Image(systemName: "person.circle")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.brandPrimary)
+                                }
+                                
+                                // Rate button (if event completed and not self)
                                     if attendee != accountManager.currentUser, isEventCompleted {
                                         Button(action: {
                                             selectedUserToRate = attendee
                                             showRateUserSheet = true
                                         }) {
-                                            Image(systemName: "star.fill")
-                                                .font(.caption)
-                                                .foregroundColor(.yellow)
-                                                .padding(4)
-                                                .background(Circle().fill(Color.white.opacity(0.9)))
-                                                .shadow(radius: 1)
-                                        }
-                                        .accessibilityLabel("Rate \(attendee)")
+                                        Image(systemName: "star")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.brandWarning)
                                     }
                                 }
                             }
                         }
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.bgCard)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.cardStroke, lineWidth: 1)
+                                )
+                        )
                     }
+                }
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "person.2.slash")
+                        .font(.system(size: 32))
+                        .foregroundColor(.textMuted)
+                    
+                    Text("No attendees yet")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.textSecondary)
+                    
+                    Text("Be the first to join this event!")
+                        .font(.caption)
+                        .foregroundColor(.textMuted)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
                 }
                 
                 // Host management section
@@ -891,60 +1339,73 @@ extension EventDetailView {
                     hostManagementSection
                 }
             }
-        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
         .id(attendanceStateChanged)
     }
     
     private var hostManagementSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Divider()
+                .background(Color.cardStroke)
             
             Text("Host Management")
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(Color.socialDark)
+                .foregroundColor(Color.textPrimary)
             
-            VStack(spacing: 8) {
+            VStack(spacing: 12) {
                 HStack {
                     Image(systemName: "person.2.fill")
                         .foregroundColor(Color.brandPrimary)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
                     Text("Manage Attendance")
-                        .font(.caption)
+                            .font(.subheadline)
                         .fontWeight(.medium)
-                    Spacer()
+                            .foregroundColor(Color.textPrimary)
+                        
                     Text("\(localEvent.attendees.count) attending")
-                        .font(.caption2)
+                            .font(.caption)
                         .foregroundColor(Color.textSecondary)
+                    }
+                    
+                    Spacer()
                 }
                 
                 Text("As the host, you're automatically marked as attending. You can manage your event and invite others.")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundColor(Color.textSecondary)
                     .multilineTextAlignment(.leading)
                 
                 // Quick actions for hosts
-                HStack(spacing: 8) {
+                HStack(spacing: 12) {
                     Button(action: {
                         showShareSheet = true
                     }) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: "square.and.arrow.up")
-                                .font(.caption2)
+                                .font(.caption)
                             Text("Share Event")
-                                .font(.caption2)
+                                .font(.caption)
                                 .fontWeight(.medium)
                         }
                         .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
                         .background(Color.brandPrimary)
-                        .cornerRadius(8)
+                        .cornerRadius(10)
                     }
                     
                     Spacer()
                 }
             }
-            .padding(.top, 4)
+            .padding(.top, 8)
         }
     }
     
@@ -954,66 +1415,93 @@ extension EventDetailView {
     }
 }
 
-// MARK: - Action Buttons
+// MARK: - Action Buttons Card - ContentView Style
 extension EventDetailView {
-    private var actionButtons: some View {
-        VStack(spacing: 12) {
+    private var actionButtonsCard: some View {
+        VStack(spacing: 20) {
+            // Header with icon
+            HStack {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandSecondary)
+                            .shadow(color: Color.brandSecondary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                Text("Event Actions")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+            }
+            
+            // Action Buttons Grid
+            VStack(spacing: 16) {
+                // Main Action Button (Join/Leave/Hosting)
             joinLeaveButton
             
-            // If user is hosting, show edit button
+                // Secondary Actions Row
+                HStack(spacing: 12) {
+                    // Group Chat Button
+                    groupChatButton
+                    
+                    // Edit Button (if hosting)
             if isHosting && !isEventCompleted {
-                Button(action: { showEditSheet = true }) {
-                    Label("Edit Event", systemImage: "pencil")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.brandPrimary)
-                        .cornerRadius(12)
+                        editEventButton
+                    }
                 }
-            }
-            
-            // If event is completed and user is a participant, show the rating button
+                
+                // Rating Button (if event completed)
             if isEventCompleted && localEvent.attendees.contains(where: { $0 == accountManager.currentUser }) {
-                Button(action: {
-                    // Show menu with attendees to rate
-                    // This will be handled by the attendance card's sheet
-                    showRateUserSheet = true
-                }) {
-                    Label("Rate Attendees", systemImage: "star.fill")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.yellow)
-                        .cornerRadius(12)
+                    rateAttendeesButton
                 }
-                .disabled(localEvent.attendees.count <= 1) // Disable if user is the only attendee
             }
-            
-            groupChatButton
         }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
     }
     
+    // MARK: - Individual Action Buttons
     private var joinLeaveButton: some View {
         Button {
             handleRSVP()
         } label: {
-            Label(
-                isHosting ? "Hosting Event" : (isAttending ? "Leave Event" : "Join Event"),
-                systemImage: isHosting ? "crown.fill" : (isAttending ? "xmark.circle.fill" : "checkmark.circle.fill")
+            HStack(spacing: 12) {
+                Image(systemName: isHosting ? "crown.fill" : (isAttending ? "xmark.circle.fill" : "checkmark.circle.fill"))
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                
+                Text(isHosting ? "Hosting Event" : (isAttending ? "Leave Event" : "Join Event"))
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textLight)
+                
+                Spacer()
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                isHosting ? Color.brandWarning : (isAttending ? Color.brandWarning : Color.brandSuccess),
+                                isHosting ? Color.brandWarning.opacity(0.85) : (isAttending ? Color.brandWarning.opacity(0.85) : Color.brandSuccess.opacity(0.85))
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: (isHosting ? Color.brandWarning : (isAttending ? Color.brandWarning : Color.brandSuccess)).opacity(0.25), radius: 8, x: 0, y: 4)
             )
-            .font(.headline)
-            .foregroundColor(.white)
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(isHosting ? Color.yellow : (isAttending ? Color.socialLight : Color.socialMedium))
-            .cornerRadius(12)
-            .shadow(radius: 4)
         }
+        .disabled(isHosting)
         .id(attendanceStateChanged)
-        .disabled(isHosting) // Hosts can't leave their own events
-        .accessibilityHint(isHosting ? "You are hosting this event" : (isAttending ? "Tap to leave this event" : "Tap to join this event"))
     }
     
     private var groupChatButton: some View {
@@ -1024,15 +1512,177 @@ extension EventDetailView {
                 eventTitle: localEvent.title
             )
         } label: {
-            Label("Group Chat", systemImage: "bubble.left.and.bubble.right.fill")
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color.socialDark)
-                .cornerRadius(12)
-                .shadow(radius: 4)
+            HStack(spacing: 8) {
+                Image(systemName: "bubble.left.and.bubble.right.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.textLight)
+                
+                Text("Group Chat")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.textLight)
+                
+                Spacer()
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.brandPrimary)
+                    .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+            )
         }
+    }
+    
+    private var editEventButton: some View {
+        Button(action: { showEditSheet = true }) {
+            HStack(spacing: 8) {
+                Image(systemName: "pencil")
+                    .font(.system(size: 16))
+                    .foregroundColor(.textLight)
+                
+                Text("Edit Event")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.textLight)
+                
+                Spacer()
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.brandPrimary)
+                    .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+            )
+        }
+    }
+    
+    private var rateAttendeesButton: some View {
+        Button(action: {
+            showRateUserSheet = true
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.textLight)
+                
+                Text("Rate Attendees")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.textLight)
+                
+                Spacer()
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.brandSuccess)
+                    .shadow(color: Color.brandSuccess.opacity(0.25), radius: 4, x: 0, y: 2)
+            )
+        }
+        .disabled(localEvent.attendees.count <= 1)
+    }
+    
+    
+    // MARK: - Social Feed Card
+    private var socialFeedCard: some View {
+        VStack(spacing: 20) {
+            // Header with icon
+            HStack {
+                Image(systemName: "photo.stack.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandPrimary)
+                            .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Social Feed")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("Share your experience")
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                Spacer()
+            }
+            
+            // Social Feed Actions
+            VStack(spacing: 12) {
+                // Share Photos Button
+                Button(action: {
+                    showSocialFeedSheet = true
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.textLight)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Share Photos")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.textLight)
+                            
+                            Text("Upload event photos")
+                                .font(.caption)
+                                .foregroundColor(.textLight.opacity(0.8))
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(.textLight)
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.brandPrimary)
+                            .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                }
+                
+                // View Feed Button
+                Button(action: {
+                    showFeedView = true
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.textLight)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("View Event Feed")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.textLight)
+                            
+                            Text("See what others shared")
+                                .font(.caption)
+                                .foregroundColor(.textLight.opacity(0.8))
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(.textLight)
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.brandPrimary)
+                            .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
     }
     
     private func handleRSVP() {
@@ -1385,13 +2035,7 @@ struct EventSocialFeedView: View {
     // MARK: - Networking Functions for EventSocialFeedView
         
     private func fetchInteractions() {
-        // Demo data for preview/testing
-        #if DEBUG
-        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
-            createDemoData()
-            return
-        }
-        #endif
+        // Load real interactions from backend
         
         // Real API call
         guard let url = URL(string: "\(APIConfig.primaryBaseURL)/events/feed/\(event.id.uuidString)/") else {
@@ -1469,51 +2113,6 @@ struct EventSocialFeedView: View {
     }
 
     
-    private func createDemoData() {
-        // Create some demo posts for preview/testing
-        let demoInteractions = EventInteractions(
-            posts: [
-                EventInteractions.Post(
-                    id: 1,
-                    text: "Having a great time at this event! The discussions are really insightful.",
-                    username: "user1",
-                    created_at: Date().ISO8601Format(),
-                    imageURLs: nil,
-                    likes: 5,
-                    isLikedByCurrentUser: false,
-                    replies: []
-                ),
-                EventInteractions.Post(
-                    id: 2,
-                    text: "Just joined and already learning so much!",
-                    username: "user2",
-                    created_at: Date().addingTimeInterval(-1800).ISO8601Format(),
-                    imageURLs: ["placeholder1", "placeholder2"],
-                    likes: 3,
-                    isLikedByCurrentUser: true,
-                    replies: [
-                        EventInteractions.Post(
-                            id: 3,
-                            text: "Welcome! Glad you're enjoying it!",
-                            username: "host",
-                            created_at: Date().addingTimeInterval(-1700).ISO8601Format(),
-                            imageURLs: nil,
-                            likes: 1,
-                            isLikedByCurrentUser: false,
-                            replies: []
-                        )
-                    ]
-                )
-            ],
-            likes: EventInteractions.Likes(total: 9, users: ["user1", "user2", "user3"]),
-            shares: EventInteractions.Shares(total: 3, breakdown: ["twitter": 1, "messages": 2])
-        )
-        
-        // Simulate network delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            self.interactions = demoInteractions
-        }
-    }
     
     private func refreshFeed() {
         fetchInteractions()
@@ -2574,4 +3173,1323 @@ struct EnhancedEventPostView: View {
         // Your existing date formatting code
         return "now" // Replace with your actual implementation
     }
+}
+
+// MARK: - Social Feed Share View
+struct SocialFeedShareView: View {
+    let event: StudyEvent
+    @EnvironmentObject var accountManager: UserAccountManager
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var showImagePicker = false
+    @State private var showSocialFeedSheet = false
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 12) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.textLight)
+                        .frame(width: 80, height: 80)
+                        .background(
+                            Circle()
+                                .fill(Color.brandPrimary)
+                                .shadow(color: Color.brandPrimary.opacity(0.25), radius: 8, x: 0, y: 4)
+                        )
+                    
+                    Text("Share Photos")
+                        .font(.title2.weight(.bold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("Share your experience at \(event.title)")
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 40)
+                
+                // Placeholder content
+                VStack(spacing: 16) {
+                    Button(action: {
+                        showImagePicker = true
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "photo.on.rectangle")
+                                .font(.system(size: 20))
+                                .foregroundColor(.textLight)
+                            
+                            Text("Select Photos")
+                                .font(.headline.weight(.semibold))
+                                .foregroundColor(.textLight)
+                            
+                            Spacer()
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.brandPrimary)
+                                .shadow(color: Color.brandPrimary.opacity(0.25), radius: 8, x: 0, y: 4)
+                        )
+                    }
+                    
+                    Button(action: {
+                        showSocialFeedSheet = true
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "text.bubble")
+                                .font(.system(size: 20))
+                                .foregroundColor(.textLight)
+                            
+                            Text("Write a Post")
+                                .font(.headline.weight(.semibold))
+                                .foregroundColor(.textLight)
+                            
+                            Spacer()
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.brandPrimary)
+                                .shadow(color: Color.brandPrimary.opacity(0.25), radius: 8, x: 0, y: 4)
+                        )
+                    }
+                }
+                .padding(.horizontal, 24)
+                
+                Spacer()
+            }
+            .background(Color.bgSurface)
+            .navigationTitle("Share Experience")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.brandPrimary)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Event Feed View
+struct EventFeedView: View {
+    let event: StudyEvent
+    @EnvironmentObject var accountManager: UserAccountManager
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header
+                    VStack(spacing: 12) {
+                        Image(systemName: "photo.stack.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(.textLight)
+                            .frame(width: 80, height: 80)
+                            .background(
+                                Circle()
+                                    .fill(Color.brandPrimary)
+                                    .shadow(color: Color.brandPrimary.opacity(0.25), radius: 8, x: 0, y: 4)
+                            )
+                        
+                        Text("Event Feed")
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.textPrimary)
+                        
+                        Text("See what others shared about \(event.title)")
+                            .font(.subheadline)
+                            .foregroundColor(.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 40)
+                    
+                    // Placeholder posts
+                    VStack(spacing: 16) {
+                        ForEach(0..<3, id: \.self) { index in
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Circle()
+                                        .fill(Color.brandPrimary.opacity(0.2))
+                                        .frame(width: 40, height: 40)
+                                        .overlay(
+                                            Text("U\(index + 1)")
+                                                .font(.headline.weight(.bold))
+                                                .foregroundColor(Color.brandPrimary)
+                                        )
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("User \(index + 1)")
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundColor(.textPrimary)
+                                        
+                                        Text("2 hours ago")
+                                            .font(.caption)
+                                            .foregroundColor(.textSecondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                
+                                Text("Had an amazing time at this event! The atmosphere was incredible and I met so many interesting people.")
+                                    .font(.body)
+                                    .foregroundColor(.textPrimary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                
+                                // Placeholder image
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.bgSecondary)
+                                    .frame(height: 200)
+                                    .overlay(
+                                        VStack {
+                                            Image(systemName: "photo")
+                                                .font(.system(size: 32))
+                                                .foregroundColor(.textMuted)
+                                            Text("Event Photo")
+                                                .font(.caption)
+                                                .foregroundColor(.textMuted)
+                                        }
+                                    )
+                            }
+                            .padding(20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.bgCard)
+                                    .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    Spacer()
+                }
+            }
+            .background(Color.bgSurface)
+            .navigationTitle("Event Feed")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.brandPrimary)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - User Profile View - Professional Design with Backend Integration
+struct UserProfileView: View {
+    let username: String
+    @EnvironmentObject var accountManager: UserAccountManager
+    @Environment(\.dismiss) var dismiss
+    
+    // Real data from backend
+    @State private var userProfile: UserProfile?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var showError = false
+    
+    // Additional data from separate API calls
+    @State private var reputationData: ReputationData?
+    @State private var friendsData: FriendsData?
+    @State private var recentEventsData: [StudyEvent]?
+    
+    // Action states
+    @State private var showChatView = false
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    @State private var showImagePicker = false
+    @State private var showSocialFeedSheet = false
+    
+    // Backend URL
+    private let baseURL = APIConfig.primaryBaseURL
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+        // Professional Background
+        Color.bgSurface.ignoresSafeArea()
+        
+        LinearGradient(
+            colors: [
+                Color.brandPrimary.opacity(0.03),
+                Color.brandSecondary.opacity(0.02),
+                Color.bgSurface
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
+                
+                // Content
+                if isLoading {
+                    loadingView
+                } else if let profile = userProfile {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 24) {
+                            // Professional Profile Header
+                            profileHeaderCard(profile: profile)
+                                .padding(.horizontal)
+                            
+                            // Key Stats Card
+                            statsCard(profile: profile)
+                                .padding(.horizontal)
+                            
+                            // Bio Card
+                            bioCard(profile: profile)
+                                .padding(.horizontal)
+                            
+            // Interests Card
+            interestsCard(profile: profile)
+                .padding(.horizontal)
+            
+            // Skills Card
+            skillsCard(profile: profile)
+                .padding(.horizontal)
+            
+            // Recent Activity Card
+            recentActivityCard(profile: profile)
+                .padding(.horizontal)
+                            
+            // Friends Card (instead of mutual connections)
+            friendsCard(profile: profile)
+                .padding(.horizontal)
+                            
+                            // Action Buttons Card
+                            actionButtonsCard(profile: profile)
+                                .padding(.horizontal)
+                            
+                            Spacer(minLength: 40)
+                        }
+                        .padding(.vertical, 10)
+                    }
+                } else {
+                    errorView
+                }
+            }
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.brandPrimary)
+                }
+            }
+            .onAppear {
+                fetchUserProfile()
+            }
+                    .alert("Error", isPresented: $showError) {
+                        Button("OK", role: .cancel) { }
+                    } message: {
+                        Text(errorMessage ?? "Failed to load profile")
+                    }
+                    .alert("Action", isPresented: $showAlert) {
+                        Button("OK", role: .cancel) { }
+                    } message: {
+                        Text(alertMessage)
+                    }
+                    .sheet(isPresented: $showChatView) {
+                        NavigationStack {
+                            ChatView(
+                                sender: accountManager.currentUser ?? "Guest",
+                                receiver: username
+                            )
+                            .environmentObject(accountManager)
+                            .environmentObject(ChatManager())
+                        }
+                    }
+        }
+    }
+    
+    // MARK: - Loading View
+    private var loadingView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            ProgressView()
+                .scaleEffect(1.5)
+                .tint(Color.brandPrimary)
+            
+            Text("Loading profile...")
+                .font(.headline)
+                .foregroundColor(.textPrimary)
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.bgSurface)
+    }
+    
+    // MARK: - Error View
+    private var errorView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundColor(.brandWarning)
+            
+            Text("Failed to Load Profile")
+                .font(.title2.weight(.bold))
+                .foregroundColor(.textPrimary)
+            
+            Text(errorMessage ?? "Unable to load user profile")
+                .font(.body)
+                .foregroundColor(.textSecondary)
+                .multilineTextAlignment(.center)
+            
+            Button("Retry") {
+                fetchUserProfile()
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.brandPrimary)
+            )
+            .foregroundColor(.textLight)
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.bgSurface)
+    }
+    
+    // MARK: - Backend Integration
+    private func fetchUserProfile() {
+        isLoading = true
+        errorMessage = nil
+        
+        guard let url = URL(string: "\(baseURL)/get_user_profile/\(username)/") else {
+            errorMessage = "Invalid URL"
+            isLoading = false
+            showError = true
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                isLoading = false
+                
+                if let error = error {
+                    print("Network Error: \(error.localizedDescription)")
+                    self.alertMessage = "Failed to load profile: \(error.localizedDescription)"
+                    self.showAlert = true
+                    return
+                }
+                
+                guard let data = data else {
+                    errorMessage = "No data received"
+                    showError = true
+                    return
+                }
+                
+                do {
+                    // First, let's see what the actual response looks like
+                    if let jsonString = String(data: data, encoding: .utf8) {
+                        print("Raw API response: \(jsonString)")
+                    }
+                    
+                    let profile = try JSONDecoder().decode(UserProfile.self, from: data)
+                    self.userProfile = profile
+                    
+                    // Fetch additional data in parallel
+                    self.fetchReputationData()
+                    self.fetchFriendsData()
+                    self.fetchRecentEvents()
+                } catch {
+                    print("JSON Decoding Error: \(error)")
+                    self.alertMessage = "Failed to parse profile data: \(error.localizedDescription)"
+                    self.showAlert = true
+                }
+            }
+        }.resume()
+    }
+    
+    
+    // MARK: - Fetch Reputation Data
+    private func fetchReputationData() {
+        guard let url = URL(string: "\(baseURL)/get_user_reputation/\(username)/") else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        let reputation = try JSONDecoder().decode(ReputationData.self, from: data)
+                        self.reputationData = reputation
+                    } catch {
+                        print("Reputation parsing error: \(error)")
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Fetch Friends Data
+    private func fetchFriendsData() {
+        guard let url = URL(string: "\(baseURL)/get_friends/\(username)/") else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        let friends = try JSONDecoder().decode(FriendsData.self, from: data)
+                        self.friendsData = friends
+                    } catch {
+                        print("Friends parsing error: \(error)")
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Fetch Recent Events
+    private func fetchRecentEvents() {
+        guard let url = URL(string: "\(baseURL)/get_study_events/\(username)/") else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        // The API returns {"events": [...]}
+                        let response = try JSONDecoder().decode(EventsResponse.self, from: data)
+                        
+                        // Filter events where the user actually participated (hosted, attended, or was invited)
+                        let userEvents = response.events.filter { event in
+                            // Check if user is the host
+                            if event.host == self.username {
+                                return true
+                            }
+                            // Check if user is in attendees list
+                            if event.attendees.contains(self.username) {
+                                return true
+                            }
+                            // Check if user was invited
+                            if event.invitedFriends.contains(self.username) {
+                                return true
+                            }
+                            return false
+                        }
+                        
+                        // Take only the first 3 events for recent activity
+                        self.recentEventsData = Array(userEvents.prefix(3))
+                    } catch {
+                        print("Recent events parsing error: \(error)")
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Helper Functions
+    private func formatEventDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            displayFormatter.timeStyle = .short
+            return displayFormatter.string(from: date)
+        }
+        return dateString
+    }
+    
+    private func formatEventDate(_ date: Date) -> String {
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateStyle = .medium
+        displayFormatter.timeStyle = .short
+        return displayFormatter.string(from: date)
+    }
+    
+    // MARK: - Action Functions
+    private func sendMessage(to username: String) {
+        showChatView = true
+    }
+    
+    private func sendFriendRequest(to username: String) {
+        guard let url = URL(string: "\(baseURL)/send_friend_request/") else {
+            alertMessage = "Invalid URL"
+            showAlert = true
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = [
+            "from_user": accountManager.currentUser ?? "Guest",
+            "to_user": username
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            alertMessage = "Error encoding request"
+            showAlert = true
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    alertMessage = "Error: \(error.localizedDescription)"
+                } else if let data = data {
+                    do {
+                        let response = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                        alertMessage = response?["message"] as? String ?? "Friend request sent!"
+                    } catch {
+                        alertMessage = "Friend request sent!"
+                    }
+                } else {
+                    alertMessage = "Friend request sent!"
+                }
+                showAlert = true
+            }
+        }.resume()
+    }
+    
+    private func blockUser(_ username: String) {
+        // Implement block functionality
+        guard let currentUser = accountManager.currentUser else { return }
+        
+        let url = URL(string: "\(baseURL)/block_user/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = [
+            "blocker": currentUser,
+            "blocked": username
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        alertMessage = "Failed to block user: \(error.localizedDescription)"
+                    } else {
+                        alertMessage = "User blocked successfully"
+                    }
+                    showAlert = true
+                }
+            }.resume()
+        } catch {
+            alertMessage = "Failed to block user"
+            showAlert = true
+        }
+    }
+    
+    // MARK: - Profile Header Card
+    private func profileHeaderCard(profile: UserProfile) -> some View {
+        VStack(spacing: 20) {
+            // Avatar and Name
+            VStack(spacing: 16) {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.brandPrimary.opacity(0.15),
+                                Color.brandSecondary.opacity(0.1),
+                                Color.brandPrimary.opacity(0.05)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+                    .overlay(
+                        Text(String(profile.username.prefix(1)).uppercased())
+                            .font(.system(size: 48, weight: .bold))
+                            .foregroundColor(Color.brandPrimary)
+                    )
+                    .shadow(color: Color.brandPrimary.opacity(0.15), radius: 12, x: 0, y: 6)
+                
+                VStack(spacing: 8) {
+                    Text(profile.displayName)
+                        .font(.system(.title, design: .rounded).weight(.bold))
+                        .foregroundColor(.textPrimary)
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .padding(4)
+                            .background(
+                                Circle()
+                                    .fill(Color.brandPrimary)
+                            )
+                        
+                        Text((profile.isVerified ?? false) ? "Verified Member" : "Member")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.textSecondary)
+                    }
+                    
+                    // University and Degree Info
+                    if let university = profile.university, !university.isEmpty {
+                        VStack(spacing: 4) {
+                            Text(university)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.textPrimary)
+                            
+                            if let degree = profile.degree, !degree.isEmpty {
+                                Text(degree)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundColor(.textSecondary)
+                            }
+                            
+                            if let year = profile.year, !year.isEmpty {
+                                Text(year)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundColor(.textSecondary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Stats Card
+    private func statsCard(profile: UserProfile) -> some View {
+        VStack(spacing: 20) {
+            HStack {
+                Image(systemName: "chart.bar.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandPrimary)
+                            .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                Text("Profile Statistics")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+            }
+            
+            HStack(spacing: 20) {
+                statItem("Events", "\(reputationData?.eventsAttended ?? 0)", "calendar")
+                statItem("Reputation", String(format: "%.1f", reputationData?.averageRating ?? 0.0), "star.fill")
+                statItem("Friends", "\(friendsData?.friends.count ?? 0)", "person.2.fill")
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Bio Card
+    private func bioCard(profile: UserProfile) -> some View {
+        VStack(spacing: 20) {
+            HStack {
+                Image(systemName: "person.text.rectangle")
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandSecondary)
+                            .shadow(color: Color.brandSecondary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                Text("About")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+            }
+            
+            Text((profile.bio?.isEmpty ?? true) ? "No bio available" : profile.bio!)
+                .font(.body)
+                .foregroundColor(.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Skills Card
+    private func skillsCard(profile: UserProfile) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.brandAccent)
+                
+                Text("Skills")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+            }
+            
+            if let skills = profile.skills, !skills.isEmpty {
+                VStack(spacing: 12) {
+                    ForEach(Array(skills.keys.sorted()), id: \.self) { skill in
+                        HStack {
+                            Text(skill)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.textPrimary)
+                            
+                            Spacer()
+                            
+                            Text(skills[skill] ?? "BEGINNER")
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(.textSecondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.bgSecondary)
+                                )
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.bgSecondary.opacity(0.5))
+                        )
+                    }
+                }
+            } else {
+                Text("No skills specified")
+                    .font(.body)
+                    .foregroundColor(.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(Color.cardStroke, lineWidth: 1)
+                )
+        )
+        .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+    }
+    
+    // MARK: - Interests Card
+    private func interestsCard(profile: UserProfile) -> some View {
+        VStack(spacing: 20) {
+            HStack {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.brandSecondary)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandSecondary.opacity(0.1))
+                            .shadow(color: Color.brandSecondary.opacity(0.15), radius: 4, x: 0, y: 2)
+                    )
+                
+                Text("Interests")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+            }
+            
+            if (profile.interests?.isEmpty ?? true) {
+                Text("No interests specified")
+                    .font(.body)
+                    .foregroundColor(.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+            } else {
+                FlowLayout(spacing: 8) {
+                    ForEach(profile.interests!, id: \.self) { interest in
+                        Text(interest)
+                            .font(.system(.caption, design: .rounded))
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color.brandPrimary.opacity(0.1))
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1)
+                            )
+                            .foregroundColor(Color.brandPrimary)
+                    }
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Recent Activity Card
+    private func recentActivityCard(profile: UserProfile) -> some View {
+        VStack(spacing: 20) {
+            HStack {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandSuccess)
+                            .shadow(color: Color.brandSuccess.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                Text("Recent Activity")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+            }
+            
+            if (recentEventsData?.isEmpty ?? true) {
+                Text("No recent activity")
+                    .font(.body)
+                    .foregroundColor(.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(recentEventsData!, id: \.id) { event in
+                        HStack(spacing: 12) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 16))
+                                .foregroundColor(.brandPrimary)
+                                .frame(width: 24, height: 24)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(event.title)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.textPrimary)
+                                    .lineLimit(1)
+                                
+                                Text(formatEventDate(event.time))
+                                    .font(.caption.weight(.medium))
+                                    .foregroundColor(.textSecondary)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Friends Card
+    private func friendsCard(profile: UserProfile) -> some View {
+        VStack(spacing: 20) {
+            HStack {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.white)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandPrimary)
+                            .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                Text("Friends")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+                
+                Text("\(friendsData?.friends.count ?? 0)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.textSecondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(Color.bgSecondary)
+                )
+            }
+            
+            if (friendsData?.friends.isEmpty ?? true) {
+                Text("No friends yet")
+                    .font(.body)
+                    .foregroundColor(.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(friendsData!.friends, id: \.self) { friendUsername in
+                            VStack(spacing: 6) {
+                                Circle()
+                                    .fill(Color.brandPrimary.opacity(0.2))
+                                    .frame(width: 50, height: 50)
+                                    .overlay(
+                                        Text(String(friendUsername.prefix(1)).uppercased())
+                                            .font(.headline.weight(.bold))
+                                            .foregroundColor(Color.brandPrimary)
+                                    )
+                                
+                                Text(friendUsername)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundColor(.textPrimary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Action Buttons Card
+    private func actionButtonsCard(profile: UserProfile) -> some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandSecondary)
+                            .shadow(color: Color.brandSecondary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                Text("Actions")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+            }
+            
+            VStack(spacing: 12) {
+                // Primary Action - Send Message
+                Button(action: {
+                    sendMessage(to: profile.username)
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "message.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white)
+                        
+                        Text("Send Message")
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.white)
+                        
+                        Spacer()
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.brandPrimary)
+                            .shadow(color: Color.brandPrimary.opacity(0.25), radius: 8, x: 0, y: 4)
+                    )
+                }
+                
+                // Secondary Actions Row
+                HStack(spacing: 12) {
+                    Button(action: {
+                        sendFriendRequest(to: profile.username)
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.badge.plus")
+                                .font(.system(size: 16))
+                                .foregroundColor(.brandSecondary)
+                            
+                            Text("Add Friend")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.brandSecondary)
+                            
+                            Spacer()
+                        }
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.brandSecondary.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.brandSecondary.opacity(0.3), lineWidth: 1)
+                                )
+                        )
+                    }
+                    
+                    Button(action: {
+                        blockUser(profile.username)
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "hand.raised.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.textSecondary)
+                            
+                            Text("Block")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.textSecondary)
+                            
+                            Spacer()
+                        }
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.bgSecondary)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.cardStroke, lineWidth: 1)
+                                )
+                        )
+                    }
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Helper Functions
+    private func statItem(_ title: String, _ value: String, _ icon: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(.textLight)
+                .frame(width: 40, height: 40)
+                .background(
+                    Circle()
+                        .fill(Color.brandPrimary)
+                        .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                )
+            
+            VStack(spacing: 2) {
+                Text(value)
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(.textPrimary)
+                
+                Text(title)
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        
+        if let date = formatter.date(from: dateString) {
+            let relativeFormatter = RelativeDateTimeFormatter()
+            relativeFormatter.unitsStyle = .abbreviated
+            return relativeFormatter.localizedString(for: date, relativeTo: Date())
+        }
+        
+        return "Recently"
+    }
+    
+}
+
+// MARK: - UserProfile Model (matches backend API)
+struct UserProfile: Codable {
+    let username: String
+    let fullName: String?
+    let university: String?
+    let degree: String?
+    let year: String?
+    let bio: String?
+    let isCertified: Bool?
+    let interests: [String]?
+    let skills: [String: String]?
+    let autoInviteEnabled: Bool?
+    let preferredRadius: Double?
+    
+    // Computed properties for UI compatibility
+    var displayName: String {
+        return fullName?.isEmpty == false ? fullName! : username
+    }
+    
+    var isVerified: Bool {
+        return isCertified ?? false
+    }
+    
+    var eventsAttended: Int {
+        return 0 // Will be fetched separately
+    }
+    
+    var reputation: Double {
+        return 0.0 // Will be fetched separately
+    }
+    
+    var friendsCount: Int {
+        return 0 // Will be fetched separately
+    }
+    
+    var recentEvents: [RecentEvent]? {
+        return nil // Not provided by current API
+    }
+    
+    var mutualFriends: [String]? {
+        return nil // Not provided by current API
+    }
+    
+    var memberSince: String? {
+        return nil // Not provided by current API
+    }
+    
+    // Custom initializer for mock data
+    init(username: String, fullName: String?, university: String?, degree: String?, year: String?, bio: String?, isCertified: Bool?, interests: [String]?, skills: [String: String]?, autoInviteEnabled: Bool?, preferredRadius: Double?) {
+        self.username = username
+        self.fullName = fullName
+        self.university = university
+        self.degree = degree
+        self.year = year
+        self.bio = bio
+        self.isCertified = isCertified
+        self.interests = interests
+        self.skills = skills
+        self.autoInviteEnabled = autoInviteEnabled
+        self.preferredRadius = preferredRadius
+    }
+    
+    // Decode from backend API response
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        username = try container.decode(String.self, forKey: .username)
+        fullName = try container.decodeIfPresent(String.self, forKey: .fullName)
+        university = try container.decodeIfPresent(String.self, forKey: .university)
+        degree = try container.decodeIfPresent(String.self, forKey: .degree)
+        year = try container.decodeIfPresent(String.self, forKey: .year)
+        bio = try container.decodeIfPresent(String.self, forKey: .bio)
+        isCertified = try container.decodeIfPresent(Bool.self, forKey: .isCertified)
+        interests = try container.decodeIfPresent([String].self, forKey: .interests)
+        skills = try container.decodeIfPresent([String: String].self, forKey: .skills)
+        autoInviteEnabled = try container.decodeIfPresent(Bool.self, forKey: .autoInviteEnabled)
+        preferredRadius = try container.decodeIfPresent(Double.self, forKey: .preferredRadius)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case username, fullName = "full_name", university, degree, year, bio, isCertified = "is_certified", interests, skills, autoInviteEnabled = "auto_invite_enabled", preferredRadius = "preferred_radius"
+    }
+}
+
+struct RecentEvent: Codable, Identifiable {
+    let id: String
+    let title: String
+    let date: String
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Try different possible field names
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? 
+                container.decodeIfPresent(String.self, forKey: .name) ?? "Unknown Event"
+        date = try container.decodeIfPresent(String.self, forKey: .date) ?? 
+               container.decodeIfPresent(String.self, forKey: .createdAt) ?? 
+               container.decodeIfPresent(String.self, forKey: .timestamp) ?? Date().iso8601String
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(date, forKey: .date)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case id, title, name, date, createdAt, timestamp
+    }
+}
+
+extension Date {
+    var iso8601String: String {
+        let formatter = ISO8601DateFormatter()
+        return formatter.string(from: self)
+    }
+}
+
+// MARK: - Additional Data Models
+struct ReputationData: Codable {
+    let username: String
+    let totalRatings: Int
+    let averageRating: Double
+    let eventsHosted: Int
+    let eventsAttended: Int
+    let trustLevel: TrustLevel
+    
+    private enum CodingKeys: String, CodingKey {
+        case username, totalRatings = "total_ratings", averageRating = "average_rating", eventsHosted = "events_hosted", eventsAttended = "events_attended", trustLevel = "trust_level"
+    }
+}
+
+struct TrustLevel: Codable {
+    let level: Int
+    let title: String
+}
+
+struct FriendsData: Codable {
+    let friends: [String]  // Backend returns array of usernames, not Friend objects
+}
+
+struct Friend: Codable, Identifiable {
+    let id = UUID()
+    let username: String
+    let firstName: String
+    let lastName: String
+    let university: String
+    let isCertified: Bool
+    
+    private enum CodingKeys: String, CodingKey {
+        case username, firstName = "first_name", lastName = "last_name", university, isCertified = "is_certified"
+    }
+}
+
+struct EventsResponse: Codable {
+    let events: [StudyEvent]
 }

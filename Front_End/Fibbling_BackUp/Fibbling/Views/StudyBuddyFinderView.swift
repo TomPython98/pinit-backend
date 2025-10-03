@@ -9,12 +9,7 @@ struct StudyBuddy: Identifiable {
     let learningStyle: String
 }
 
-// 🎯 Sample Data
-let sampleBuddies: [StudyBuddy] = [
-    StudyBuddy(name: "Alice", subjects: ["Mathematics", "Physics"], availability: "Evenings", learningStyle: "Visual"),
-    StudyBuddy(name: "Bob", subjects: ["History", "Economics"], availability: "Afternoons", learningStyle: "Auditory"),
-    StudyBuddy(name: "Charlie", subjects: ["Biology", "Chemistry"], availability: "Mornings", learningStyle: "Hands-on")
-]
+// StudyBuddy data will be loaded from backend API
 
 // 🎯 Study Buddy Finder View
 struct StudyBuddyFinderView: View {
@@ -83,11 +78,9 @@ struct StudyBuddyFinderView: View {
 
     // 🎯 Find Matching Buddies
     func findStudyBuddies() {
-        matchedBuddies = sampleBuddies.filter { buddy in
-            (selectedSubject.isEmpty || buddy.subjects.contains(selectedSubject)) &&
-            (selectedAvailability.isEmpty || buddy.availability == selectedAvailability) &&
-            (selectedLearningStyle.isEmpty || buddy.learningStyle == selectedLearningStyle)
-        }
+        // Load study buddies from backend API
+        // TODO: Implement real API call to find study buddies
+        matchedBuddies = []
     }
 }
 

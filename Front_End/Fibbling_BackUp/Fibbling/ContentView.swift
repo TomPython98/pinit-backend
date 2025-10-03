@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import MapKit
 import Combine
+import CoreLocation
 
 // Import the UserProfileManager from ViewModels
 // (Note: Swift automatically finds files in the project, no path needed)
@@ -13,45 +14,15 @@ import Combine
 //  Created by Your Name on 2025-03-XX.
 
 extension Color {
-    // Primary interface colors - refined tones
-    static let bgSurface = Color(red: 248/255, green: 250/255, blue: 255/255)        // Light bg surface (slightly bluer tint)
-    static let bgCard = Color(red: 255/255, green: 255/255, blue: 255/255)           // White card background
-    static let bgAccent = Color(red: 240/255, green: 242/255, blue: 255/255)         // Accented bg (light purple hue)
-    static let bgSecondary = Color(red: 242/255, green: 245/255, blue: 250/255)      // Secondary bg (slightly bluer)
-    
-    // Vibrant brand colors - slightly more saturated
-    static let brandPrimary = Color(red: 79/255, green: 70/255, blue: 229/255)       // Indigo primary
-    static let brandSecondary = Color(red: 59/255, green: 130/255, blue: 246/255)    // Royal blue (more professional)
-    static let brandAccent = Color(red: 236/255, green: 72/255, blue: 153/255)       // Pink
-    static let brandWarning = Color(red: 245/255, green: 158/255, blue: 11/255)      // Amber
-    static let brandSuccess = Color(red: 16/255, green: 185/255, blue: 129/255)      // Emerald
-    
-    // Gradient colors - enhanced
+    // Gradient colors - enhanced for visual appeal (keeping unique gradients)
     static let gradientStart = Color(red: 79/255, green: 70/255, blue: 229/255)      // Indigo start
     static let gradientMiddle = Color(red: 88/255, green: 80/255, blue: 236/255)     // Transition color
     static let gradientEnd = Color(red: 99/255, green: 102/255, blue: 241/255)       // Lighter indigo end
     
-    // Text colors - enhanced contrast
-    static let textPrimary = Color(red: 15/255, green: 23/255, blue: 42/255)         // Near black (darker)
-    static let textSecondary = Color(red: 71/255, green: 85/255, blue: 105/255)      // Slate 600
-    static let textLight = Color(red: 255/255, green: 255/255, blue: 255/255)        // White text
-    static let textMuted = Color(red: 148/255, green: 163/255, blue: 184/255)        // Slate 400
-    
-    static let socialDark = Color(red: 20/255, green: 42/255, blue: 80/255)
-    static let socialMedium = Color(red: 40/255, green: 80/255, blue: 135/255)
-    static let socialPrimary = Color(red: 70/255, green: 130/255, blue: 210/255)
-    static let socialAccent = Color(red: 130/255, green: 195/255, blue: 235/255)
-    static let socialLight = Color(red: 190/255, green: 225/255, blue: 245/255)
-    
-    // UI Elements - refined
-    static let divider = Color(red: 226/255, green: 232/255, blue: 240/255)          // Slate 200
-    static let cardShadow = Color(red: 15/255, green: 23/255, blue: 42/255).opacity(0.08) // Slate 900 8%
-    static let cardStroke = Color(red: 226/255, green: 232/255, blue: 240/255)       // Slate 200
+    // Additional UI elements for polish (keeping unique additions)
     static let coloredShadow = Color(red: 79/255, green: 70/255, blue: 229/255).opacity(0.15) // Indigo shadow
-    
-    // Additional UI elements
     static let cardHighlight = Color.white                                          // Card highlight
-    static let iconBg = Color(red: 240/255, green: 245/255, blue: 255/255)          // Icon background
+    static let iconBg = Color(red: 240/255, green: 245/255, blue: 255/255)          // Icon background  
     static let activeElement = Color(red: 59/255, green: 130/255, blue: 246/255)    // Active element color
 }
 
@@ -500,10 +471,10 @@ struct ContentView: View {
             spacing: 20
         ) {
             toolButton(
-                "Study Chat",
-                systemImage: "message.fill",
+                "Friends & Social",
+                systemImage: "person.2.fill",
                 background: Color.brandPrimary,
-                description: "Connect with classmates"
+                description: "Connect with friends"
             ) {
                 withAnimation(.spring()) {
                     showFriendsView = true
@@ -542,17 +513,17 @@ struct ContentView: View {
             }
             
             toolButton(
-                "Flashcards",
-                systemImage: "rectangle.stack.fill",
-                background: Color.brandWarning,
-                description: "Study efficiently"
+                "Community Hub",
+                systemImage: "person.3.fill",
+                background: Color.brandPrimary,
+                description: "See what's trending"
             ) {
                 withAnimation(.spring()) {
                     showFlashcardsView = true
                 }
             }
             .sheet(isPresented: $showFlashcardsView) {
-                FlashcardsView()
+                CommunityHubView()
             }
         }
     }
@@ -734,16 +705,14 @@ struct ScaleButtonStyle: ButtonStyle {
     }
 }
 
-struct FlashcardsView: View {
+struct CommunityHubView: View {
+    @EnvironmentObject var accountManager: UserAccountManager
+    
     var body: some View {
         ZStack {
-            // Clean background
-            Color.bgSurface.ignoresSafeArea()
-            
-            Text("Flashcards View Placeholder")
-                .font(.title)
-                .foregroundColor(Color.textPrimary)
-                .padding()
+            // Social Activity Feed & Trending Events
+            SocialActivityFeedView()
+                .environmentObject(accountManager)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
                         .fill(Color.bgCard)
@@ -2181,15 +2150,7 @@ struct ProfileView: View {
                         self.eventsAttended = self.reputationManager.userStats.eventsAttended
                     }
                 } else {
-                    // Fallback to mock data if backend fails
-                    self.reputationManager.mockFetchUserReputation(username: username) { mockSuccess in
-                        if mockSuccess {
-                            DispatchQueue.main.async {
-                                self.eventsHosted = self.reputationManager.userStats.eventsHosted
-                                self.eventsAttended = self.reputationManager.userStats.eventsAttended
-                            }
-                        }
-                    }
+                    print("Failed to load reputation data")
                 }
             }
         }
@@ -2517,5 +2478,738 @@ struct EnhancedToggleStyle: ToggleStyle {
                 configuration.isOn.toggle()
             }
         }
+    }
+}
+
+// MARK: - Social Activity Feed & Trending Events
+struct SocialActivityFeedView: View {
+    @EnvironmentObject var accountManager: UserAccountManager
+    @StateObject private var locationManager = LocationManager()
+    @State private var trendingEvents: [StudyEvent] = []
+    @State private var recentActivity: [SocialActivity] = []
+    @State private var isLoading = false
+    @State private var selectedEvent: StudyEvent? = nil
+    @State private var showEventDetail = false
+    
+    private let baseURL = APIConfig.primaryBaseURL
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Header
+                headerView
+                
+                // Trending Events Section
+                trendingEventsSection
+                
+                // Recent Activity Section
+                recentActivitySection
+                
+                // Quick Actions
+                quickActionsSection
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+        }
+        .background(Color.bgSurface.ignoresSafeArea())
+        .onAppear {
+            initializeView()
+        }
+        .sheet(isPresented: $showEventDetail) {
+            if let event = selectedEvent {
+                NavigationStack {
+                    EventDetailView(event: event, studyEvents: .constant([]), onRSVP: { _ in })
+                }
+            }
+        }
+    }
+    
+    // MARK: - Header View
+    private var headerView: some View {
+        VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Community Hub")
+                        .font(.title2.weight(.bold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("\(trendingEvents.count) trending events • \(recentActivity.count) recent activities")
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                Spacer()
+                
+                // Live counter with FOMO
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Color.brandSuccess)
+                            .frame(width: 8, height: 8)
+                            .scaleEffect(1.0)
+                            .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isLoading)
+                        
+                        Text("LIVE")
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(.brandSuccess)
+                    }
+                    
+                    Text("\(getActiveUsersCount()) online")
+                        .font(.caption2)
+                        .foregroundColor(.textMuted)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.brandSuccess.opacity(0.1))
+                .cornerRadius(12)
+            }
+        }
+    }
+    
+    private func getActiveUsersCount() -> Int {
+        // Calculate based on actual data
+        return trendingEvents.count + recentActivity.count
+    }
+    
+    // MARK: - Trending Events Section
+    private var trendingEventsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .foregroundColor(.brandWarning)
+                        .font(.title3)
+                        .scaleEffect(1.0)
+                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isLoading)
+                    
+                    Text("Trending Events")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.textPrimary)
+                }
+                
+                Spacer()
+                
+                Text("\(trendingEvents.count)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.brandWarning)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.brandWarning.opacity(0.1))
+                    .cornerRadius(8)
+            }
+            
+            if isLoading {
+                trendingEventsLoadingView
+            } else if trendingEvents.isEmpty {
+                trendingEventsEmptyView
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(trendingEvents.prefix(5)) { event in
+                            TrendingEventCard(event: event) {
+                                selectedEvent = event
+                                showEventDetail = true
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+    }
+    
+    // MARK: - Recent Activity Section
+    private var recentActivitySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "clock.fill")
+                    .foregroundColor(.brandPrimary)
+                    .font(.title3)
+                
+                Text("Recent Activity")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+                
+                Button(action: {
+                    loadSocialData()
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+            }
+            
+            if isLoading {
+                activityLoadingView
+            } else if recentActivity.isEmpty {
+                activityEmptyView
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(recentActivity.prefix(8)) { activity in
+                        ActivityCard(activity: activity)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+    }
+    
+    // MARK: - Quick Actions Section
+    private var quickActionsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "bolt.fill")
+                    .foregroundColor(.brandAccent)
+                    .font(.title3)
+                
+                Text("Quick Actions")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+            }
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+                QuickActionCard(
+                    icon: "plus.circle.fill",
+                    title: "Create Event",
+                    subtitle: "Start something new",
+                    color: .brandPrimary
+                ) {
+                    // Navigate to event creation - would need navigation state
+                    print("Navigate to event creation")
+                }
+                
+                QuickActionCard(
+                    icon: "person.2.fill",
+                    title: "Find Friends",
+                    subtitle: "Connect with others",
+                    color: .brandSecondary
+                ) {
+                    // Navigate to friends - would need navigation state
+                    print("Navigate to friends")
+                }
+                
+                QuickActionCard(
+                    icon: "location.fill",
+                    title: "Nearby Events",
+                    subtitle: "Discover local",
+                    color: .brandSuccess
+                ) {
+                    // Navigate to map - would need navigation state
+                    print("Navigate to map")
+                }
+                
+                QuickActionCard(
+                    icon: "star.fill",
+                    title: "Rate Events",
+                    subtitle: "Share feedback",
+                    color: .brandWarning
+                ) {
+                    // Navigate to ratings - would need navigation state
+                    print("Navigate to ratings")
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+    }
+    
+    // MARK: - Loading Views
+    private var trendingEventsLoadingView: some View {
+        HStack(spacing: 16) {
+            ForEach(0..<3, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.bgSecondary)
+                    .frame(width: 200, height: 120)
+                    .shimmer()
+            }
+        }
+    }
+    
+    private var activityLoadingView: some View {
+        VStack(spacing: 12) {
+            ForEach(0..<4, id: \.self) { _ in
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(Color.bgSecondary)
+                        .frame(width: 40, height: 40)
+                        .shimmer()
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.bgSecondary)
+                            .frame(height: 16)
+                            .shimmer()
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.bgSecondary)
+                            .frame(width: 120, height: 12)
+                            .shimmer()
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Empty Views
+    private var trendingEventsEmptyView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "flame")
+                .font(.system(size: 40))
+                .foregroundColor(.textMuted)
+            
+            Text("No trending events yet")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.textSecondary)
+            
+            Text("Be the first to create an event!")
+                .font(.caption)
+                .foregroundColor(.textMuted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+    
+    private var activityEmptyView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "clock")
+                .font(.system(size: 40))
+                .foregroundColor(.textMuted)
+            
+            Text("No recent activity")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.textSecondary)
+            
+            Text("Join events to see activity here")
+                .font(.caption)
+                .foregroundColor(.textMuted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+    
+    // MARK: - Data Loading
+    private func loadSocialData() {
+        isLoading = true
+        
+        // Load trending events
+        loadTrendingEvents()
+        
+        // Load recent activity
+        loadRecentActivity()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            isLoading = false
+        }
+    }
+    
+    private func loadTrendingEvents() {
+        // Load real trending events from backend
+        guard let username = accountManager.currentUser else { return }
+        
+        let url = URL(string: "\(baseURL)/get_trending_events/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        let response = try JSONDecoder().decode(EventsResponse.self, from: data)
+                        // Filter and sort events
+                        var filteredEvents = response.events
+                            .filter { event in
+                                // Only show events happening soon (next 24 hours) for urgency
+                                let timeUntilEvent = event.time.timeIntervalSinceNow
+                                return timeUntilEvent > 0 && timeUntilEvent < 86400 // 24 hours
+                            }
+                        
+                        // If location is available, prioritize nearby events
+                        if locationManager.isLocationAvailable() {
+                            filteredEvents = locationManager.getNearbyEvents(filteredEvents, radiusKm: 25.0)
+                        }
+                        
+                        // Sort by attendee count (social proof) then by time (urgency)
+                        self.trendingEvents = filteredEvents
+                            .sorted { event1, event2 in
+                                if event1.attendees.count != event2.attendees.count {
+                                    return event1.attendees.count > event2.attendees.count
+                                }
+                                return event1.time < event2.time
+                            }
+                            .prefix(5)
+                            .map { $0 }
+                    } catch {
+                        print("Error parsing trending events: \(error)")
+                        self.trendingEvents = []
+                    }
+                } else {
+                    print("Failed to load trending events")
+                    self.trendingEvents = []
+                }
+            }
+        }.resume()
+    }
+    
+    
+    private func loadRecentActivity() {
+        // Load real recent activity from backend
+        guard let username = accountManager.currentUser else { return }
+        
+        let url = URL(string: "\(baseURL)/get_recent_activity/\(username)/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        let response = try JSONDecoder().decode(RecentActivityResponse.self, from: data)
+                        self.recentActivity = response.activities
+                            .sorted { $0.timestamp > $1.timestamp } // Most recent first
+                            .prefix(8)
+                            .map { $0 }
+                    } catch {
+                        print("Error parsing recent activity: \(error)")
+                        self.recentActivity = []
+                    }
+                } else {
+                    print("Failed to load recent activity")
+                    self.recentActivity = []
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Lifecycle
+    private func initializeView() {
+        // Start location services for nearby events
+        locationManager.startLocationUpdates()
+        loadTrendingEvents()
+        loadRecentActivity()
+    }
+}
+
+// MARK: - Supporting Views and Models
+
+struct TrendingEventCard: View {
+    let event: StudyEvent
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Urgency Badge
+                HStack {
+                    if isUrgent {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock.fill")
+                                .font(.caption2)
+                            Text(urgencyText)
+                                .font(.caption.weight(.bold))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.brandWarning)
+                        .cornerRadius(8)
+                    } else {
+                        Text(event.eventType.rawValue.capitalized)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(eventTypeColor)
+                            .cornerRadius(8)
+                    }
+                    
+                    Spacer()
+                    
+                    // Social Proof with FOMO
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.2.fill")
+                            .font(.caption2)
+                        Text("\(event.attendees.count) going")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundColor(.brandSuccess)
+                }
+                
+                // Event Title with FOMO indicators
+                Text(event.title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                    .lineLimit(2)
+                
+                // Time with urgency styling
+                HStack(spacing: 4) {
+                    Image(systemName: isUrgent ? "clock.fill" : "clock")
+                        .font(.caption)
+                        .foregroundColor(isUrgent ? .brandWarning : .textSecondary)
+                    Text(formatEventTime(event.time))
+                        .font(.caption.weight(isUrgent ? .semibold : .regular))
+                        .foregroundColor(isUrgent ? .brandWarning : .textSecondary)
+                }
+                
+                Spacer()
+                
+                // Host Info with verification
+                HStack(spacing: 6) {
+                    Image(systemName: event.hostIsCertified ? "checkmark.seal.fill" : "person.fill")
+                        .font(.caption)
+                        .foregroundColor(event.hostIsCertified ? .brandSuccess : .textSecondary)
+                    
+                    Text(event.host)
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(16)
+            .frame(width: 200, height: 140)
+            .background(Color.bgCard)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isUrgent ? Color.brandWarning.opacity(0.5) : Color.cardStroke, lineWidth: isUrgent ? 2 : 1)
+            )
+            .shadow(color: isUrgent ? Color.brandWarning.opacity(0.3) : Color.cardShadow, radius: isUrgent ? 8 : 4, x: 0, y: isUrgent ? 4 : 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var isUrgent: Bool {
+        let timeUntilEvent = event.time.timeIntervalSinceNow
+        return timeUntilEvent > 0 && timeUntilEvent < 3600 // Less than 1 hour
+    }
+    
+    private var urgencyText: String {
+        let timeUntilEvent = event.time.timeIntervalSinceNow
+        if timeUntilEvent < 1800 { // Less than 30 minutes
+            return "NOW!"
+        } else {
+            return "SOON"
+        }
+    }
+    
+    private var eventTypeColor: Color {
+        switch event.eventType {
+        case .study: return .brandPrimary
+        case .party: return .brandWarning
+        case .business: return .brandSecondary
+        case .cultural: return .brandWarning
+        case .academic: return .brandSuccess
+        case .networking: return .brandPrimary
+        case .social: return .brandSuccess
+        case .language_exchange: return .brandSecondary
+        case .other: return .textSecondary
+        }
+    }
+    
+    private func formatEventTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+struct ActivityCard: View {
+    let activity: SocialActivity
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Avatar
+            Image(systemName: activity.avatar)
+                .font(.title2)
+                .foregroundColor(.brandPrimary)
+                .frame(width: 40, height: 40)
+                .background(Color.brandPrimary.opacity(0.1))
+                .cornerRadius(20)
+            
+            // Activity Content
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.description)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.textPrimary)
+                
+                Text(timeAgoString(from: activity.timestamp))
+                    .font(.caption)
+                    .foregroundColor(.textSecondary)
+            }
+            
+            Spacer()
+            
+            // Activity Icon
+            Image(systemName: activity.type.icon)
+                .font(.caption)
+                .foregroundColor(activity.type.color)
+                .frame(width: 24, height: 24)
+                .background(activity.type.color.opacity(0.1))
+                .cornerRadius(12)
+        }
+        .padding(12)
+        .background(Color.bgSecondary)
+        .cornerRadius(12)
+    }
+    
+    private func timeAgoString(from date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+struct QuickActionCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(color)
+                    .frame(width: 40, height: 40)
+                    .background(color.opacity(0.1))
+                    .cornerRadius(20)
+                
+                VStack(spacing: 4) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(16)
+            .background(Color.bgCard)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.cardStroke, lineWidth: 1)
+            )
+            .shadow(color: Color.cardShadow, radius: 2, x: 0, y: 1)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Data Models
+
+struct RecentActivityResponse: Codable {
+    let activities: [SocialActivity]
+}
+
+struct SocialActivity: Identifiable, Codable {
+    let id: UUID
+    let type: ActivityType
+    let username: String
+    let eventTitle: String?
+    let timestamp: Date
+    let avatar: String
+    
+    var description: String {
+        switch type {
+        case .eventJoined:
+            return "\(username) joined \(eventTitle ?? "an event")"
+        case .eventCreated:
+            return "\(username) created \(eventTitle ?? "an event")"
+        case .friendAdded:
+            return "\(username) made a new friend"
+        case .eventCompleted:
+            return "\(username) completed \(eventTitle ?? "an event")"
+        }
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, type, username, eventTitle = "event_title", timestamp, avatar
+    }
+}
+
+enum ActivityType: String, Codable, CaseIterable {
+    case eventJoined = "event_joined"
+    case eventCreated = "event_created"
+    case friendAdded = "friend_added"
+    case eventCompleted = "event_completed"
+    
+    var icon: String {
+        switch self {
+        case .eventJoined: return "person.badge.plus"
+        case .eventCreated: return "plus.circle"
+        case .friendAdded: return "person.2"
+        case .eventCompleted: return "checkmark.circle"
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .eventJoined: return .brandSuccess
+        case .eventCreated: return .brandPrimary
+        case .friendAdded: return .brandSecondary
+        case .eventCompleted: return .brandWarning
+        }
+    }
+}
+
+// MARK: - Shimmer Effect
+struct ShimmerModifier: ViewModifier {
+    @State private var phase: CGFloat = 0
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.clear,
+                                Color.white.opacity(0.3),
+                                Color.clear
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .rotationEffect(.degrees(30))
+                    .offset(x: phase)
+                    .animation(
+                        .linear(duration: 1.5)
+                        .repeatForever(autoreverses: false),
+                        value: phase
+                    )
+            )
+            .onAppear {
+                phase = 200
+            }
+    }
+}
+
+extension View {
+    func shimmer() -> some View {
+        modifier(ShimmerModifier())
     }
 }

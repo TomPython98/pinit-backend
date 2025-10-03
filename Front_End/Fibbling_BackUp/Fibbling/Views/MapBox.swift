@@ -793,14 +793,17 @@ struct StudyMapView: View {
     @EnvironmentObject var accountManager: UserAccountManager
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.dismiss) var dismiss
+    @StateObject private var locationManager = LocationManager()
     
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816),
+        center: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816), // Default to Buenos Aires
         span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
     )
+    @State private var showLocationPermission = false
     @State private var showEventCreationSheet = false
     @State private var newEventCoordinate: CLLocationCoordinate2D? = nil
     @State private var isSearchExpanded = false
+    @State private var showSearchSheet = false
     @State private var selectedEvent: StudyEvent?
     
     @State private var mapSearchQuery = ""
@@ -828,8 +831,6 @@ struct StudyMapView: View {
     @State private var eventViewMode: EventViewMode = .all
 
     // MARK: - State for UI Animation
-    @State private var showMenu: Bool = false
-    @State private var showTools: Bool = false
     
     // MARK: - Helper Functions
     
@@ -953,57 +954,62 @@ struct StudyMapView: View {
                 })
                 .edgesIgnoringSafeArea(.all)
                 
+                // Location permission overlay
+                if showLocationPermission {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            showLocationPermission = false
+                        }
+                    
+                    LocationPermissionView(locationManager: locationManager) {
+                        showLocationPermission = false
+                    }
+                    .padding(.horizontal, 20)
+                }
+                
                 // Overall UI Container
                 VStack(spacing: 0) {
-                    // Minimalist Top Bar
+                    // Simple Top Bar with Back Arrow and Search
                     HStack {
-                        // Menu Button
+                        // Back Button
                         Button(action: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                showMenu.toggle()
-                                if showMenu { showTools = false }
-                            }
+                            dismiss()
                         }) {
-                            Image(systemName: showMenu ? "xmark" : "line.horizontal.3")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundColor(.white)
+                            Image(systemName: "arrow.left")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.textPrimary)
                                 .frame(width: 44, height: 44)
-                                .background(Color.black.opacity(0.7))
-                                .clipShape(Circle())
-                                .shadow(color: .black.opacity(0.3), radius: 3)
+                                .background(
+                                    Circle()
+                                        .fill(Color.bgCard)
+                                        .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+                                )
                         }
                         .padding(.leading, 16)
                         
-                        Spacer()
-                        
-                        // Tools Button
-                        Button(action: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                                showTools.toggle()
-                                if showTools { showMenu = false }
-                            }
-                        }) {
-                            Image(systemName: showTools ? "xmark" : "ellipsis.circle")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(width: 44, height: 44)
-                                .background(Color.black.opacity(0.7))
-                                .clipShape(Circle())
-                                .shadow(color: .black.opacity(0.3), radius: 3)
-                        }
-                        .padding(.trailing, 16)
+                Spacer()
+                
+                // Location Status Indicator
+                LocationStatusIndicator(locationManager: locationManager)
+                
+                // Search Button
+                Button(action: {
+                    showSearchSheet = true
+                }) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.textPrimary)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(Color.bgCard)
+                                .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+                        )
+                }
+                .padding(.trailing, 16)
                     }
                     .padding(.top, 55)
-                    
-                    // Expandable Menu
-                    if showMenu {
-                        menuExpansionView
-                    }
-                    
-                    // Expandable Tools
-                    if showTools {
-                        toolsExpansionView
-                    }
                     
                     // Search Bar when expanded
                     if isSearchExpanded {
@@ -1030,13 +1036,17 @@ struct StudyMapView: View {
                             VStack(spacing: 15) {
                                 ProgressView()
                                     .scaleEffect(1.2)
+                                    .tint(.brandPrimary)
                                 Text("Updating events...")
                                     .font(.caption)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.textPrimary)
                             }
                             .frame(width: 150, height: 90)
-                            .background(Color.black.opacity(0.7))
-                            .cornerRadius(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.bgCard)
+                                    .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+                            )
                             Spacer()
                         }
                         Spacer().frame(height: 100)
@@ -1046,6 +1056,23 @@ struct StudyMapView: View {
                 }
             }
             .navigationBarHidden(true)
+            .onAppear {
+                // Request location permission on first load
+                if locationManager.authorizationStatus == .notDetermined {
+                    showLocationPermission = true
+                } else {
+                    locationManager.startLocationUpdates()
+                }
+            }
+            .onChange(of: locationManager.location) { newLocation in
+                // Update map region when user location is available
+                if let location = newLocation {
+                    withAnimation(.easeInOut(duration: 1.0)) {
+                        region.center = location.coordinate
+                        region.span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05) // Zoom in closer
+                    }
+                }
+            }
             .sheet(isPresented: $showEventCreationSheet) {
                 EventCreationView(
                     coordinate: newEventCoordinate ?? region.center,
@@ -1083,6 +1110,13 @@ struct StudyMapView: View {
                     filterEventType: $filterEventType,
                     isPresented: $showFilterView,
                     onApply: { searchEvents() }
+                )
+            }
+            .sheet(isPresented: $showSearchSheet) {
+                EventSearchView(
+                    searchQuery: $filterQuery,
+                    onSearch: { searchEvents() },
+                    isPresented: $showSearchSheet
                 )
             }
             .alert(isPresented: $showAlert) {
@@ -1128,124 +1162,6 @@ struct StudyMapView: View {
         }
     }
     
-    // Expandable Menu View
-    private var menuExpansionView: some View {
-        VStack(spacing: 0) {
-            // Menu Header
-            Text("Menu")
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 24)
-                .padding(.top, 8)
-            
-            // Menu Options
-            menuOptionButton(icon: "arrow.left", title: "Back", action: { dismiss() })
-            
-            // Refresh button - Remove the action that calls fetchEvents
-            menuOptionButton(icon: "arrow.clockwise", title: "Refresh Events") {
-                 // calendarManager.fetchEvents() // REMOVED - This should not poll the API
-                 // Consider replacing this with a WebSocket status check or reconnect if needed
-            }
-            .disabled(calendarManager.isLoading) // Keep disabled state if needed
-
-            // Display last refresh time from CalendarManager
-             if let lastRefresh = calendarManager.lastRefreshTime {
-                 HStack {
-                     Spacer()
-                     Text("Last updated: \(timeAgoString(from: lastRefresh))")
-                         .font(.caption2)
-                         .foregroundColor(.gray)
-                         .padding(.trailing, 20)
-                         .padding(.bottom, 5)
-                 }
-             }
-
-            // Auto-refresh controls REMOVED
-            /*
-            VStack(spacing: 8) {
-                // ... removed code ...
-            }
-            .padding(.vertical, 2)
-            */
-
-            menuOptionButton(icon: "flame.fill", title: "Hot Posts", color: .orange) {
-                withAnimation {
-                    showHotPosts = fetchHotPostsForMap()
-                    showMenu = false
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-                    withAnimation {
-                        self.showHotPosts = []
-                    }
-                }
-            }
-        }
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.black.opacity(0.8))
-        )
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .transition(.move(edge: .leading).combined(with: .opacity))
-    }
-    
-    // Helper for menu option buttons
-    private func menuOptionButton(icon: String, title: String, color: Color = .white, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(color)
-                    .frame(width: 24, height: 24)
-                
-                Text(title)
-                    .font(.body)
-                    .foregroundColor(.white)
-                
-                Spacer()
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 20)
-        }
-    }
-    
-    // Expandable Tools View
-    private var toolsExpansionView: some View {
-        VStack(spacing: 0) {
-            // Tools Header
-            Text("Tools")
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 24)
-                .padding(.top, 8)
-            
-            // Tools Options
-            menuOptionButton(icon: "magnifyingglass", title: "Search") {
-                withAnimation(.spring(response: 0.35)) {
-                    isSearchExpanded.toggle()
-                    showTools = false
-                }
-            }
-            
-            menuOptionButton(icon: "line.horizontal.3.decrease.circle", title: "Filter Events") {
-                withAnimation {
-                    showFilterView = true
-                    showTools = false
-                }
-            }
-        }
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.black.opacity(0.8))
-        )
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .transition(.move(edge: .trailing).combined(with: .opacity))
-    }
     
     // Redesigned search bar
     var searchBarView: some View {
@@ -1799,6 +1715,99 @@ extension StudyMapView {
         // Find the corresponding event
         if let event = calendarManager.events.first(where: { $0.id == hotPost.eventId }) {
             selectedEvent = event
+        }
+    }
+}
+
+// MARK: - Event Search View
+struct EventSearchView: View {
+    @Binding var searchQuery: String
+    let onSearch: () -> Void
+    @Binding var isPresented: Bool
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 40))
+                        .foregroundColor(.brandPrimary)
+                    
+                    Text("Search Events")
+                        .font(.title2.weight(.bold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("Find events using AI-powered semantic search")
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 20)
+                
+                // Search Input
+                VStack(spacing: 16) {
+                    TextField("Search for events...", text: $searchQuery)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .font(.body)
+                        .padding(.horizontal, 20)
+                    
+                    // Search Examples
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Try searching for:")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.textSecondary)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("• \"study groups for computer science\"")
+                            Text("• \"networking events this week\"")
+                            Text("• \"language exchange partners\"")
+                            Text("• \"research collaboration\"")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.textMuted)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                }
+                
+                Spacer()
+                
+                // Action Buttons
+                VStack(spacing: 12) {
+                    Button(action: {
+                        onSearch()
+                        isPresented = false
+                    }) {
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                            Text("Search Events")
+                        }
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.brandPrimary)
+                        )
+                    }
+                    .disabled(searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    
+                    Button(action: {
+                        isPresented = false
+                    }) {
+                        Text("Cancel")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.textSecondary)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+            .background(Color.bgSurface.ignoresSafeArea())
+            .navigationBarHidden(true)
         }
     }
 }
