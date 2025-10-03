@@ -128,11 +128,11 @@ struct LocationPermissionView: View {
                 .foregroundColor(.brandPrimary)
             
             VStack(spacing: 12) {
-                Text("Location Access Required")
+                Text("location_access_required".localized)
                     .font(.title2.weight(.bold))
                     .foregroundColor(.textPrimary)
                 
-                Text("PinIt needs your location to show nearby events and help you discover study groups in Buenos Aires.")
+                Text("location_permission_message".localized)
                     .font(.body)
                     .foregroundColor(.textSecondary)
                     .multilineTextAlignment(.center)
@@ -145,7 +145,7 @@ struct LocationPermissionView: View {
                 }) {
                     HStack {
                         Image(systemName: "location.fill")
-                        Text("Allow Location Access")
+                        Text("allow_location_access".localized)
                     }
                     .font(.headline.weight(.semibold))
                     .foregroundColor(.white)
@@ -158,7 +158,7 @@ struct LocationPermissionView: View {
                 Button(action: {
                     onPermissionGranted()
                 }) {
-                    Text("Continue Without Location")
+                    Text("continue_without_location".localized)
                         .font(.subheadline)
                         .foregroundColor(.textSecondary)
                 }
@@ -234,13 +234,13 @@ struct LocationStatusIndicator: View {
     private var locationText: String {
         switch locationManager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
-            return locationManager.location != nil ? "Location Active" : "Getting Location..."
+            return locationManager.location != nil ? "location_active".localized : "getting_location".localized
         case .denied, .restricted:
-            return "Location Disabled"
+            return "location_disabled".localized
         case .notDetermined:
-            return "Location Needed"
+            return "location_needed".localized
         @unknown default:
-            return "Location Unknown"
+            return "location_needed".localized
         }
     }
 }

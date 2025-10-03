@@ -471,7 +471,7 @@ struct ContentView: View {
             spacing: 20
         ) {
             toolButton(
-                "Friends & Social",
+                "friends_social".localized,
                 systemImage: "person.2.fill",
                 background: Color.brandPrimary,
                 description: "Connect with friends"
@@ -512,12 +512,12 @@ struct ContentView: View {
                 InvitationsView()
             }
             
-            toolButton(
-                "Community Hub",
-                systemImage: "person.3.fill",
-                background: Color.brandPrimary,
-                description: "See what's trending"
-            ) {
+        toolButton(
+            "community_hub".localized,
+            systemImage: "person.3.fill",
+            background: Color.brandPrimary,
+            description: "See what's trending"
+        ) {
                 withAnimation(.spring()) {
                     showFlashcardsView = true
                 }
@@ -2529,7 +2529,7 @@ struct SocialActivityFeedView: View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Community Hub")
+                    Text("community_hub".localized)
                         .font(.title2.weight(.bold))
                         .foregroundColor(.textPrimary)
                     

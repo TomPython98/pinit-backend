@@ -11,7 +11,7 @@ struct SettingsView: View {
     // MARK: - App Storage for Preferences
     @AppStorage("enableNotifications") private var enableNotifications = true
     @AppStorage("darkMode") private var darkMode = false
-    @AppStorage("appLanguage") private var selectedLanguage = "English"
+    @StateObject private var localizationManager = LocalizationManager.shared
     @AppStorage("showOnlineStatus") private var showOnlineStatus = true
     @AppStorage("allowTagging") private var allowTagging = true
     @AppStorage("allowDirectMessages") private var allowDirectMessages = true
@@ -28,7 +28,6 @@ struct SettingsView: View {
     @State private var showNotificationPreferences = false
     @State private var showPrivacySettings = false
     
-    let supportedLanguages = ["English", "German", "Spanish", "French", "Italian", "Portuguese", "Chinese", "Japanese"]
 
     var body: some View {
         NavigationStack {
@@ -394,18 +393,35 @@ struct SettingsView: View {
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(Color.pinItTextSecondary)
                         .frame(width: 24, height: 24)
-                    Text("Language")
+                    Text("language".localized)
                         .font(.body.weight(.medium))
                         .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                 }
                 
-                Picker("Language", selection: $selectedLanguage) {
-                    ForEach(supportedLanguages, id: \.self) { language in
-                        Text(language).tag(language)
+                HStack {
+                    Spacer()
+                    ForEach(LocalizationManager.Language.allCases, id: \.self) { language in
+                        Button(action: {
+                            localizationManager.setLanguage(language)
+                        }) {
+                            HStack(spacing: 8) {
+                                Text(language.flag)
+                                    .font(.system(size: 20))
+                                Text(language.displayName)
+                                    .font(.body.weight(.medium))
+                                    .foregroundColor(localizationManager.currentLanguage == language ? .brandPrimary : .textSecondary)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(localizationManager.currentLanguage == language ? Color.brandPrimary.opacity(0.1) : Color.clear)
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .pickerStyle(.menu)
                 .padding(.leading, 40)
             }
         }
