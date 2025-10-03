@@ -23,7 +23,7 @@ struct EmptyStateView: View {
             
             Text(message)
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             

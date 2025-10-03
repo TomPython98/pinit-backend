@@ -4,15 +4,17 @@ struct APIConfig {
     // MARK: - Environment Configuration
     
     #if DEBUG
-    // Development URLs - for local testing
+    // Development URLs - prioritize production for TestFlight builds
     static let baseURLs = [
         "https://pinit-backend-production.up.railway.app/api",
+        "https://pin-it.net/api",
+        "https://api.pin-it.net/api",
         "http://127.0.0.1:8000/api",
         "http://localhost:8000/api",
         "http://10.0.0.30:8000/api"
     ]
     static let serverBaseURL = "https://pinit-backend-production.up.railway.app"
-    static let isProduction = false
+    static let isProduction = true  // Force production mode for TestFlight
     #else
     // Production URLs - for App Store release
     static let baseURLs = [

@@ -19,15 +19,15 @@ extension Color {
     static let pinItError = Color(red: 0.9, green: 0.2, blue: 0.2)          // Red
     static let pinItInfo = Color(red: 0.2, green: 0.5, blue: 0.9)           // Blue
 
-    // MARK: - Background Colors
-    static let pinItBackground = Color(red: 0.98, green: 0.98, blue: 0.99)  // Off White
+    // MARK: - Background Colors (Enhanced contrast)
+    static let pinItBackground = Color(red: 248/255, green: 250/255, blue: 255/255)  // Light bg surface (slightly bluer tint)
     static let pinItCardBackground = Color.white
     static let pinItOverlay = Color.black.opacity(0.3)
 
-    // MARK: - Text Colors
-    static let pinItTextPrimary = Color(red: 0.1, green: 0.1, blue: 0.1)    // Dark Text
-    static let pinItTextSecondary = Color(red: 0.4, green: 0.4, blue: 0.4)  // Medium Text
-    static let pinItTextTertiary = Color(red: 0.6, green: 0.6, blue: 0.6)   // Light Text
+    // MARK: - Text Colors (Enhanced contrast for better readability)
+    static let pinItTextPrimary = Color(red: 15/255, green: 23/255, blue: 42/255)    // Near black (darker)
+    static let pinItTextSecondary = Color(red: 71/255, green: 85/255, blue: 105/255)  // Slate 600 (darker)
+    static let pinItTextTertiary = Color(red: 100/255, green: 116/255, blue: 139/255) // Slate 500 (darker)
     static let pinItTextInverse = Color.white
 
     // MARK: - Event Type Colors

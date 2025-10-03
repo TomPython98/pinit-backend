@@ -76,7 +76,7 @@ struct GroupChatView: View {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text(msg.sender)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                             Text(msg.text)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
@@ -88,7 +88,7 @@ struct GroupChatView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(msg.sender)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                             Text(msg.text)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)

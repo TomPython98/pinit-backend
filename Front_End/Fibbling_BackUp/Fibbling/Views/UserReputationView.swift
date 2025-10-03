@@ -45,6 +45,7 @@ struct UserReputationView: View {
             VStack(alignment: .leading) {
                 Text("Reputation")
                     .font(.headline)
+                    .foregroundColor(Color.textPrimary)
                 
                 if reputationManager.userStats.totalRatings > 0 {
                     Text("Based on \(reputationManager.userStats.totalRatings) ratings")
@@ -73,6 +74,7 @@ struct UserReputationView: View {
             Text(String(format: "%.1f", reputationManager.userStats.averageRating))
                 .font(.subheadline)
                 .fontWeight(.bold)
+                .foregroundColor(Color.textPrimary)
                 .padding(.leading, 4)
         }
     }
@@ -81,6 +83,7 @@ struct UserReputationView: View {
         VStack(alignment: .leading, spacing: 5) {
             Text("Trust Level")
                 .font(.headline)
+                .foregroundColor(Color.textPrimary)
             
             HStack {
                 Image(systemName: trustLevelIcon)
@@ -105,8 +108,9 @@ struct UserReputationView: View {
                         HStack {
                             // Ratings progress
                             if reputationManager.userStats.totalRatings < nextLevel.requiredRatings {
-                                Text("\(reputationManager.userStats.totalRatings)/\(nextLevel.requiredRatings) ratings")
-                                    .font(.caption)
+                        Text("\(reputationManager.userStats.totalRatings)/\(nextLevel.requiredRatings) ratings")
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
                             }
                             
                             Spacer()
@@ -115,6 +119,7 @@ struct UserReputationView: View {
                             if reputationManager.userStats.averageRating < nextLevel.minAverageRating {
                                 Text("Need \(String(format: "%.1f", nextLevel.minAverageRating)) avg rating")
                                     .font(.caption)
+                                    .foregroundColor(Color.textSecondary)
                             }
                         }
                         
@@ -131,12 +136,14 @@ struct UserReputationView: View {
         VStack(alignment: .leading, spacing: 5) {
             Text("Activity")
                 .font(.headline)
+                .foregroundColor(Color.textPrimary)
             
             HStack(spacing: 20) {
                 VStack {
                     Text("\(reputationManager.userStats.eventsHosted)")
                         .font(.title2)
                         .fontWeight(.bold)
+                        .foregroundColor(Color.textPrimary)
                     Text("Hosted")
                         .font(.caption)
                         .foregroundColor(Color.textSecondary)
@@ -146,6 +153,7 @@ struct UserReputationView: View {
                     Text("\(reputationManager.userStats.eventsAttended)")
                         .font(.title2)
                         .fontWeight(.bold)
+                        .foregroundColor(Color.textPrimary)
                     Text("Attended")
                         .font(.caption)
                         .foregroundColor(Color.textSecondary)
@@ -155,6 +163,7 @@ struct UserReputationView: View {
                     Text("\(reputationManager.userStats.totalRatings)")
                         .font(.title2)
                         .fontWeight(.bold)
+                        .foregroundColor(Color.textPrimary)
                     Text("Reviews")
                         .font(.caption)
                         .foregroundColor(Color.textSecondary)
@@ -170,6 +179,7 @@ struct UserReputationView: View {
             HStack {
                 Text("Recent Reviews")
                     .font(.headline)
+                    .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 
@@ -178,6 +188,7 @@ struct UserReputationView: View {
                         showRatingsList = true
                     }
                     .font(.subheadline)
+                    .foregroundColor(Color.brandPrimary)
                 }
             }
             
@@ -243,19 +254,31 @@ struct UserRatingsListView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(ratings) { rating in
-                    RatingRowView(rating: rating)
+        NavigationStack {
+            ZStack {
+                // Background
+                Color.bgSurface
+                    .ignoresSafeArea()
+                
+                List {
+                    ForEach(ratings) { rating in
+                        RatingRowView(rating: rating)
+                            .listRowBackground(Color.bgCard)
+                    }
                 }
+                .listStyle(PlainListStyle())
+                .background(Color.bgSurface)
             }
             .navigationTitle("All Reviews")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.bgCard, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
+                    .foregroundColor(Color.textPrimary)
                 }
             }
         }
@@ -270,6 +293,7 @@ struct RatingRowView: View {
             HStack {
                 Text(rating.fromUser)
                     .font(.headline)
+                    .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 

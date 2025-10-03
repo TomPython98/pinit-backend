@@ -200,7 +200,7 @@ struct EventDetailView: View {
             .progressViewStyle(CircularProgressViewStyle(tint: .blue))
             .scaleEffect(1.5)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(.systemBackground))
+            .background(Color.bgSurface)
     }
     
     private var contentView: some View {
@@ -215,7 +215,7 @@ struct EventDetailView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 40)
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.bgSurface.ignoresSafeArea())
         .sheet(isPresented: $showRateUserSheet, onDismiss: {
             selectedUserToRate = nil
         }) {
@@ -639,7 +639,7 @@ extension EventDetailView {
                             .foregroundColor(.blue)
                         Text("Auto-Matched Event")
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .foregroundColor(Color.textPrimary)
                         
                         Spacer()
                         
@@ -657,7 +657,7 @@ extension EventDetailView {
                     
                     Text("This event uses interest matching to connect people with similar interests.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     
                     // Display real interest tags if available
@@ -730,7 +730,7 @@ extension EventDetailView {
                     }
                 }
                 .padding(15)
-                .background(Color(.systemBackground).opacity(0.7))
+                .background(Color.bgCard.opacity(0.7))
                 .cornerRadius(12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
@@ -746,7 +746,7 @@ extension EventDetailView {
             if let description = localEvent.description, !description.isEmpty {
                 Text(description)
                     .font(.body)
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
             }
         }
     }
@@ -778,11 +778,12 @@ extension EventDetailView {
         VStack(alignment: .leading, spacing: 4) {
             Text("Hosted By")
                 .font(.caption.weight(.bold))
-                .foregroundColor(.gray)
+                .foregroundColor(Color.textSecondary)
             
             HStack {
                 Text(localEvent.host)
                     .font(.subheadline.weight(.semibold))
+                    .foregroundColor(Color.textPrimary)
                 
                 if localEvent.hostIsCertified {
                     Image(systemName: "checkmark.seal.fill")
@@ -815,7 +816,7 @@ extension EventDetailView {
                             Text("Host")
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color.textPrimary)
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -825,13 +826,13 @@ extension EventDetailView {
                     
                     Text("\(localEvent.attendees.count)")
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color.textSecondary)
                 }
                 
                 if localEvent.attendees.isEmpty {
                     Text("Be the first to join!")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color.textSecondary)
                         .padding(.vertical, 4)
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -896,12 +897,12 @@ extension EventDetailView {
                     Spacer()
                     Text("\(localEvent.attendees.count) attending")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 }
                 
                 Text("As the host, you're automatically marked as attending. You can manage your event and invite others.")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .multilineTextAlignment(.leading)
                 
                 // Quick actions for hosts
@@ -1133,9 +1134,9 @@ struct EventSocialFeedView: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                     .padding(8)
-                    .background(Color(.systemBackground).opacity(0.8))
+                    .background(Color.bgCard.opacity(0.8))
                     .clipShape(Circle())
             }
             .accessibilityLabel("Close")
@@ -1152,9 +1153,9 @@ struct EventSocialFeedView: View {
                 refreshFeed()
             } label: {
                 Image(systemName: "arrow.clockwise")
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                     .padding(8)
-                    .background(Color(.systemBackground).opacity(0.8))
+                    .background(Color.bgCard.opacity(0.8))
                     .clipShape(Circle())
             }
             .disabled(isRefreshing)
@@ -1222,7 +1223,7 @@ struct EventSocialFeedView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
     }
     
     private var imagePreviewGrid: some View {
@@ -1394,7 +1395,7 @@ struct EventSocialFeedView: View {
         #endif
         
         // Real API call
-        guard let url = URL(string: "http://127.0.0.1:8000/api/events/feed/\(event.id.uuidString)/") else {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/events/feed/\(event.id.uuidString)/") else {
             self.errorMessage = "Invalid URL"
             return
         }
@@ -1535,7 +1536,7 @@ struct EventSocialFeedView: View {
         isRefreshing = true
         
         // API endpoint
-        guard let url = URL(string: "http://127.0.0.1:8000/api/events/comment/") else {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/events/comment/") else {
             errorMessage = "Invalid API URL"
             isRefreshing = false
             return
@@ -1702,7 +1703,7 @@ struct EventSocialFeedView: View {
         }
         
         // Make API call to persist the change
-        guard let url = URL(string: "http://127.0.0.1:8000/api/events/like/"),
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/events/like/"),
               let currentUser = accountManager.currentUser else {
             self.errorMessage = "Cannot like post: Invalid user or URL"
             return
@@ -1830,7 +1831,7 @@ struct EventSocialFeedView: View {
         errorMessage = nil
         
         // API endpoint
-        guard let url = URL(string: "http://127.0.0.1:8000/api/events/comment/") else {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/events/comment/") else {
             errorMessage = "Invalid API URL"
             isRefreshing = false
             return
@@ -1959,15 +1960,17 @@ struct EventPostView: View {
                     HStack {
                         Text(post.username)
                             .font(.headline)
+                            .foregroundColor(Color.textPrimary)
                         Spacer()
                         Text(formatDate(post.created_at))
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(Color.textSecondary)
                     }
                     
                     // Post text
                     Text(post.text)
                         .font(.body)
+                        .foregroundColor(Color.textPrimary)
                         .multilineTextAlignment(.leading)
                     
                     // Image grid if present
@@ -2038,11 +2041,11 @@ struct EventPostView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
         .overlay(
             Rectangle()
                 .frame(height: 1)
-                .foregroundColor(Color(.systemGray5)),
+                .foregroundColor(Color.textMuted),
             alignment: .bottom
         )
     }
@@ -2107,7 +2110,7 @@ struct EventPostView: View {
             }
         }
         .padding(8)
-        .background(Color(.systemGray6))
+        .background(Color.bgSecondary)
         .cornerRadius(8)
     }
     
@@ -2152,7 +2155,7 @@ struct PostDetailView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "arrow.left")
-                        .foregroundColor(.primary)
+                        .foregroundColor(Color.textPrimary)
                 }
                 .accessibilityLabel("Back")
                 
@@ -2167,7 +2170,7 @@ struct PostDetailView: View {
                     // Share options
                 } label: {
                     Image(systemName: "square.and.arrow.up")
-                        .foregroundColor(.primary)
+                        .foregroundColor(Color.textPrimary)
                 }
                 .accessibilityLabel("Share Post")
             }
@@ -2237,18 +2240,12 @@ struct EventCard<Content: View>: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 20)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.white.opacity(0.7), Color.white.opacity(0.4)]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(Color.bgCard)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        .stroke(Color.divider, lineWidth: 1)
                 )
-                .shadow(radius: 4)
+                .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
             content.padding()
         }
     }
@@ -2260,10 +2257,10 @@ struct AttendeeChip: View {
     var body: some View {
         Text(name)
             .font(.subheadline.weight(.medium))
-            .foregroundColor(.black)
+            .foregroundColor(Color.textPrimary)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.8)))
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.bgCard))
             .shadow(radius: 2)
     }
 }
@@ -2502,15 +2499,17 @@ struct EnhancedEventPostView: View {
                     HStack {
                         Text(post.username)
                             .font(.headline)
+                            .foregroundColor(Color.textPrimary)
                         Spacer()
                         Text(formatDate(post.created_at))
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(Color.textSecondary)
                     }
                     
                     // Post text
                     Text(post.text)
                         .font(.body)
+                        .foregroundColor(Color.textPrimary)
                         .multilineTextAlignment(.leading)
                     
                     // Debug info during development
@@ -2588,11 +2587,11 @@ struct EnhancedEventPostView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
         .overlay(
             Rectangle()
                 .frame(height: 1)
-                .foregroundColor(Color(.systemGray5)),
+                .foregroundColor(Color.textMuted),
             alignment: .bottom
         )
     }

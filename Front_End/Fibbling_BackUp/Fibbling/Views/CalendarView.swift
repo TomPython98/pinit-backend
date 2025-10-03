@@ -49,7 +49,7 @@ struct CustomCalendarView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .background(Color(.systemGroupedBackground))
+            .background(Color.bgSurface)
             .sheet(isPresented: $showDayEventsSheet) {
                 DayEventsView(events: selectedDayEvents, date: selectedDate)
                     .presentationDetents([.medium, .large])
@@ -147,7 +147,7 @@ struct CustomCalendarView: View {
                 
                 Text(monthYearString(from: displayedMonth))
                     .font(.title2.bold())
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 
@@ -223,7 +223,7 @@ struct CustomCalendarView: View {
             weekdayHeader
         }
         .padding(.top)
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
     }
     
     // MARK: - Helper computed properties for view mode button styling (same as map)
@@ -274,11 +274,11 @@ struct CustomCalendarView: View {
                 Text(day)
                     .font(.caption.weight(.semibold))
                     .frame(maxWidth: .infinity)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .padding(.vertical, 8)
             }
         }
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
     }
     
     // MARK: - Month View
@@ -374,7 +374,7 @@ struct CustomCalendarView: View {
             HStack {
                 Text(sectionTitle)
                     .font(.title3.bold())
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 Spacer()
                 Button(action: { showEventCreation = true }) {
                     Label("Add Event", systemImage: "plus.circle.fill")
@@ -394,7 +394,7 @@ struct CustomCalendarView: View {
                         .foregroundColor(.secondary.opacity(0.7))
                     Text(emptyStateMessage)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 30)
@@ -403,7 +403,7 @@ struct CustomCalendarView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
+                .fill(Color.bgCard)
                 .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
         )
     }
@@ -673,13 +673,13 @@ struct DayCell: View {
     }
     
     private var cellBackground: Color {
-        isSelected ? Color.accentColor.opacity(0.1) : Color(.systemBackground)
+        isSelected ? Color.accentColor.opacity(0.1) : Color.bgCard
     }
     
     private var cellTextColor: Color {
-        if !isSameMonth { return .secondary.opacity(0.5) }
-        else if isToday { return .accentColor }
-        else { return .primary }
+        if !isSameMonth { return Color.textMuted }
+        else if isToday { return Color.brandPrimary }
+        else { return Color.textPrimary }
     }
 }
 
@@ -695,10 +695,11 @@ struct WeekDayRow: View {
                 Text(date, style: .date)
                     .font(.subheadline)
                     .fontWeight(isToday ? .bold : .regular)
+                    .foregroundColor(Color.textPrimary)
                 if !events.isEmpty {
                     Text("\(events.count) events")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 }
             }
             Spacer()
@@ -709,7 +710,7 @@ struct WeekDayRow: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.systemBackground))
+                .fill(Color.bgCard)
                 .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
         )
     }
@@ -728,17 +729,18 @@ struct EventRow: View {
                 Text(event.title)
                     .font(.subheadline)
                     .fontWeight(.medium)
+                    .foregroundColor(Color.textPrimary)
                 Text(event.time, style: .time)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
             }
             Spacer()
             Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
         .cornerRadius(8)
     }
 }
@@ -771,12 +773,13 @@ struct SimpleEventRow: View {
                 Text(event.title)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(Color.textPrimary)
                 
                 HStack(spacing: 8) {
                     Text(event.time.formatted(date: .omitted, time: .shortened))
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                     
                     Text(event.eventType.displayName)
                         .font(.caption)
@@ -797,13 +800,13 @@ struct SimpleEventRow: View {
                     .font(.system(size: 16))
             } else {
                 Image(systemName: "chevron.right")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .font(.system(size: 14))
             }
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
         .cornerRadius(8)
     }
 }
@@ -847,7 +850,7 @@ struct EventCreationSheet: View {
     var body: some View {
         ZStack {
             // Background
-            Color(.systemGroupedBackground)
+            Color.bgSurface
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -959,7 +962,7 @@ struct EventCreationSheet: View {
                         
                         TextField("Enter title", text: $eventTitle)
                             .padding()
-                            .background(Color(.systemGray6))
+                            .background(Color.bgSecondary)
                             .cornerRadius(8)
                     }
                 }
@@ -982,7 +985,7 @@ struct EventCreationSheet: View {
                                         .frame(width: 12, height: 12)
                                     
                                     Text(type.displayName)
-                                        .foregroundColor(.primary)
+                                        .foregroundColor(Color.textPrimary)
                                 }
                                 .tag(type)
                             }
@@ -1004,7 +1007,7 @@ struct EventCreationSheet: View {
                         TextEditor(text: $eventDescription)
                             .frame(minHeight: 100)
                             .padding(4)
-                            .background(Color(.systemGray6))
+                            .background(Color.bgSecondary)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
@@ -1025,12 +1028,12 @@ struct EventCreationSheet: View {
                         
                         TextField("Enter location", text: $eventLocation)
                             .padding()
-                            .background(Color(.systemGray6))
+                            .background(Color.bgSecondary)
                             .cornerRadius(8)
                         
                         Text("Location feature will be available soon")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.textSecondary)
                     }
                 }
             }
@@ -1056,7 +1059,7 @@ struct EventCreationSheet: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Start")
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                                 
                                 DatePicker("", selection: $eventDate)
                                     .datePickerStyle(.compact)
@@ -1066,7 +1069,7 @@ struct EventCreationSheet: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("End")
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                                 
                                 DatePicker("", selection: $eventEndDate)
                                     .datePickerStyle(.compact)
@@ -1090,7 +1093,7 @@ struct EventCreationSheet: View {
                         HStack {
                             Text(formatDuration(from: eventDate, to: eventEndDate))
                                 .padding()
-                                .background(Color(.systemGray6))
+                                .background(Color.bgSecondary)
                                 .cornerRadius(8)
                             
                             Spacer()
@@ -1117,7 +1120,7 @@ struct EventCreationSheet: View {
                                      "Anyone can see and join this event" : 
                                         "Only invited users can see this event")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                             }
                         }
                         .toggleStyle(SwitchToggleStyle(tint: .blue))
@@ -1149,7 +1152,7 @@ struct EventCreationSheet: View {
                                 
                                 Text("Automatically invite users with similar interests")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                             }
                         }
                         .toggleStyle(SwitchToggleStyle(tint: .blue))
@@ -1213,7 +1216,7 @@ struct EventCreationSheet: View {
                                     } else if !addingInterest {
                                         Text("Add tags to improve matching")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(Color.textSecondary)
                                             .padding(.vertical, 8)
                                     }
                                     
@@ -1225,7 +1228,7 @@ struct EventCreationSheet: View {
                                                 TextField("New tag", text: $newInterest)
                                                     .padding(.horizontal, 12)
                                                     .padding(.vertical, 8)
-                                                    .background(Color(.systemGray6))
+                                                    .background(Color.bgSecondary)
                                                     .cornerRadius(8)
                                                 
                                                 Button(action: {
@@ -1253,7 +1256,7 @@ struct EventCreationSheet: View {
                                             HStack {
                                                 Text("Suggestions:")
                                                     .font(.caption)
-                                                    .foregroundColor(.secondary)
+                                                    .foregroundColor(Color.textSecondary)
                                                 
                                                 Spacer()
                                                 
@@ -1280,12 +1283,12 @@ struct EventCreationSheet: View {
                                             } else {
                                                 Text("No more suggestions available")
                                                     .font(.caption)
-                                                    .foregroundColor(.secondary)
+                                                    .foregroundColor(Color.textSecondary)
                                                     .padding(.vertical, 8)
                                             }
                                         }
                                         .padding(12)
-                                        .background(Color(.systemGray6).opacity(0.5))
+                                        .background(Color.bgSecondary.opacity(0.5))
                                         .cornerRadius(12)
                                     }
                                 }
@@ -1307,7 +1310,7 @@ struct EventCreationSheet: View {
                             
                             Text("Auto-matching uses your selected tags to find users with similar interests. The system will automatically invite compatible users to your event.")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                             
                             if selectedInterests.isEmpty {
@@ -1343,7 +1346,7 @@ struct EventCreationSheet: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Title")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                                 
                                 HStack {
                                     Text(eventTitle.isEmpty ? "Untitled Event" : eventTitle)
@@ -1367,12 +1370,12 @@ struct EventCreationSheet: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Schedule")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                                 
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack {
                                         Image(systemName: "calendar")
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(Color.textSecondary)
                                             .frame(width: 20)
                                         Text(formatDate(eventDate))
                                             .font(.subheadline)
@@ -1380,7 +1383,7 @@ struct EventCreationSheet: View {
                                     
                                     HStack {
                                         Image(systemName: "clock")
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(Color.textSecondary)
                                             .frame(width: 20)
                                         Text("\(formatTime(eventDate)) - \(formatTime(eventEndDate))")
                                             .font(.subheadline)
@@ -1388,7 +1391,7 @@ struct EventCreationSheet: View {
                                     
                                     HStack {
                                         Image(systemName: "hourglass")
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(Color.textSecondary)
                                             .frame(width: 20)
                                         Text(formatDuration(from: eventDate, to: eventEndDate))
                                             .font(.subheadline)
@@ -1402,11 +1405,11 @@ struct EventCreationSheet: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Settings")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                                 
                                 HStack {
                                     Image(systemName: isPublicEvent ? "globe" : "lock")
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(Color.textSecondary)
                                         .frame(width: 20)
                                     Text(isPublicEvent ? "Public event" : "Private event")
                                         .font(.subheadline)
@@ -1414,7 +1417,7 @@ struct EventCreationSheet: View {
                                 
                                 HStack {
                                     Image(systemName: "person.2")
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(Color.textSecondary)
                                         .frame(width: 20)
                                     Text(autoMatchingEnabled ? "Auto-matching enabled" : "Auto-matching disabled")
                                         .font(.subheadline)
@@ -1423,7 +1426,7 @@ struct EventCreationSheet: View {
                                 if autoMatchingEnabled {
                                     HStack {
                                         Image(systemName: "number")
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(Color.textSecondary)
                                             .frame(width: 20)
                                         Text("Maximum \(maxParticipants) participants")
                                             .font(.subheadline)
@@ -1438,7 +1441,7 @@ struct EventCreationSheet: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Interest Tags")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(Color.textSecondary)
                                     
                                     FlowLayout(spacing: 6) {
                                         ForEach(selectedInterests, id: \.self) { tag in
@@ -1466,7 +1469,7 @@ struct EventCreationSheet: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Description")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(Color.textSecondary)
                                     
                                     Text(eventDescription)
                                         .font(.subheadline)
@@ -1536,7 +1539,7 @@ struct EventCreationSheet: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(Color(.systemGray6))
+                    .background(Color.bgSecondary)
                     .cornerRadius(8)
                 }
             }
@@ -1567,7 +1570,7 @@ struct EventCreationSheet: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
         .shadow(color: Color.black.opacity(0.05), radius: 3, y: -2)
     }
     
@@ -1586,7 +1589,7 @@ struct EventCreationSheet: View {
                     .foregroundColor(.white)
             }
             .padding(30)
-            .background(Color(.systemBackground).opacity(0.9))
+            .background(Color.bgCard.opacity(0.9))
             .cornerRadius(16)
             .shadow(radius: 10)
         }
@@ -1596,7 +1599,7 @@ struct EventCreationSheet: View {
     private func cardView<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
             .padding(16)
-            .background(Color(.systemBackground))
+            .background(Color.bgCard)
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
@@ -1692,7 +1695,7 @@ struct EventCreationSheet: View {
     }
 
     private func sendEventToBackend(_ event: StudyEvent) {
-        guard let url = URL(string: "http://127.0.0.1:8000/api/create_study_event/") else {
+        guard let url = URL(string: APIConfig.fullURL(for: "createEvent")) else {
             isLoading = false
             errorMessage = "Invalid URL"
             showAlert = true
@@ -1881,7 +1884,7 @@ struct TagSuggestions: View {
                         Image(systemName: "ellipsis")
                     }
                     .font(.footnote)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(

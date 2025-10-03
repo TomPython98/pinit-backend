@@ -17,7 +17,7 @@ struct FriendsListView: View {
     @State private var isLoading = false
     
     private let tabs = ["Friends", "Requests", "Discover"]
-    private let baseURL = "http://127.0.0.1:8000/api"
+    private let baseURL = APIConfig.primaryBaseURL
 
     // MARK: - Filtering Logic
     var filteredFriends: [String] {
@@ -52,7 +52,7 @@ struct FriendsListView: View {
         NavigationStack {
             ZStack {
                 // Clean background
-                Color(.systemGroupedBackground)
+                Color.bgSurface
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
@@ -84,7 +84,7 @@ struct FriendsListView: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(Color.textPrimary)
                     }
                 }
                 
@@ -92,7 +92,7 @@ struct FriendsListView: View {
                     Button(action: { refreshData() }) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(Color.textPrimary)
                             .rotationEffect(.degrees(isLoading ? 360 : 0))
                             .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: isLoading)
                     }
@@ -117,7 +117,7 @@ struct FriendsListView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                     
                     TextField("Search people...", text: $searchQuery)
                         .font(.system(size: 17))
@@ -133,13 +133,13 @@ struct FriendsListView: View {
                         Button(action: { searchQuery = "" }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 16))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                         }
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(Color(.systemBackground))
+                .background(Color.bgCard)
                 .cornerRadius(12)
                 .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
             }
@@ -160,7 +160,7 @@ struct FriendsListView: View {
                     VStack(spacing: 8) {
                         Text(tabs[index])
                             .font(.system(size: 16, weight: selectedTab == index ? .semibold : .medium))
-                            .foregroundColor(selectedTab == index ? .primary : .secondary)
+                            .foregroundColor(selectedTab == index ? Color.textPrimary : Color.textSecondary)
                         
                         // Active indicator
                         Rectangle()
@@ -173,7 +173,7 @@ struct FriendsListView: View {
                 }
             }
         }
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         .padding(.horizontal, 20)
@@ -215,21 +215,21 @@ struct FriendsListView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("General Chat")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.primary)
+                        .foregroundColor(Color.textPrimary)
                     
                     Text("Connect with everyone")
                         .font(.system(size: 15))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
             }
             .padding(20)
-            .background(Color(.systemBackground))
+            .background(Color.bgCard)
             .cornerRadius(16)
             .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
         }
@@ -244,11 +244,11 @@ struct FriendsListView: View {
             VStack(spacing: 8) {
                 Text("No Friends Yet")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("Start connecting with people by sending friend requests")
                     .font(.system(size: 16))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .multilineTextAlignment(.center)
             }
             
@@ -268,7 +268,7 @@ struct FriendsListView: View {
         }
         .padding(40)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
@@ -291,11 +291,11 @@ struct FriendsListView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(friend)
                                 .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color.textPrimary)
                             
                             Text("Tap to chat")
                                 .font(.system(size: 14))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                         }
                         
                         Spacer()
@@ -305,7 +305,7 @@ struct FriendsListView: View {
                             .foregroundColor(.accentColor)
                     }
                     .padding(16)
-                    .background(Color(.systemBackground))
+                    .background(Color.bgCard)
                     .cornerRadius(12)
                     .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 1)
                 }
@@ -338,22 +338,22 @@ struct FriendsListView: View {
         VStack(spacing: 20) {
             Image(systemName: "person.badge.plus")
                 .font(.system(size: 60))
-                .foregroundColor(.secondary.opacity(0.6))
+                .foregroundColor(Color.textMuted)
             
             VStack(spacing: 8) {
                 Text("No Requests")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("When you send or receive friend requests, they'll appear here")
                     .font(.system(size: 16))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .multilineTextAlignment(.center)
             }
         }
         .padding(40)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
@@ -367,7 +367,7 @@ struct FriendsListView: View {
                 
                 Text("Pending Requests")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 
@@ -395,11 +395,11 @@ struct FriendsListView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(user)
                                 .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color.textPrimary)
                             
                             Text("Wants to connect")
                                 .font(.system(size: 14))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                         }
                         
                         Spacer()
@@ -425,7 +425,7 @@ struct FriendsListView: View {
                         }
                     }
                     .padding(16)
-                    .background(Color(.systemBackground))
+                    .background(Color.bgCard)
                     .cornerRadius(12)
                     .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 1)
                 }
@@ -442,7 +442,7 @@ struct FriendsListView: View {
                 
                 Text("Sent Requests")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 
@@ -470,16 +470,16 @@ struct FriendsListView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(user)
                                 .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color.textPrimary)
                             
                             HStack(spacing: 4) {
                                 Image(systemName: "clock.fill")
                                     .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                                 
                                 Text("Pending approval")
                                     .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                             }
                         }
                         
@@ -490,11 +490,11 @@ struct FriendsListView: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(Color.gray.opacity(0.2))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.textSecondary)
                             .cornerRadius(8)
                     }
                     .padding(16)
-                    .background(Color(.systemBackground))
+                    .background(Color.bgCard)
                     .cornerRadius(12)
                     .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 1)
                 }
@@ -526,17 +526,17 @@ struct FriendsListView: View {
             VStack(spacing: 8) {
                 Text("No Users Found")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("Try adjusting your search or check back later")
                     .font(.system(size: 16))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .multilineTextAlignment(.center)
             }
         }
         .padding(40)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.bgCard)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
@@ -557,11 +557,11 @@ struct FriendsListView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(user)
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(Color.textPrimary)
                         
                         Text("Fibbling User")
                             .font(.system(size: 14))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.textSecondary)
                     }
                     
                     Spacer()
@@ -577,7 +577,7 @@ struct FriendsListView: View {
                     }
                 }
                 .padding(16)
-                .background(Color(.systemBackground))
+                .background(Color.bgCard)
                 .cornerRadius(12)
                 .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 1)
             }

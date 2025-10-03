@@ -46,47 +46,57 @@ struct InvitationsView: View {
     
     var body: some View {
         NavigationStack {
-            VStack {
-                // Tab selector
-                Picker("Invitation Type", selection: $selectedTab) {
-                    Text("Direct Invites").tag(0)
-                    Text("Potential Matches").tag(1)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
+            ZStack {
+                // Background
+                Color.bgSurface
+                    .ignoresSafeArea()
                 
-                List {
-                    if selectedTab == 0 {
-                        // Direct Invitations Tab
-                        if directInvitations.isEmpty {
-                            Text("No direct invitations")
-                                .foregroundColor(.secondary)
-                                .padding()
-                        } else {
-                            ForEach(directInvitations) { invitation in
-                                InvitationRow(invitation: invitation,
-                                            onAccept: { accept(invitation) },
-                                            onDecline: { decline(invitation) })
-                            }
-                        }
-                    } else {
-                        // Potential Matches Tab
-                        if potentialMatches.isEmpty {
-                            Text("No potential matches")
-                                .foregroundColor(.secondary)
-                                .padding()
-                        } else {
-                            ForEach(potentialMatches) { invitation in
-                                PotentialMatchRow(invitation: invitation,
+                VStack {
+                    // Tab selector
+                    Picker("Invitation Type", selection: $selectedTab) {
+                        Text("Direct Invites").tag(0)
+                        Text("Potential Matches").tag(1)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+                    
+                    List {
+                        if selectedTab == 0 {
+                            // Direct Invitations Tab
+                            if directInvitations.isEmpty {
+                                Text("No direct invitations")
+                                    .foregroundColor(Color.textSecondary)
+                                    .padding()
+                            } else {
+                                ForEach(directInvitations) { invitation in
+                                    InvitationRow(invitation: invitation,
                                                 onAccept: { accept(invitation) },
                                                 onDecline: { decline(invitation) })
+                                }
+                            }
+                        } else {
+                            // Potential Matches Tab
+                            if potentialMatches.isEmpty {
+                                Text("No potential matches")
+                                    .foregroundColor(Color.textSecondary)
+                                    .padding()
+                            } else {
+                                ForEach(potentialMatches) { invitation in
+                                    PotentialMatchRow(invitation: invitation,
+                                                    onAccept: { accept(invitation) },
+                                                    onDecline: { decline(invitation) })
+                                }
                             }
                         }
                     }
+                    .listStyle(PlainListStyle())
+                    .background(Color.bgSurface)
                 }
-                .listStyle(PlainListStyle())
             }
             .navigationTitle(selectedTab == 0 ? "Direct Invitations" : "Potential Matches")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.bgCard, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .overlay {
                 if isLoading {
                     ProgressView("Loading Invitations...")
@@ -169,7 +179,7 @@ struct InvitationsView: View {
     /// Accepts an invitation by calling the RSVP endpoint.
     private func accept(_ invitation: Invitation) {
         guard let username = accountManager.currentUser,
-              let url = URL(string: "http://127.0.0.1:8000/api/rsvp_study_event/")
+              let url = URL(string: "\(APIConfig.primaryBaseURL)/rsvp_study_event/")
         else { return }
         
         print("🔍 [InvitationsView] Accepting invitation for event: \(invitation.event.title) (ID: \(invitation.event.id))")
@@ -258,7 +268,7 @@ struct InvitationsView: View {
     /// Declines an invitation by calling the appropriate backend endpoint.
     private func decline(_ invitation: Invitation) {
         guard let username = accountManager.currentUser,
-              let url = URL(string: "http://127.0.0.1:8000/api/decline_invitation/")
+              let url = URL(string: "\(APIConfig.primaryBaseURL)/decline_invitation/")
         else { return }
         
         print("🔍 [InvitationsView] Declining invitation for event: \(invitation.event.title) (ID: \(invitation.event.id))")
@@ -311,22 +321,22 @@ struct InvitationRow: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(invitation.event.title)
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundColor(Color.textPrimary)
             
             Text("Hosted by \(invitation.event.host)")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.textSecondary)
             
             Text(invitation.event.time, style: .date)
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(Color.textMuted)
             
             if let message = invitation.event.description, !message.isEmpty {
                 Text(message)
                     .font(.caption)
-                    .foregroundColor(.blue)
+                    .foregroundColor(Color.brandPrimary)
                     .padding(4)
-                    .background(Color.white.opacity(0.7))
+                    .background(Color.bgSecondary)
                     .cornerRadius(5)
             }
             
@@ -353,39 +363,39 @@ struct PotentialMatchRow: View {
             HStack {
                 Text(invitation.event.title)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 
                 // Auto-match badge
                 Text("Auto-Matched")
                     .font(.system(size: 10, weight: .medium))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.2))
-                    .foregroundColor(.blue)
+                    .background(Color.brandPrimary.opacity(0.2))
+                    .foregroundColor(Color.brandPrimary)
                     .cornerRadius(10)
             }
             
             Text("Hosted by \(invitation.event.host)")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.textSecondary)
             
             Text(invitation.event.time, style: .date)
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(Color.textMuted)
             
             if let message = invitation.event.description, !message.isEmpty {
                 Text(message)
                     .font(.caption)
-                    .foregroundColor(.blue)
+                    .foregroundColor(Color.brandPrimary)
                     .padding(4)
-                    .background(Color.white.opacity(0.7))
+                    .background(Color.bgSecondary)
                     .cornerRadius(5)
             }
             
             // Show the event type
             Text("Event type: \(invitation.event.eventType.displayName)")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.textSecondary)
             
             // Divider
             Divider()
@@ -393,7 +403,7 @@ struct PotentialMatchRow: View {
             
             Text("This event matches your interests")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color.textSecondary)
                 .italic()
             
             HStack {

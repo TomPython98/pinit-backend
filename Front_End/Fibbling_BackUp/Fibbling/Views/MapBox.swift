@@ -460,7 +460,7 @@ struct HotPostDetailView: View {
                 HStack {
                     Text("Posted by @\(hotPost.username)")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                     Spacer()
                     Label("\(hotPost.likeCount)", systemImage: "heart.fill")
                         .foregroundColor(.red)
@@ -1562,7 +1562,7 @@ struct StudyMapView: View {
             print("❌ CRITICAL ERROR: Could not find event with ID \(eventID) in studyEvents array")
         }
         
-        guard let url = URL(string: "http://127.0.0.1:8000/api/rsvp_study_event/") else { 
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/rsvp_study_event/") else { 
             print("❌ Invalid RSVP URL")
             return 
         }
@@ -1689,7 +1689,7 @@ extension StudyMapView {
             print("❌ Invalid username for search")
             return
         }
-        var components = URLComponents(string: "http://127.0.0.1:8000/api/enhanced_search_events/")
+        var components = URLComponents(string: "\(APIConfig.primaryBaseURL)/enhanced_search_events/")
         print("🔍 Search Parameters:")
         print("Query: \(filterQuery)")
         print("Private Only: \(filterPrivateOnly)")
@@ -1762,7 +1762,7 @@ extension StudyMapView {
     func getTopPostFor(event: StudyEvent) -> EventPost? {
         print("🔍 Fetching top post for event: \(event.title) (ID: \(event.id))")
         
-        guard let url = URL(string: "http://127.0.0.1:8000/api/events/feed/\(event.id.uuidString)/") else {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/events/feed/\(event.id.uuidString)/") else {
             print("❌ Invalid URL for event \(event.id)")
             return nil
         }

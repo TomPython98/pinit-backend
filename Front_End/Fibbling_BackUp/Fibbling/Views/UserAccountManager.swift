@@ -267,7 +267,7 @@ class UserAccountManager: ObservableObject {
     // ✅ Fetch pending friend requests
     func fetchPendingRequests() {
         guard let username = currentUser,
-              let url = URL(string: "http://127.0.0.1:8000/api/get_pending_requests/\(username)/") else { return }
+              let url = URL(string: "\(APIConfig.primaryBaseURL)/get_pending_requests/\(username)/") else { return }
 
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data else {

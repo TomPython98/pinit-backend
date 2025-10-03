@@ -143,7 +143,7 @@ struct EditProfileView: View {
                 }
             } else {
                 Text("No interests added yet")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                     .italic()
                     .padding(.vertical, 8)
             }

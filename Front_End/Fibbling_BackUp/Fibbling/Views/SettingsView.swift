@@ -33,7 +33,7 @@ struct SettingsView: View {
         NavigationStack {
             ZStack {
                 // Clean, elegant background
-                Color.pinItBackground
+                Color.bgSurface
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -80,22 +80,20 @@ struct SettingsView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.bgCard, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
-                        Image(systemName: PinItIcons.close)
+                        Image(systemName: "chevron.left")
                             .font(.title2)
-                            .foregroundStyle(Color.pinItTextPrimary)
+                            .foregroundColor(Color.textPrimary)
                     }
                 }
                 ToolbarItem(placement: .principal) {
-                    HStack {
-                        Image(systemName: PinItIcons.settings)
-                            .foregroundStyle(Color.pinItPrimary)
-                        Text("Settings")
-                            .font(.title3.bold())
-                            .foregroundStyle(Color.pinItTextPrimary)
-                    }
+                    Text("Settings")
+                        .font(.title2.bold())
+                        .foregroundColor(Color.textPrimary)
                 }
             }
         }

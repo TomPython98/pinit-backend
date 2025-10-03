@@ -156,14 +156,8 @@ struct RateUserView: View {
         
         let finalReference = reference.isEmpty ? nil : reference
         
-        // Try multiple base URLs to maximize chances of successful connection
-        let baseURLs = [
-            "http://127.0.0.1:8000/api",
-            "http://localhost:8000/api",
-            "http://10.0.0.30:8000/api",
-            // Real server
-            "http://tombesinger.pythonanywhere.com/api"
-        ]
+        // Use APIConfig for consistent URL management
+        let baseURLs = APIConfig.baseURLs
         
         // Create the rating data with field names matching the Django backend
         let ratingData: [String: Any] = [

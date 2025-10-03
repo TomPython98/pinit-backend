@@ -112,7 +112,7 @@ struct StudyGroupRowView: View {
                     .font(.headline)
                 Text("Subject: \(group.subject)")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
                 if let meetingTime = group.meetingTime {
                     Text("Meeting: \(meetingTime, formatter: groupDateFormatter)")
                         .font(.caption)

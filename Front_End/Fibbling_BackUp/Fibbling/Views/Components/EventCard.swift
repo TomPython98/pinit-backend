@@ -34,7 +34,7 @@ struct StudyEventCard: View {
                     HStack(spacing: 4) {
                         Text("Host: \(event.host)")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.textSecondary)
                         
                         if event.hostIsCertified {
                             Image(systemName: "checkmark.seal.fill")
@@ -48,25 +48,25 @@ struct StudyEventCard: View {
                 Text(event.title)
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                     .lineLimit(2)
                 
                 // Date & time
                 HStack(spacing: 6) {
                     Image(systemName: "calendar")
                         .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                     
                     Text("\(dateFormatter.string(from: event.time))")
                         .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(Color.textPrimary)
                 }
                 
                 // Description if available
                 if let description = event.description, !description.isEmpty {
                     Text(description)
                         .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                         .lineLimit(2)
                 }
                 
@@ -75,13 +75,13 @@ struct StudyEventCard: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Attendees: \(event.attendees.count)")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.textSecondary)
                         
                         // Show first few attendees
                         if event.attendees.count > 0 {
                             Text(event.attendees.prefix(3).joined(separator: ", "))
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                                 .lineLimit(1)
                         }
                     }

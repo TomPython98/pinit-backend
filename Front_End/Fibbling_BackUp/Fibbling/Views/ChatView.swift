@@ -80,11 +80,11 @@ struct ChatView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(receiver)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text(receiver == "general" ? "Group Chat" : "Online")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
             }
             
             Spacer()
@@ -231,7 +231,7 @@ struct ChatView: View {
                     if !isFromCurrentUser && message.sender != "general" {
                         Text(message.sender)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color.textSecondary)
                             .padding(.leading, 12)
                     }
                     
@@ -246,7 +246,7 @@ struct ChatView: View {
                     
                     Text(formattedTime)
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color.textSecondary)
                         .padding(.horizontal, 8)
                         .padding(.top, 2)
                 }

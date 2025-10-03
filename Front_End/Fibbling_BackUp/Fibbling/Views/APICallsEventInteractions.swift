@@ -10,7 +10,7 @@ import AppKit
 #endif
 
 class EventAPIService {
-    private let baseURL = "http://127.0.0.1:8000/api"
+    private let baseURL = APIConfig.primaryBaseURL
     private var cancellables = Set<AnyCancellable>()
     
     // Fetch event social feed

@@ -20,7 +20,7 @@ struct DateTimeSelector: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundColor(Color.textPrimary)
             
             Button(action: {
                 withAnimation {
@@ -29,7 +29,7 @@ struct DateTimeSelector: View {
             }) {
                 HStack {
                     Text(dateFormatter.string(from: selectedDate))
-                        .foregroundColor(.primary)
+                        .foregroundColor(Color.textPrimary)
                     
                     Spacer()
                     

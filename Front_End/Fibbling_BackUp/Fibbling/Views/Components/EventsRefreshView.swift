@@ -14,7 +14,7 @@ struct EventsRefreshView: View {
         HStack {
             Image(systemName: isRefreshing ? "arrow.clockwise.circle.fill" : "arrow.clockwise.circle")
                 .font(.title2)
-                .foregroundColor(isRefreshing ? .blue : .gray)
+                .foregroundColor(isRefreshing ? Color.brandPrimary : Color.textSecondary)
                 .rotationEffect(.degrees(isRefreshing ? 360 : 0))
                 .animation(isRefreshing ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshing)
             
@@ -22,11 +22,11 @@ struct EventsRefreshView: View {
                 Text(isRefreshing ? "Refreshing..." : "Refresh Events")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(isRefreshing ? .blue : .primary)
+                    .foregroundColor(isRefreshing ? Color.brandPrimary : Color.textPrimary)
                 
                 Text("Last updated: \(timeAgoString(from: lastRefreshTime))")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.textSecondary)
             }
             
             Spacer()

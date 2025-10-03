@@ -90,24 +90,25 @@ struct EventCreationView: View {
                 dismiss()
             }
             .font(.headline)
-            .foregroundColor(.white)
+            .foregroundColor(Color.textPrimary)
             
             Spacer()
             
             Text("Create Event")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
             
             Spacer()
             
             // Make the header Save button inactive
             Text("Save")
                 .font(.headline)
-                .foregroundColor(.gray) // Indicate inactive state
+                .foregroundColor(Color.textMuted) // Indicate inactive state
         }
         .padding()
-        .background(Color.black.opacity(0.2))
+        .background(Color.bgCard)
         .cornerRadius(15)
+        .shadow(color: Color.cardShadow, radius: 5, x: 0, y: 2)
         .padding()
     }
     
@@ -123,11 +124,13 @@ struct EventCreationView: View {
                                 .foregroundColor(.brandPrimary)
                             Text("Event Title")
                                 .font(.headline)
+                                .foregroundColor(Color.textPrimary)
                         }
                         
                         TextField("Enter title", text: $eventTitle)
                             .padding()
                             .background(Color.bgSecondary)
+                            .foregroundColor(Color.textPrimary)
                             .cornerRadius(8)
                     }
                 }
@@ -140,6 +143,7 @@ struct EventCreationView: View {
                                 .foregroundColor(.brandPrimary)
                             Text("Event Type")
                                 .font(.headline)
+                                .foregroundColor(Color.textPrimary)
                         }
                         
                         Picker("Event Type", selection: $selectedEventType) {
@@ -155,7 +159,7 @@ struct EventCreationView: View {
                                 .tag(type)
                             }
                         }
-                        .pickerStyle(.segmented)
+                        .pickerStyle(.menu)
                     }
                 }
                 
@@ -167,6 +171,7 @@ struct EventCreationView: View {
                                 .foregroundColor(.brandPrimary)
                             Text("Description")
                                 .font(.headline)
+                                .foregroundColor(Color.textPrimary)
                         }
                                 
                                 TextEditor(text: $eventDescription)
@@ -174,21 +179,22 @@ struct EventCreationView: View {
                             .padding(4)
                             .background(Color.bgSecondary)
                             .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
                                     .stroke(Color.divider, lineWidth: 1)
-                                    )
-                                    .overlay(
-                                        Group {
-                                            if eventDescription.isEmpty {
-                                                Text("Describe your event...")
-                                            .foregroundColor(.textMuted)
+                            )
+                            .overlay(
+                                Group {
+                                    if eventDescription.isEmpty {
+                                        Text("Describe your event...")
+                                            .foregroundColor(Color.textMuted)
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 10)
-                                            }
-                                        },
-                                        alignment: .topLeading
-                                    )
+                                    }
+                                },
+                                alignment: .topLeading
+                            )
+                            .colorScheme(.light)
                     }
                 }
                 
@@ -548,6 +554,7 @@ struct EventCreationView: View {
                                 .foregroundColor(.brandPrimary)
                             Text("Event Summary")
                                 .font(.headline)
+                                .foregroundColor(Color.textPrimary)
                         }
                         
                         VStack(alignment: .leading, spacing: 16) {
@@ -555,11 +562,12 @@ struct EventCreationView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Title")
                                     .font(.caption)
-                                    .foregroundColor(.textSecondary)
+                                    .foregroundColor(Color.textSecondary)
                                 
                                 HStack {
                                     Text(eventTitle.isEmpty ? "Untitled Event" : eventTitle)
                                         .font(.subheadline.bold())
+                                        .foregroundColor(Color.textPrimary)
                                     
                                     Spacer()
                                     
@@ -909,7 +917,7 @@ struct EventCreationView: View {
     }
     
     private func sendEventToBackend(_ event: StudyEvent) {
-        guard let url = URL(string: "http://127.0.0.1:8000/api/create_study_event/") else {
+        guard let url = URL(string: APIConfig.fullURL(for: "createEvent")) else {
             isLoading = false
             dismiss()
             return
