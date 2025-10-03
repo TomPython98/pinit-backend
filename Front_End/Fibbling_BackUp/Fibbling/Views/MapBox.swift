@@ -706,7 +706,6 @@ struct StudyMapBoxView: UIViewRepresentable {
         // Enable user location display
         mapView.location.options.puckType = .puck2D()
         mapView.location.options.puckBearingEnabled = true
-        mapView.location.options.puckBearingSource = .heading
         
         mapView.mapboxMap.onCameraChanged.observe { [weak mapView] event in
             guard let mapView = mapView else { return }
@@ -729,8 +728,8 @@ struct StudyMapBoxView: UIViewRepresentable {
             .store(in: &context.coordinator.cancelables)
         
         // Center map on user location when available
-        mapView.location.onLocationChange.observe { [weak mapView] location in
-            guard let mapView = mapView, let location = location else { return }
+        mapView.location.onLocationChange.observe { [weak mapView] locations in
+            guard let mapView = mapView, let location = locations.first else { return }
             DispatchQueue.main.async {
                 let cameraOptions = CameraOptions(
                     center: location.coordinate,
