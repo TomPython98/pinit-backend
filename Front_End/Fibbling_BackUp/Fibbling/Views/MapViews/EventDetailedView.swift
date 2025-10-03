@@ -87,6 +87,7 @@ struct EventDetailView: View {
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var showShareSheet = false
+    @State private var showEditSheet = false
 
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>, onRSVP: @escaping (UUID) -> Void) {
         self.event = event
@@ -168,6 +169,17 @@ struct EventDetailView: View {
                     .foregroundColor(Color.textPrimary)
                     .lineLimit(1)
             }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if isHosting {
+                    Button(action: { showEditSheet = true }) {
+                        Image(systemName: "pencil")
+                            .font(.title2)
+                            .foregroundColor(Color.textPrimary)
+                    }
+                    .accessibilityLabel("Edit Event")
+                }
+            }
         }
         .sheet(isPresented: $showImagePicker) {
             EventImagePicker(selectedImages: $selectedImages)
@@ -180,6 +192,11 @@ struct EventDetailView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             ShareEventView(event: localEvent)
+        }
+        .sheet(isPresented: $showEditSheet) {
+            EventEditView(event: localEvent, studyEvents: $studyEvents)
+                .environmentObject(accountManager)
+                .environmentObject(calendarManager)
         }
         .alert("Calendar Access Required", isPresented: $showCalendarError) {
             Button("Open Settings", role: .none) { openSettings() }
@@ -961,6 +978,19 @@ extension EventDetailView {
     private var actionButtons: some View {
         VStack(spacing: 12) {
             joinLeaveButton
+            
+            // If user is hosting, show edit button
+            if isHosting && !isEventCompleted {
+                Button(action: { showEditSheet = true }) {
+                    Label("Edit Event", systemImage: "pencil")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.brandPrimary)
+                        .cornerRadius(12)
+                }
+            }
             
             // If event is completed and user is a participant, show the rating button
             if isEventCompleted && localEvent.attendees.contains(where: { $0 == accountManager.currentUser }) {

@@ -40,6 +40,7 @@ struct APIConfig {
         "updateProfile": "/update_user_profile/",
         "getEvents": "/get_study_events/",
         "createEvent": "/create_study_event/",
+        "updateEvent": "/update_study_event/",
         "getFriends": "/get_friends/",
         "sendFriendRequest": "/send_friend_request/",
         "getFriendRequests": "/get_friend_requests/",

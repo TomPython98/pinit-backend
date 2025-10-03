@@ -127,7 +127,3 @@ echo "🌐 Your app will be live at: https://your-app.railway.app"
 echo "📱 Next: Update iOS app and submit to App Store!"
 echo ""
 echo "🚀 Congratulations! Your PinIt app is going live!"
-
-
-
-
