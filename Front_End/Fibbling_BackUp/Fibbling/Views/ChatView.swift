@@ -166,13 +166,6 @@ struct ChatView: View {
             Divider()
             
             HStack(spacing: 12) {
-                // Attachment button
-                Button(action: {}) {
-                    Image(systemName: "paperclip")
-                        .font(.system(size: 22))
-                        .foregroundColor(.blue)
-                }
-                
                 // Message input field
                 HStack {
                     TextField("Message...", text: $message)

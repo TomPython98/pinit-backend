@@ -4,6 +4,7 @@ import PhotosUI
 struct SettingsView: View {
     @EnvironmentObject var accountManager: UserAccountManager
     @AppStorage("isLoggedIn") private var isLoggedIn = true
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @Environment(\.dismiss) private var dismiss
     @StateObject private var theme = PinItTheme()
     
@@ -22,7 +23,7 @@ struct SettingsView: View {
     @State private var selectedImage: PhotosPickerItem?
     @State private var profileImage: Image?
     @State private var showImagePicker = false
-    @State private var bio = "Hey there! I'm using PinIt 📍"
+    @State private var bio = ""
     @State private var isEditingBio = false
     @State private var showNotificationPreferences = false
     @State private var showPrivacySettings = false
@@ -427,6 +428,14 @@ struct SettingsView: View {
             Link(destination: URL(string: "https://pinit.app/terms")!) {
                 settingsButton(icon: "doc.text", title: "Terms of Service", action: {})
             }
+            
+            #if DEBUG
+            Button(action: {
+                hasCompletedOnboarding = false
+            }) {
+                settingsButton(icon: "arrow.clockwise", title: "Reset Onboarding", action: {})
+            }
+            #endif
             
             Divider()
                 .padding(.vertical, 8)

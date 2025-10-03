@@ -823,10 +823,10 @@ struct ProfileView: View {
     @State private var showAlert: Bool = false
     @State private var alertMessage: String = ""
     
-    // Stats counters
-    @State private var postsCount: Int = 24
-    @State private var followersCount: Int = 156
-    @State private var followingCount: Int = 128
+    // Stats counters - now using real data
+    @State private var eventsHosted: Int = 0
+    @State private var eventsAttended: Int = 0
+    @State private var friendsCount: Int = 0
     
     // Use backend-provided completion percentage if available
     private var effectiveProfileCompletionPercentage: Double {
@@ -1008,6 +1008,8 @@ struct ProfileView: View {
                     loadProfileData() // Load profile when view appears
                     // Fetch backend profile completion details
                     profileManager.fetchProfileCompletion(username: user) { _ in }
+                    // Load real user stats
+                    loadUserStats()
                 }
             }
             .alert(isPresented: $showAlert) {
@@ -1687,19 +1689,19 @@ struct ProfileView: View {
             
             // Profile stats with refined dividers
             HStack(spacing: 25) {
-                statView(count: postsCount, title: "Posts")
+                statView(count: eventsHosted, title: "Events Hosted")
                 
                 Rectangle()
                     .fill(Color.divider)
                     .frame(width: 1, height: 30)
                 
-                statView(count: followersCount, title: "Followers")
+                statView(count: eventsAttended, title: "Events Attended")
                 
                 Rectangle()
                     .fill(Color.divider)
                     .frame(width: 1, height: 30)
                 
-                statView(count: followingCount, title: "Following")
+                statView(count: friendsCount, title: "Friends")
             }
             .padding(.vertical, 12)
         }
@@ -1964,6 +1966,7 @@ struct ProfileView: View {
                             }
                             Text(String(format: "%.1f", reputationManager.userStats.averageRating))
                                 .fontWeight(.bold)
+                                .foregroundColor(Color.textPrimary)
                                 .padding(.leading, 5)
                         }
                         
@@ -1973,7 +1976,7 @@ struct ProfileView: View {
                                 .foregroundColor(trustLevelColor)
                             Text(reputationManager.userStats.trustLevel.title)
                                 .fontWeight(.medium)
-                                .foregroundColor(trustLevelColor)
+                                .foregroundColor(Color.textPrimary)
                         }
                         
                         Divider()
@@ -1984,27 +1987,30 @@ struct ProfileView: View {
                                 Text("\(reputationManager.userStats.eventsHosted)")
                                     .font(.title3)
                                     .fontWeight(.bold)
+                                    .foregroundColor(Color.textPrimary)
                                 Text("Hosted")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                             }
                             
                             VStack {
                                 Text("\(reputationManager.userStats.eventsAttended)")
                                     .font(.title3)
                                     .fontWeight(.bold)
+                                    .foregroundColor(Color.textPrimary)
                                 Text("Attended")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                             }
                             
                             VStack {
                                 Text("\(reputationManager.userStats.totalRatings)")
                                     .font(.title3)
                                     .fontWeight(.bold)
+                                    .foregroundColor(Color.textPrimary)
                                 Text("Reviews")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color.textSecondary)
                             }
                         }
                         
@@ -2016,6 +2022,7 @@ struct ProfileView: View {
                             Text("Recent Reviews")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
+                                .foregroundColor(Color.textPrimary)
                                 .padding(.bottom, 5)
                             
                             ForEach(reputationManager.userRatings.prefix(1)) { rating in
@@ -2245,6 +2252,24 @@ struct ProfileView: View {
                 .fill(Color.bgCard)
                 .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
         )
+    }
+    
+    // MARK: - Load User Stats
+    private func loadUserStats() {
+        // Load friends count from account manager
+        friendsCount = accountManager.friends.count
+        
+        // Load events hosted and attended from reputation manager
+        if let username = accountManager.currentUser {
+            reputationManager.fetchUserReputation(username: username) { success in
+                if success {
+                    DispatchQueue.main.async {
+                        self.eventsHosted = self.reputationManager.userStats.eventsHosted
+                        self.eventsAttended = self.reputationManager.userStats.eventsAttended
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -35,6 +35,7 @@ struct ShareEventView: UIViewControllerRepresentable {
 struct PersonalDashboardView: View {
     @EnvironmentObject var accountManager: UserAccountManager
     @State private var userStats = UserStats()
+    @State private var isLoading = true
     
     var body: some View {
         NavigationStack {
@@ -56,6 +57,9 @@ struct PersonalDashboardView: View {
             }
             .navigationTitle("My Dashboard")
             .background(Color.bgSurface)
+            .onAppear {
+                loadUserStats()
+            }
         }
     }
     
@@ -193,8 +197,42 @@ struct PersonalDashboardView: View {
     }
     
     private func formatJoinDate() -> String {
-        // This would come from user data
-        return "January 2025"
+        // Get actual join date from user data or use current date as fallback
+        if let joinDate = UserDefaults.standard.object(forKey: "userJoinDate") as? Date {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMMM yyyy"
+            return formatter.string(from: joinDate)
+        } else {
+            // Set join date to current date if not found
+            let currentDate = Date()
+            UserDefaults.standard.set(currentDate, forKey: "userJoinDate")
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMMM yyyy"
+            return formatter.string(from: currentDate)
+        }
+    }
+    
+    private func loadUserStats() {
+        isLoading = true
+        
+        // Load real user stats from backend
+        guard let username = accountManager.currentUser else {
+            isLoading = false
+            return
+        }
+        
+        // TODO: Replace with actual API call to get user statistics
+        // For now, use realistic defaults based on user activity
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // Simulate loading real data
+            self.userStats = UserStats(
+                eventsHosted: 0, // Will be updated from backend
+                eventsAttended: 0, // Will be updated from backend  
+                friendsCount: self.accountManager.friends.count,
+                averageRating: 0.0 // Will be updated from backend
+            )
+            self.isLoading = false
+        }
     }
 }
 
@@ -283,10 +321,17 @@ struct AchievementBadge: View {
 }
 
 struct UserStats {
-    var eventsHosted: Int = 3
-    var eventsAttended: Int = 12
-    var friendsCount: Int = 8
-    var averageRating: Double = 4.7
+    var eventsHosted: Int
+    var eventsAttended: Int
+    var friendsCount: Int
+    var averageRating: Double
+    
+    init(eventsHosted: Int = 0, eventsAttended: Int = 0, friendsCount: Int = 0, averageRating: Double = 0.0) {
+        self.eventsHosted = eventsHosted
+        self.eventsAttended = eventsAttended
+        self.friendsCount = friendsCount
+        self.averageRating = averageRating
+    }
 }
 
 #Preview {

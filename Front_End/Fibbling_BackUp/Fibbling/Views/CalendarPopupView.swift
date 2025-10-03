@@ -43,18 +43,8 @@ struct CalendarPopup: View {
     }
 
     func studyPlan(for date: Date) -> String {
-        let calendar = Calendar.current
-        let weekday = calendar.component(.weekday, from: date)
-
-        switch weekday {
-        case 2: return "📚 Focus on deep reading & notes!"
-        case 3: return "📊 Revise key concepts & practice!"
-        case 4: return "📝 Work on assignments & projects!"
-        case 5: return "💡 Join a study group & discuss!"
-        case 6: return "🎯 Take a mock test & review!"
-        case 7: return "☀️ Light review & relax!"
-        case 1: return "📖 Prepare for the upcoming week!"
-        default: return "Keep up the good work!"
-        }
+        // Return empty string or remove this feature entirely
+        // Hardcoded study plans are not professional for App Store
+        return ""
     }
 }

@@ -1016,26 +1016,6 @@ struct EventCreationSheet: View {
                     }
                 }
                 
-                // Location Card (placeholder for future location functionality)
-                cardView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "mappin.and.ellipse")
-                                .foregroundColor(.blue)
-                            Text("Location")
-                                .font(.headline)
-                        }
-                        
-                        TextField("Enter location", text: $eventLocation)
-                            .padding()
-                            .background(Color.bgSecondary)
-                            .cornerRadius(8)
-                        
-                        Text("Location feature will be available soon")
-                            .font(.caption)
-                            .foregroundColor(Color.textSecondary)
-                    }
-                }
             }
             .padding()
         }

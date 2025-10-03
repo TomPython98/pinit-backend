@@ -927,40 +927,20 @@ extension EventDetailView {
                 // Quick actions for hosts
                 HStack(spacing: 8) {
                     Button(action: {
-                        // TODO: Add invite friends functionality
-                        showAlert = true
-                        alertTitle = "Coming Soon"
-                        alertMessage = "Invite friends feature will be available soon!"
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "person.badge.plus")
-                                .font(.caption2)
-                            Text("Invite")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                        }
-                        .foregroundColor(Color.brandPrimary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(6)
-                    }
-                    
-                    Button(action: {
                         showShareSheet = true
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.caption2)
-                            Text("Share")
+                            Text("Share Event")
                                 .font(.caption2)
                                 .fontWeight(.medium)
                         }
-                        .foregroundColor(.green)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(6)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.brandPrimary)
+                        .cornerRadius(8)
                     }
                     
                     Spacer()
