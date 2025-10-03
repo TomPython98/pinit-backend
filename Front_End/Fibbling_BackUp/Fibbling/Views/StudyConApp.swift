@@ -14,7 +14,6 @@ struct PinItApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
-        print("📱 [PinItApp] Initializing app...")
         
         // Create account manager
         let am = UserAccountManager()
@@ -23,7 +22,6 @@ struct PinItApp: App {
         // Create calendar manager with the account manager
         _calendarManager = StateObject(wrappedValue: CalendarManager(accountManager: am))
         
-        print("✅ [PinItApp] Managers initialized")
     }
     
     var body: some Scene {
@@ -37,11 +35,9 @@ struct PinItApp: App {
                     .environmentObject(chatManager)
                     .environmentObject(notificationManager)
                     .onAppear {
-                        print("🔐 [PinItApp] User logged in, showing ContentView")
                         
                         // When app appears while logged in, refresh calendar events
                         if let username = accountManager.currentUser, !username.isEmpty {
-                            print("🔄 [PinItApp] Setting up WebSocket connection for \(username)")
                             // calendarManager.fetchEvents() // Removed - WebSocket will handle updates
                             
                             // Request notification permission
@@ -54,7 +50,6 @@ struct PinItApp: App {
                     .environmentObject(chatManager)
                     .environmentObject(notificationManager)
                     .onAppear {
-                        print("🔒 [PinItApp] User not logged in, showing LoginView")
                     }
             }
         }

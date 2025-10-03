@@ -33,12 +33,10 @@ class GroupChatWebSocketManager: ObservableObject {
         webSocketTask?.resume()
         
         listenForMessages()
-        print("✅ Group WebSocket CONNECTED for eventID=\(eventID)")
     }
     
     func disconnect() {
         webSocketTask?.cancel(with: .goingAway, reason: nil)
-        print("❌ Group WebSocket DISCONNECTED from eventID=\(eventID)")
     }
     
     func sendMessage(_ message: String) {
@@ -50,7 +48,6 @@ class GroupChatWebSocketManager: ObservableObject {
             let wsMessage = URLSessionWebSocketTask.Message.data(data)
             webSocketTask?.send(wsMessage) { error in
                 if let error = error {
-                    print("❌ Error sending group chat message: \(error)")
                 }
             }
         }
@@ -62,7 +59,7 @@ class GroupChatWebSocketManager: ObservableObject {
             
             switch result {
             case .failure(let error):
-                print("❌ WebSocket receive error: \(error)")
+                break
             case .success(let message):
                 switch message {
                 case .data(let data):
@@ -72,7 +69,7 @@ class GroupChatWebSocketManager: ObservableObject {
                         self.handleIncoming(data)
                     }
                 @unknown default:
-                    print("❌ Unknown WebSocket message type")
+                    break
                 }
                 self.listenForMessages() // Continue listening
             }

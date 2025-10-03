@@ -52,6 +52,6 @@ struct EmptyStateView: View {
         message: "There are no upcoming events matching your criteria. Try adjusting your filters or create a new event.",
         icon: "calendar.badge.exclamationmark",
         buttonTitle: "Create Event",
-        action: { print("Create event tapped") }
+        action: { }
     )
 } 

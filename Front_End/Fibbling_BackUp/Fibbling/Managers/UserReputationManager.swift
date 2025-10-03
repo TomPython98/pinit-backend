@@ -16,7 +16,6 @@ class UserReputationManager: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        print("🔵 Attempting to fetch reputation for: \(username)")
         
         // Try each URL in sequence
         tryNextURL(index: 0, endpoint: "getUserReputation", username: username) { [weak self] success, data in
@@ -37,7 +36,6 @@ class UserReputationManager: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        print("🔵 Attempting to fetch ratings for: \(username)")
         
         // Try each URL in sequence
         tryNextURL(index: 0, endpoint: "getUserRatings", username: username) { [weak self] success, data in
@@ -58,7 +56,6 @@ class UserReputationManager: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        print("🔵 Attempting to submit rating from \(fromUser) to \(toUser)")
         
         // Create the rating object
         let userRating = UserRating(
@@ -78,7 +75,6 @@ class UserReputationManager: ObservableObject {
     private func tryNextURL(index: Int, endpoint: String, username: String, completion: @escaping (Bool, Data?) -> Void) {
         // Check if we've tried all URLs
         guard index < baseURLs.count else {
-            print("❌ Tried all base URLs, none responded")
             completion(false, nil)
             return
         }
@@ -86,7 +82,6 @@ class UserReputationManager: ObservableObject {
         let baseURL = baseURLs[index]
         let endpointPath = APIConfig.endpoints[endpoint] ?? endpoint
         let fullURL = "\(baseURL)\(endpointPath)\(username)/"
-        print("🔵 Trying API URL: \(fullURL)")
         
         guard let url = URL(string: fullURL) else {
             // Skip to next URL if this one can't be constructed
@@ -96,11 +91,9 @@ class UserReputationManager: ObservableObject {
         
         let task = URLSession.shared.dataTask(with: url) { data, response, error in
             if let httpResponse = response as? HTTPURLResponse {
-                print("🔵 HTTP Status Code: \(httpResponse.statusCode)")
                 
                 // If we got a valid response (even an error), log it
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {
-                    print("🔵 Response Data: \(dataString)")
                 }
                 
                 // If we got a successful response, return the data
@@ -111,7 +104,6 @@ class UserReputationManager: ObservableObject {
             }
             
             if let error = error {
-                print("🔵 Network Error with \(baseURL): \(error.localizedDescription)")
             }
             
             // Try the next URL
@@ -127,14 +119,12 @@ class UserReputationManager: ObservableObject {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.errorMessage = "Failed to connect to any server"
-                print("❌ Tried all base URLs for rating submission, none responded")
                 completion(false)
             }
             return
         }
         
         let baseURL = baseURLs[index]
-        print("🔵 Trying API URL: \(baseURL)/submit_user_rating/")
         
         guard let url = URL(string: "\(baseURL)/submit_user_rating/") else {
             // Skip to next URL if this one can't be constructed
@@ -158,12 +148,10 @@ class UserReputationManager: ObservableObject {
         // Use JSONSerialization instead of encoder to ensure proper field names
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: ratingData)
-            print("🔵 Successfully encoded rating data")
         } catch {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.errorMessage = "Error encoding data: \(error.localizedDescription)"
-                print("❌ Error encoding data: \(error.localizedDescription)")
                 completion(false)
             }
             return
@@ -173,18 +161,15 @@ class UserReputationManager: ObservableObject {
             guard let self = self else { return }
             
             if let httpResponse = response as? HTTPURLResponse {
-                print("🔵 HTTP Status Code: \(httpResponse.statusCode)")
                 
                 // If we got a valid response (even an error), log it
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {
-                    print("🔵 Response Data: \(dataString)")
                 }
                 
                 // If we got a successful response, return success
                 if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
                     DispatchQueue.main.async {
                         self.isLoading = false
-                        print("✅ Rating submitted successfully")
                         completion(true)
                     }
                     return
@@ -192,7 +177,6 @@ class UserReputationManager: ObservableObject {
             }
             
             if let error = error {
-                print("🔵 Network Error with \(baseURL): \(error.localizedDescription)")
             }
             
             // Try the next URL
@@ -204,11 +188,9 @@ class UserReputationManager: ObservableObject {
     
     private func parseReputationData(data: Data, completion: @escaping (Bool) -> Void) {
         do {
-            print("🔵 Attempting to parse reputation JSON data")
             
             // Debug: Print raw JSON data
             if let jsonString = String(data: data, encoding: .utf8) {
-                print("📦 Raw reputation JSON: \(jsonString)")
             }
             
             let decoder = JSONDecoder()
@@ -217,20 +199,12 @@ class UserReputationManager: ObservableObject {
             DispatchQueue.main.async {
                 self.userStats = stats
                 self.isLoading = false
-                print("✅ Reputation data successfully parsed:")
-                print("   Total ratings: \(stats.totalRatings)")
-                print("   Average rating: \(stats.averageRating)")
-                print("   Events hosted: \(stats.eventsHosted)")
-                print("   Events attended: \(stats.eventsAttended)")
-                print("   Trust level: \(stats.trustLevel.title)")
                 completion(true)
             }
         } catch {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.errorMessage = "Error parsing reputation data: \(error.localizedDescription)"
-                print("❌ Error parsing reputation data: \(error.localizedDescription)")
-                print("❌ Error details: \(error)")
                 completion(false)
             }
         }
@@ -238,7 +212,6 @@ class UserReputationManager: ObservableObject {
     
     private func parseRatingsData(data: Data, completion: @escaping (Bool) -> Void) {
         do {
-            print("🔵 Attempting to parse ratings JSON data")
             
             // Parse the backend response structure
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -254,14 +227,12 @@ class UserReputationManager: ObservableObject {
             DispatchQueue.main.async {
                 self.userRatings = ratings
                 self.isLoading = false
-                print("✅ Ratings data successfully parsed: \(ratings.count) ratings")
                 completion(true)
             }
         } catch {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.errorMessage = "Error parsing ratings data: \(error.localizedDescription)"
-                print("❌ Error parsing ratings data: \(error.localizedDescription)")
                 completion(false)
             }
         }
@@ -288,12 +259,6 @@ class UserReputationManager: ObservableObject {
                 eventsAttended: eventsAttended
             )
             
-            print("🎭 Mock reputation data for \(username):")
-            print("   Total ratings: \(totalRatings)")
-            print("   Average rating: \(String(format: "%.1f", averageRating))")
-            print("   Trust level: \(self.userStats.trustLevel.title)")
-            print("   Events hosted: \(eventsHosted)")
-            print("   Events attended: \(eventsAttended)")
             
             completion(true)
         }

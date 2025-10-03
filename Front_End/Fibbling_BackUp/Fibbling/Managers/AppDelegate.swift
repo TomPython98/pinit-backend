@@ -23,7 +23,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        print("📲 [AppDelegate] Device token: \(tokenString)")
         
         // Send the token to your server
         sendTokenToServer(token: tokenString)
@@ -32,14 +31,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     // Called if registration for remote notifications fails
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("❌ [AppDelegate] Failed to register for remote notifications: \(error.localizedDescription)")
     }
     
     // Process incoming push notifications
     func application(_ application: UIApplication,
                      didReceiveRemoteNotification userInfo: [AnyHashable: Any],
                      fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        print("📩 [AppDelegate] Received remote notification: \(userInfo)")
         
         // Pass to notification manager for processing
         NotificationManager.shared.handlePushNotification(userInfo: userInfo)
@@ -66,7 +63,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     // Send device token to your Django server
     private func sendTokenToServer(token: String) {
         guard let username = UserAccountManager.shared.currentUser, !username.isEmpty else {
-            print("⚠️ [AppDelegate] No username available, can't register device token")
             return
         }
         
@@ -82,7 +78,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         
         // Convert body to JSON data
         guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
-            print("❌ [AppDelegate] Failed to serialize JSON")
             return
         }
         
@@ -97,18 +92,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Send request
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("❌ [AppDelegate] Error sending device token: \(error.localizedDescription)")
                 return
             }
             
             if let httpResponse = response as? HTTPURLResponse {
                 if (200...299).contains(httpResponse.statusCode) {
-                    print("✅ [AppDelegate] Device token registered successfully")
                 } else {
-                    print("⚠️ [AppDelegate] Server returned status code: \(httpResponse.statusCode)")
                     
                     if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                        print("📄 [AppDelegate] Response: \(responseString)")
                     }
                 }
             }

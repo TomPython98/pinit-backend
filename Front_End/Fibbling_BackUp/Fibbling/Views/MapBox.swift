@@ -652,7 +652,6 @@ func clusterEvents(_ events: [StudyEvent], region: MKCoordinateRegion) -> [Clust
             uniqueEvents.append(event)
             seenIDs.insert(event.id)
         } else {
-            print("🗺️ Map prevented duplicate event by ID: \(event.title) (ID: \(event.id))")
         }
     }
     
@@ -873,9 +872,6 @@ struct StudyMapView: View {
         
         let username = accountManager.currentUser ?? ""
         
-        print("🗺️ [StudyMapView] Starting with \(calendarManager.events.count) events from CalendarManager")
-        print("🗺️ [StudyMapView] Current eventViewMode: \(eventViewMode)")
-        print("🗺️ [StudyMapView] Filter query: '\(filterQuery)'")
         
         // First filter events by view mode - Read from calendarManager.events
         let eventsFilteredByType = calendarManager.events.filter { event in
@@ -899,7 +895,6 @@ struct StudyMapView: View {
             }
         }
         
-        print("🗺️ [StudyMapView] After view mode filtering: \(eventsFilteredByType.count) events")
         
         // Apply standard filtering
         let events = eventsFilteredByType.filter { event in
@@ -933,20 +928,12 @@ struct StudyMapView: View {
             let include = anyTextMatches && privateMatches && certifiedMatches && typeMatches && notExpired
             
             if !include {
-                print("🗺️ [StudyMapView] Excluding event '\(event.title)':")
-                print("   - Text matches: \(anyTextMatches)")
-                print("   - Private matches: \(privateMatches)")
-                print("   - Certified matches: \(certifiedMatches)")
-                print("   - Type matches: \(typeMatches)")
-                print("   - Not expired: \(notExpired)")
             }
             
             return include
         }
         
-        print("🗺️ [StudyMapView] Final filtered events: \(events.count)")
         for event in events {
-            print("   📍 \(event.title) (host: \(event.host), attendees: \(event.attendees.count))")
         }
         
         return events
@@ -960,10 +947,8 @@ struct StudyMapView: View {
                     // Always get the most up-to-date version of the event from studyEvents
                     if let freshEvent = calendarManager.events.first(where: { $0.id == event.id }) {
                         selectedEvent = freshEvent
-                        print("📌 Selected event: \(freshEvent.title) with \(freshEvent.attendees.count) attendees")
                     } else {
                         selectedEvent = event
-                        print("⚠️ Using original event data - couldn't find updated version")
                     }
                 })
                 .edgesIgnoringSafeArea(.all)
@@ -1161,7 +1146,6 @@ struct StudyMapView: View {
             menuOptionButton(icon: "arrow.clockwise", title: "Refresh Events") {
                  // calendarManager.fetchEvents() // REMOVED - This should not poll the API
                  // Consider replacing this with a WebSocket status check or reconnect if needed
-                 print("🔄 Manual Refresh Tapped - Action Removed (Was fetchEvents)")
             }
             .disabled(calendarManager.isLoading) // Keep disabled state if needed
 
@@ -1476,7 +1460,6 @@ struct StudyMapView: View {
     // MARK: - Networking & Backend Integration
     func createStudyEvent(_ event: StudyEvent) {
         // Add the event to the local list immediately for faster UI feedback
-        print("📝 Processing new event creation: \(event.title)")
         
         // Only add if it doesn't already exist in our list
         if !calendarManager.events.contains(where: { $0.id == event.id }) {
@@ -1491,7 +1474,6 @@ struct StudyMapView: View {
             
             // Add to local list immediately
             DispatchQueue.main.async {
-                print("✅ Adding event to local array for immediate display: \(localEvent.title)")
                 self.calendarManager.events.append(localEvent)
                 
                 // Show a toast or alert to instruct user to tap refresh button if needed
@@ -1503,38 +1485,30 @@ struct StudyMapView: View {
     }
     
     func rsvpEvent(eventID: UUID) {
-        print("🔴 RSVP FUNCTION CALLED - START")
         guard let username = accountManager.currentUser else {
-            print("❌ No username available for RSVP")
             return
         }
         
-        print("🎟️ Processing RSVP for event ID: \(eventID.uuidString) by user: \(username)")
         
         // First update the local event list immediately for better UX
         if let index = calendarManager.events.firstIndex(where: { $0.id == eventID }) {
             var updatedEvent = calendarManager.events[index]
             
-            print("🔍 Before update - Event: \(updatedEvent.title) - Attendees: \(updatedEvent.attendees)")
             
             // Check if the current user is the host (for logging purposes only)
             let isCurrentUserHost = updatedEvent.host == username
             if isCurrentUserHost {
-                print("🔵 Current user is the host of this event")
             }
             
             // Toggle attendance (now allowed for hosts too)
             if updatedEvent.attendees.contains(username) {
                 // User is already attending, so remove them
                 updatedEvent.attendees.removeAll(where: { $0 == username })
-                print("🚶‍♂️ User \(username) is leaving event: \(updatedEvent.title)")
             } else {
                 // User is not attending, so add them
                 updatedEvent.attendees.append(username)
-                print("🎉 User \(username) is joining event: \(updatedEvent.title)")
             }
             
-            print("🔍 After update - Event: \(updatedEvent.title) - Attendees: \(updatedEvent.attendees)")
             
             // Create a completely new copy of the events array to ensure SwiftUI detects the change
             var newEventsList = calendarManager.events
@@ -1615,16 +1589,13 @@ struct StudyMapView: View {
                                         userInfo: ["eventID": eventID]
                                     )
                                     
-                                    print("🔴 RSVP FUNCTION COMPLETED")
                                 }
                                 return
                             }
                         }
                     } catch {
-                        print("⚠️ Could not parse RSVP response: \(error)")
                     }
                 } else {
-                    print("⚠️ No response data received from RSVP request")
                 }
                 
                 // Only run this if we didn't get a successful response above
@@ -1632,23 +1603,18 @@ struct StudyMapView: View {
                     // Restore the original state since the RSVP network request will not be sent
                     // self.calendarManager.fetchEvents() // REMOVED
                     // We should ideally revert the optimistic UI update here instead of fetching all
-                    print("🔴 RSVP FUNCTION COMPLETED (error path) - Should revert optimistic update")
                 }
             }
             
             task.resume()
             
         } catch {
-            print("❌ Error encoding RSVP data: \(error)")
             // Log more detailed error information
-            print("❌ RSVP data that failed to encode: \(rsvpData)")
-            print("❌ Error details: \(error.localizedDescription)")
             
             // Notify user or handle the error more gracefully
             DispatchQueue.main.async {
                 // Restore the original state since the RSVP network request will not be sent
                 // self.calendarManager.fetchEvents() // REMOVED
-                print("🔴 RSVP FUNCTION COMPLETED (error path) - Should revert optimistic update")
             }
         }
     }
@@ -1669,15 +1635,9 @@ struct StudyMapView: View {
 extension StudyMapView {
     func searchEvents() {
         guard let username = accountManager.currentUser else {
-            print("❌ Invalid username for search")
             return
         }
         var components = URLComponents(string: "\(APIConfig.primaryBaseURL)/enhanced_search_events/")
-        print("🔍 Search Parameters:")
-        print("Query: \(filterQuery)")
-        print("Private Only: \(filterPrivateOnly)")
-        print("Certified Only: \(filterCertifiedOnly)")
-        print("Event Type: \(filterEventType?.rawValue ?? "None")")
         
         var queryItems = [URLQueryItem]()
         if !filterQuery.isEmpty {
@@ -1693,29 +1653,20 @@ extension StudyMapView {
         components?.queryItems = queryItems
         
         guard let url = components?.url else {
-            print("❌ Invalid search URL")
             return
         }
-        print("🔍 Full Search URL: \(url.absoluteString)")
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("❌ Search error: \(error.localizedDescription)")
                 return
             }
             guard let data = data else {
-                print("❌ No data received from search")
                 return
             }
             do {
                 let eventsResponse = try JSONDecoder().decode(StudyEventsResponse.self, from: data)
                 DispatchQueue.main.async {
                     let validEvents = eventsResponse.events.filter { $0.endTime > Date() }
-                    print("🎉 Decoded \(eventsResponse.events.count) events")
-                    print("✅ Valid Events: \(validEvents.count)")
                     validEvents.forEach { event in
-                        print("📍 Event: \(event.title)")
-                        print("   Description: \(event.description ?? "No description")")
-                        print("   Coordinate: (\(event.coordinate.latitude), \(event.coordinate.longitude))")
                     }
                     self.calendarManager.events.removeAll()
                     self.calendarManager.events = validEvents
@@ -1727,15 +1678,11 @@ extension StudyMapView {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         self.region.center = currentCenter
                     }
-                    print("🗺️ Filtered Events After Search:")
                     self.filteredEvents.forEach { event in
-                        print("- \(event.title) at (\(event.coordinate.latitude), \(event.coordinate.longitude))")
                     }
                 }
             } catch {
-                print("❌ Decoding Error: \(error)")
                 if let rawResponse = String(data: data, encoding: .utf8) {
-                    print("Raw Response: \(rawResponse)")
                 }
             }
         }.resume()
@@ -1743,14 +1690,11 @@ extension StudyMapView {
     
     // Enhanced version of getTopPostFor with debugging
     func getTopPostFor(event: StudyEvent) -> EventPost? {
-        print("🔍 Fetching top post for event: \(event.title) (ID: \(event.id))")
         
         guard let url = URL(string: "\(APIConfig.primaryBaseURL)/events/feed/\(event.id.uuidString)/") else {
-            print("❌ Invalid URL for event \(event.id)")
             return nil
         }
         
-        print("📡 Making API request to: \(url.absoluteString)")
         
         var topPost: EventPost?
         let semaphore = DispatchSemaphore(value: 0)
@@ -1759,44 +1703,30 @@ extension StudyMapView {
             defer { semaphore.signal() }
             
             if let error = error {
-                print("❌ Network error: \(error.localizedDescription)")
                 return
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ Invalid response type")
                 return
             }
             
-            print("📊 HTTP Status: \(httpResponse.statusCode)")
             
             guard let data = data else {
-                print("❌ No data received")
                 return
             }
             
             // Print the raw JSON response for debugging
             if let responseString = String(data: data, encoding: .utf8) {
-                print("📄 Full Response Data: \(responseString)")
             }
             
             do {
                 let response = try JSONDecoder().decode(EventFeedResponse.self, from: data)
-                print("✅ Successfully decoded response")
-                print("Total Posts: \(response.posts.count)")
-                print("Total Likes: \(response.likes.total)")
                 
                 // Print details of each post
                 for (index, post) in response.posts.enumerated() {
-                    print("Post \(index + 1):")
-                    print("  Text: \(post.text)")
-                    print("  Username: \(post.username)")
-                    print("  Likes: \(post.likes)")
-                    print("  Replies: \(post.replies.count)")
                 }
                 
                 if response.posts.isEmpty {
-                    print("⚠️ No posts found for this event")
                     return
                 }
                 
@@ -1805,20 +1735,15 @@ extension StudyMapView {
                 })
                 
                 if let post = topPost {
-                    print("🏆 Top post: \"\(post.text)\" by @\(post.username) with \(post.likes) likes and \(post.replies.count) replies")
                 } else {
-                    print("❓ Failed to find top post despite having \(response.posts.count) posts")
                 }
             } catch {
-                print("❌ Error decoding event feed: \(error)")
-                print("❌ Decoding error details: \(error.localizedDescription)")
             }
         }.resume()
         
         _ = semaphore.wait(timeout: .now() + 2)
         
         if topPost == nil {
-            print("⏱️ Timeout or no post found after waiting")
         }
         
         return topPost
@@ -1852,10 +1777,6 @@ extension StudyMapView {
         for event in calendarManager.events {
             // Fetch the top post for each event
             if let topPost = getTopPostFor(event: event) {
-                print("📝 Top Post Found for Event \(event.title):")
-                print("   Text: \(topPost.text)")
-                print("   Username: \(topPost.username)")
-                print("   Like Count: \(topPost.likes)")
                 
                 // Create an EventHotPost from the top post
                 let hotPost = EventHotPost(

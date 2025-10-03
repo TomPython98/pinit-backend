@@ -889,12 +889,10 @@ struct EventCreationView: View {
         
         // Save tags for debugging and local preservation
         let selectedTags = tags.isEmpty ? ["general", eventTitle.lowercased()] : tags
-        print("🏷️ Selected tags for event: \(selectedTags)")
         
         // Store tags with title as temporary key - we'll update with event ID later
         let tempKey = "event_tags_title_\(eventTitle.lowercased())"
         UserDefaults.standard.set(selectedTags, forKey: tempKey)
-        print("💾 Saved tags with title key: \(tempKey) = \(selectedTags)")
         
                 let newEvent = StudyEvent(
                     title: eventTitle.isEmpty ? "New Event" : eventTitle,
@@ -998,7 +996,6 @@ struct EventCreationView: View {
             // Store in UserDefaults for persistence
             let eventTagsKey = "event_tags_\(event.id.uuidString)"
             UserDefaults.standard.set(tagsToSend, forKey: eventTagsKey)
-            print("💾 Backup: Saved event tags to UserDefaults with key: \(eventTagsKey)")
             
             // Emphasize max participants for matching
             jsonBody["max_participants"] = maxParticipants
@@ -1006,43 +1003,26 @@ struct EventCreationView: View {
             // Try to specify a lower match threshold for better results
             jsonBody["match_threshold"] = 1  // Require only 1 matching interest for better results
             
-            print("📊 DEBUG: Auto-matching enabled with settings:")
-            print("   🔹 Tags: \(tagsToSend)")
-            print("   🔹 Max participants: \(maxParticipants)")
-            print("   🔹 Host user: \(event.host)")
-            print("   🔹 Public event: \(event.isPublic)")
             
             // Print critical info about the exact keys being used
-            print("📝 IMPORTANT: Sending auto-matching payload with exact keys:")
-            print("   🔑 \"auto_matching_enabled\": \(jsonBody["auto_matching_enabled"] ?? "nil")")
-            print("   🔑 \"interest_tags\": \(jsonBody["interest_tags"] ?? "nil")")
-            print("   🔑 \"max_participants\": \(jsonBody["max_participants"] ?? "nil")")
-            print("   🔑 \"match_threshold\": \(jsonBody["match_threshold"] ?? "nil")")
         } else {
             // Even for non-auto-matched events, still send tags if available for display
             if !tags.isEmpty {
                 jsonBody["interest_tags"] = tags
-                print("📝 Including tags for non-auto-matched event: \(tags)")
             }
         }
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: jsonBody)
-            print("🔄 Sending event data: \(jsonBody)")
             
             // Print request curl command for debugging
             #if DEBUG
             // Access curlString directly since it's not an optional
             let curlString = request.curlString
-            print("🔄 CURL equivalent: \(curlString)")
             
             // Also print basic request details
-            print("🔄 [DEBUG] Request URL: \(request.url?.absoluteString ?? "unknown")")
-            print("🔄 [DEBUG] Request Method: \(request.httpMethod ?? "unknown")")
-            print("🔄 [DEBUG] Request Headers: \(request.allHTTPHeaderFields ?? [:])")
             #endif
         } catch {
-            print("❌ JSON encoding error: \(error.localizedDescription)")
             isLoading = false
             dismiss()
             return
@@ -1053,17 +1033,14 @@ struct EventCreationView: View {
                 self.isLoading = false
                 
                 if let error = error {
-                    print("❌ Network error: \(error.localizedDescription)")
                     self.dismiss()
                     return
                 }
                 
                 let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-                print("📡 HTTP Status: \(statusCode)")
                 
                 // Log response data
                 if let data = data, let responseStr = String(data: data, encoding: .utf8) {
-                    print("📦 Response: \(responseStr)")
                     
                     // Parse auto-matching results if available
                     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -1092,57 +1069,40 @@ struct EventCreationView: View {
                         
                         // Process enhanced auto-matching results
                         if let autoMatchResults = json["auto_matching_results"] as? [String: Any] {
-                            print("⭐ ENHANCED AUTO-MATCHING RESULTS RECEIVED:")
                             
                             // Print complete raw results for debugging
                             for (key, value) in autoMatchResults {
-                                print("   🔸 \(key): \(value)")
                             }
                             
                             let invitesSent = autoMatchResults["invites_sent"] as? Int ?? 0
                             let successfulMatches = autoMatchResults["successful_matches"] as? Int ?? 0
                             
-                            print("✅ Enhanced auto-matched results: \(successfulMatches) successful matches, \(invitesSent) invites sent")
                             
                             if invitesSent == 0 {
-                                print("⚠️ No users matched! Details:")
-                                print("   📋 Tags used: \(jsonBody["interest_tags"] ?? [])")
                                 
                                 // Check if there were any potential matches at all
                                 if let potentialCount = autoMatchResults["potential_match_count"] as? Int {
-                                    print("   👥 Potential users found: \(potentialCount)")
                                     if potentialCount == 0 {
-                                        print("   ❌ No users with matching interests in system!")
-                                        print("   💡 Try adding more common tags or checking that other users have interests set")
                                     } else {
-                                        print("   ⚠️ Users found but no matches made - check enhanced matching algorithm")
-                                        print("   💡 The enhanced matching threshold might be too high (now 30+ points)")
                                     }
                                 }
                                 
                                 // Show match threshold if available
                                 if let threshold = autoMatchResults["match_threshold"] as? Int {
-                                    print("   🎯 Enhanced matching threshold: \(threshold) - must have at least this many points")
                                 }
                             }
                             
                             // Detailed matched user information with enhanced scoring
                             if let matchedUsers = autoMatchResults["matched_users"] as? [[String: Any]] {
-                                print("🔍 Enhanced matched users details (\(matchedUsers.count) users):")
                                 for user in matchedUsers {
                                     if let username = user["username"] as? String,
                                        let matchingInterests = user["matching_interests"] as? [String],
                                        let score = user["score"] as? Double {
-                                        print("👤 Enhanced matched with \(username):")
-                                        print("   ✓ Enhanced match score: \(score)")
-                                        print("   ✓ Common interests: \(matchingInterests.joined(separator: ", "))")
                                         
                                         // Show score breakdown if available
                                         if let scoreBreakdown = user["score_breakdown"] as? [String: Any] {
-                                            print("   📊 Score breakdown:")
                                             for (factor, factorScore) in scoreBreakdown {
                                                 if let score = factorScore as? Double, score > 0 {
-                                                    print("     • \(factor): \(score)")
                                                 }
                                             }
                                         }
@@ -1151,26 +1111,10 @@ struct EventCreationView: View {
                             }
                             
                             // Show enhanced matching explanation
-                            print("🎯 Enhanced matching now considers:")
-                            print("   • Interest matching (25 points per match)")
-                            print("   • Academic similarity (university, degree, year)")
-                            print("   • Skill relevance to event content")
-                            print("   • Bio similarity with event description")
-                            print("   • Social connections and mutual friends")
-                            print("   • Location proximity with enhanced distance scaling")
-                            print("   • User reputation and trust level")
-                            print("   • Event type preferences based on history")
-                            print("   • Time compatibility patterns")
-                            print("   • Recent activity level")
                             
                         } else {
-                            print("❓ No enhanced auto-matching results in response")
                             if enableAutoMatching {
-                                print("⚠️ Enhanced auto-matching was enabled but no results returned!")
-                                print("⚠️ Check if backend has enhanced auto-matching feature enabled")
-                                print("📝 Raw response content:")
                                 for (key, value) in json {
-                                    print("   🔹 \(key): \(value)")
                                 }
                             }
                         }

@@ -356,7 +356,6 @@ struct EventDetailView: View {
         // Next try to get tags from the studyEvents array (which should be freshly fetched)
         if let updatedEvent = studyEvents.first(where: { $0.id == localEvent.id }),
            let tags = updatedEvent.interestTags, !tags.isEmpty {
-            print("✅ Found tags in studyEvents array: \(tags)")
             DispatchQueue.main.async {
                 var updatedLocalEvent = self.localEvent
                 updatedLocalEvent.interestTags = tags
@@ -368,7 +367,6 @@ struct EventDetailView: View {
         // Try to load from UserDefaults by event ID
         let eventTagsKey = "event_tags_\(localEvent.id.uuidString)"
         if let savedTags = UserDefaults.standard.array(forKey: eventTagsKey) as? [String], !savedTags.isEmpty {
-            print("📂 Retrieved tags from UserDefaults by event ID: \(savedTags)")
             DispatchQueue.main.async {
                 var updatedEvent = self.localEvent
                 updatedEvent.interestTags = savedTags
@@ -380,11 +378,9 @@ struct EventDetailView: View {
         // Try to load from UserDefaults by event title
         let titleKey = "event_tags_title_\(localEvent.title.lowercased())"
         if let savedTagsByTitle = UserDefaults.standard.array(forKey: titleKey) as? [String], !savedTagsByTitle.isEmpty {
-            print("📂 Retrieved tags from UserDefaults by title: \(savedTagsByTitle)")
             
             // Save with the event ID for future reference
             UserDefaults.standard.set(savedTagsByTitle, forKey: eventTagsKey)
-            print("📂 Updated tags storage with event ID key: \(eventTagsKey)")
             
             DispatchQueue.main.async {
                 var updatedEvent = self.localEvent
@@ -394,7 +390,6 @@ struct EventDetailView: View {
             return
         }
 
-        print("⚠️ No tags found in any local sources - generating from event info")
         
         // As a fallback, try to reconstruct tags from the event title and type
         DispatchQueue.main.async {
@@ -429,7 +424,6 @@ struct EventDetailView: View {
             
             updatedEvent.interestTags = uniqueTags
             self.localEvent = updatedEvent
-            print("🔄 Created fallback tags based on event info: \(uniqueTags)")
         }
     }
     
@@ -446,11 +440,9 @@ struct EventDetailView: View {
         let now = Date()
         if let lastRefresh = RefreshCache.lastRefreshTime[localEvent.id],
            now.timeIntervalSince(lastRefresh) < 2.0 {
-            print("⏱️ Skipping refresh as event was updated less than 2 seconds ago")
             return
         }
         
-        print("🔄 Refreshing event data for \(localEvent.title)")
         
         // Update the last refresh time
         RefreshCache.lastRefreshTime[localEvent.id] = now
@@ -467,11 +459,9 @@ struct EventDetailView: View {
     private func checkAndUpdateFromStudyEvents() -> Bool {
         // Find the current event in the studyEvents array and update our local copy
         if let updatedEvent = studyEvents.first(where: { $0.id == localEvent.id }) {
-            print("📝 Updated event data found - Attendees: \(updatedEvent.attendees)")
             
             // Only update if there are actual changes
             if updatedEvent.attendees != localEvent.attendees {
-                print("🔄 Attendee list changed, updating local state")
                 localEvent = updatedEvent
                 
                 // Force UI to refresh by updating attendance state trigger
@@ -493,7 +483,6 @@ struct EventDetailView: View {
                 
                 // If UserDefaults doesn't match current state, update local event
                 if isAttendingInUserDefaults != isCurrentlyAttending {
-                    print("🔄 Found attendance mismatch in UserDefaults vs local event, updating")
                     
                     if isAttendingInUserDefaults && !isCurrentlyAttending {
                         // Add user to attendees
@@ -600,7 +589,6 @@ extension EventDetailView {
         
         do {
             try eventStore.save(calendarEvent, span: .thisEvent)
-            print("Event added to calendar.")
         } catch {
             await MainActor.run { showCalendarError = true }
         }
@@ -728,13 +716,11 @@ extension EventDetailView {
                                         )
                                         .foregroundColor(Color.brandPrimary)
                                         .onAppear {
-                                            print("🏷️ Displaying tag: \(tag)")
                                         }
                                 }
                             }
                         }
                         .onAppear {
-                            print("🏷️ Interest tags section appeared with \(tags.count) tags")
                         }
                     } else {
                         // If no tags are available, show a static message instead of auto-refreshing
@@ -745,7 +731,6 @@ extension EventDetailView {
                             
                             // Manual refresh button instead of automatic refreshing
                             Button(action: {
-                                print("🔄 Manual refresh of tags requested")
                                 fetchEventTags()
                             }) {
                                 Label("Refresh Tags", systemImage: "arrow.clockwise")
@@ -760,7 +745,6 @@ extension EventDetailView {
                                 .foregroundColor(.gray.opacity(0.5))
                         }
                         .onAppear {
-                            print("⚠️ No tags available in auto-matching section")
                             // Don't auto-fetch tags to prevent refresh loops
                         }
                     }
@@ -773,9 +757,6 @@ extension EventDetailView {
                         .stroke(Color.blue.opacity(0.2), lineWidth: 1)
                 )
                 .onAppear {
-                    print("🔍 Auto-matching section appeared - isAutoMatched: \(localEvent.isAutoMatched ?? false)")
-                    print("🔍 Current tags: \(localEvent.interestTags?.joined(separator: ", ") ?? "none")")
-                    print("🔍 Event ID: \(localEvent.id)")
                 }
             }
             
@@ -1016,7 +997,6 @@ extension EventDetailView {
     
     private var joinLeaveButton: some View {
         Button {
-            print("🔵 Join/Leave button tapped - about to call handleRSVP()")
             handleRSVP()
         } label: {
             Label(
@@ -1056,8 +1036,6 @@ extension EventDetailView {
     }
     
     private func handleRSVP() {
-        print("RSVP button clicked for event: \(localEvent.id)")
-        print("Current user: \(accountManager.currentUser ?? "No user")")
         
         // Immediately update the local event's attendees list
         let currentUser = accountManager.currentUser ?? ""
@@ -1065,7 +1043,6 @@ extension EventDetailView {
             // User is attending and wants to un-RSVP
             if let index = localEvent.attendees.firstIndex(of: currentUser) {
                 localEvent.attendees.remove(at: index)
-                print("Removed user from attendees locally")
                 
                 // Store RSVP status in UserDefaults for this event
                 let key = "event_rsvp_\(localEvent.id.uuidString)_\(currentUser)"
@@ -1075,7 +1052,6 @@ extension EventDetailView {
             // User is not attending and wants to RSVP
             if !localEvent.attendees.contains(currentUser) {
                 localEvent.attendees.append(currentUser)
-                print("Added user to attendees locally")
                 
                 // Store RSVP status in UserDefaults for this event
                 let key = "event_rsvp_\(localEvent.id.uuidString)_\(currentUser)"
@@ -1085,16 +1061,13 @@ extension EventDetailView {
         
         // Toggle the state to refresh the UI
         attendanceStateChanged = UUID()
-        print("Updated attendanceStateChanged to refresh UI")
         
         // Call onRSVP immediately
         onRSVP(localEvent.id)
-        print("RSVP sent to backend for event: \(localEvent.id)")
         
         // Update the studyEvents array with our local event
         if let eventIndex = studyEvents.firstIndex(where: { $0.id == localEvent.id }) {
             studyEvents[eventIndex] = localEvent
-            print("Updated global events array with local changes")
         }
         
         // Post a single notification instead of relying on multiple cascading updates
@@ -1465,7 +1438,6 @@ struct EventSocialFeedView: View {
                 
                 // Handle 403 Forbidden specifically - indicates user doesn't have access
                 if httpResponse.statusCode == 403 {
-                    print("⛔ Received 403 Forbidden for event \(self.event.id) - user not in matched users")
                     // Remember that this event gave a 403 to prevent future requests
                     UserDefaults.standard.set(self.event.id.uuidString, forKey: "lastForbiddenEventId")
                     self.errorMessage = "You don't have access to this event's social feed."
@@ -1487,11 +1459,9 @@ struct EventSocialFeedView: View {
                     self.interactions = decoded
                 } catch {
                     self.errorMessage = "Failed to decode data: \(error.localizedDescription)"
-                    print("Decoding error details: \(error)")
                     
                     // Print the received data for debugging
                     if let dataString = String(data: data, encoding: .utf8) {
-                        print("Received data: \(dataString)")
                     }
                 }
             }
@@ -1650,7 +1620,6 @@ struct EventSocialFeedView: View {
                     
                     // Show response data for debugging
                     if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                        print("Server error response: \(responseString)")
                     }
                     
                     // Revert optimistic update on failure
@@ -1675,7 +1644,6 @@ struct EventSocialFeedView: View {
                 // Update with correct like count from server
                 updatedPosts[i].likes = newCount
                 updatedPosts[i].isLikedByCurrentUser = isLiked
-                print("✅ Updated post \(postID) with server data: likes=\(newCount), liked=\(isLiked)")
                 return updatedPosts
             }
             
@@ -1691,7 +1659,6 @@ struct EventSocialFeedView: View {
                 
                 // Check if we found and updated the target post in replies
                 if updatedPosts[i].replies != originalReplies {
-                    print("✅ Updated like state in a reply of post \(updatedPosts[i].id)")
                     return updatedPosts
                 }
             }
@@ -1703,7 +1670,6 @@ struct EventSocialFeedView: View {
     
     // Enhanced likePost function with debugging and proper API call
     func likePost(postID: Int) {
-        print("❤️ Like/unlike requested for post ID: \(postID)")
         
         // Find the post to check its current state before update
         if let interactions = interactions {
@@ -1711,9 +1677,7 @@ struct EventSocialFeedView: View {
                             interactions.posts.flatMap { $0.replies }.first(where: { $0.id == postID })
             
             if let post = foundPost {
-                print("🔍 Found post \(postID) with current state: liked=\(post.isLikedByCurrentUser), likes=\(post.likes)")
             } else {
-                print("⚠️ Could not find post ID \(postID) before updating")
             }
         }
         
@@ -1745,20 +1709,16 @@ struct EventSocialFeedView: View {
             "post_id": postID  // This matches the backend expectation
         ]
         
-        print("📡 Sending API request to: \(url.absoluteString)")
-        print("📦 Request body: \(body)")
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         } catch {
-            print("❌ Error serializing request: \(error)")
             return
         }
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("❌ Network error: \(error.localizedDescription)")
                     self.errorMessage = "Failed to like post: \(error.localizedDescription)"
                     // Revert the optimistic update if the API call fails
                     self.refreshFeed()
@@ -1766,14 +1726,11 @@ struct EventSocialFeedView: View {
                 }
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    print("❌ Invalid response type")
                     return
                 }
                 
-                print("📊 HTTP Status: \(httpResponse.statusCode)")
                 
                 if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                    print("📄 Response: \(responseString)")
                     
                     // Try to parse response for total_likes
                     do {
@@ -1782,7 +1739,6 @@ struct EventSocialFeedView: View {
                            let liked = json["liked"] as? Bool,
                            let totalLikes = json["total_likes"] as? Int {
                             
-                            print("✅ Like operation successful. New state: liked=\(liked), total_likes=\(totalLikes)")
                             
                             // Update the post with correct likes count from server
                             if var updatedInteractions = self.interactions {
@@ -1795,15 +1751,12 @@ struct EventSocialFeedView: View {
                                 self.interactions = updatedInteractions
                             }
                         } else {
-                            print("⚠️ Unexpected response format")
                         }
                     } catch {
-                        print("⚠️ Error parsing response: \(error)")
                     }
                 }
                 
                 if !(200...299).contains(httpResponse.statusCode) {
-                    print("❌ Server error: \(httpResponse.statusCode)")
                     self.errorMessage = "Server error: \(httpResponse.statusCode)"
                     self.refreshFeed()
                 }
@@ -1822,7 +1775,6 @@ struct EventSocialFeedView: View {
                    updatedPosts[i].isLikedByCurrentUser = !wasLiked
                    updatedPosts[i].likes += wasLiked ? -1 : 1
                    
-                   print("✅ Toggled like for post \(postID): liked=\(!wasLiked), likes=\(updatedPosts[i].likes)")
                    return updatedPosts
                }
                
@@ -1833,7 +1785,6 @@ struct EventSocialFeedView: View {
                    
                    // Check if we found and updated the target post in replies
                    if updatedPosts[i].replies != originalReplies {
-                       print("✅ Updated like state in a reply of post \(updatedPosts[i].id)")
                        return updatedPosts
                    }
                }
@@ -1929,7 +1880,6 @@ struct EventSocialFeedView: View {
                     
                     // Show response data for debugging
                     if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                        print("Server error response: \(responseString)")
                     }
                     return
                 }
@@ -2351,7 +2301,6 @@ struct EventImagePicker: UIViewControllerRepresentable {
                         defer { group.leave() }
                         
                         if let error = error {
-                            print("Image loading error: \(error.localizedDescription)")
                             return
                         }
                         
@@ -2412,7 +2361,6 @@ struct SocialImagePicker: UIViewControllerRepresentable {
                         defer { group.leave() }
                         
                         if let error = error {
-                            print("Image loading error: \(error.localizedDescription)")
                             return
                         }
                         

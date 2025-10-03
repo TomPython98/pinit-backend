@@ -613,30 +613,24 @@ struct FriendsListView: View {
     // MARK: - Networking Methods (keeping existing implementation)
     private func fetchAllUsers() {
         guard let url = URL(string: "\(baseURL)/get_all_users/") else {
-            print("❌ [FriendsListView] Invalid URL for fetching all users")
             return
         }
         
-        print("🔍 [FriendsListView] Fetching all users...")
         
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("❌ [FriendsListView] Error fetching all users: \(error.localizedDescription)")
                 return
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ [FriendsListView] Invalid response type")
                 return
             }
             
             guard httpResponse.statusCode == 200 else {
-                print("❌ [FriendsListView] HTTP error \(httpResponse.statusCode) when fetching all users")
                 return
             }
             
             guard let data = data else {
-                print("❌ [FriendsListView] No data when fetching all users")
                 return
             }
             
@@ -644,10 +638,8 @@ struct FriendsListView: View {
                 let users = try JSONSerialization.jsonObject(with: data, options: []) as? [String] ?? []
                 DispatchQueue.main.async {
                     self.allUsers = users
-                    print("✅ [FriendsListView] Fetched \(users.count) users")
                 }
             } catch {
-                print("❌ [FriendsListView] Error decoding all users JSON: \(error)")
                 DispatchQueue.main.async {
                     self.allUsers = []
                 }
@@ -658,50 +650,40 @@ struct FriendsListView: View {
     private func fetchPendingRequests() {
         guard let username = accountManager.currentUser,
               let url = URL(string: "\(baseURL)/get_pending_requests/\(username)/") else {
-            print("❌ [FriendsListView] Invalid URL for pending requests")
             return
         }
 
-        print("🔍 [FriendsListView] Fetching pending requests for \(username)")
 
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("❌ [FriendsListView] Error fetching pending requests: \(error.localizedDescription)")
                 return
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ [FriendsListView] Invalid response type")
                 return
             }
             
             guard httpResponse.statusCode == 200 else {
-                print("❌ [FriendsListView] HTTP error \(httpResponse.statusCode) when fetching pending requests")
                 return
             }
             
             guard let data = data else {
-                print("❌ [FriendsListView] No data when fetching pending requests")
                 return
             }
 
             do {
-                print("📦 [FriendsListView] Raw pending requests: \(String(data: data, encoding: .utf8) ?? "invalid data")")
                 
                 let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                 if let pendingRequestsList = json?["pending_requests"] as? [String] {
                     DispatchQueue.main.async {
                         self.pendingRequests = pendingRequestsList
-                        print("✅ [FriendsListView] Fetched \(pendingRequestsList.count) Pending Requests")
                     }
                 } else {
-                    print("❌ [FriendsListView] Invalid pending requests JSON structure")
                     DispatchQueue.main.async {
                         self.pendingRequests = []
                     }
                 }
             } catch {
-                print("❌ [FriendsListView] Error decoding pending requests JSON: \(error)")
                 DispatchQueue.main.async {
                     self.pendingRequests = []
                 }
@@ -712,50 +694,40 @@ struct FriendsListView: View {
     private func fetchSentRequests() {
         guard let username = accountManager.currentUser,
               let url = URL(string: "\(baseURL)/get_sent_requests/\(username)/") else {
-            print("❌ [FriendsListView] Invalid URL for sent requests")
             return
         }
 
-        print("🔍 [FriendsListView] Fetching sent requests for \(username)")
 
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("❌ [FriendsListView] Error fetching sent requests: \(error.localizedDescription)")
                 return
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ [FriendsListView] Invalid response type")
                 return
             }
             
             guard httpResponse.statusCode == 200 else {
-                print("❌ [FriendsListView] HTTP error \(httpResponse.statusCode) when fetching sent requests")
                 return
             }
             
             guard let data = data else {
-                print("❌ [FriendsListView] No data when fetching sent requests")
                 return
             }
 
             do {
-                print("📦 [FriendsListView] Raw sent requests: \(String(data: data, encoding: .utf8) ?? "invalid data")")
                 
                 let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                 if let sentRequestsList = json?["sent_requests"] as? [String] {
                     DispatchQueue.main.async {
                         self.sentRequests = sentRequestsList
-                        print("✅ [FriendsListView] Fetched \(sentRequestsList.count) Sent Requests")
                     }
                 } else {
-                    print("❌ [FriendsListView] Invalid sent requests JSON structure")
                     DispatchQueue.main.async {
                         self.sentRequests = []
                     }
                 }
             } catch {
-                print("❌ [FriendsListView] Error decoding sent requests JSON: \(error)")
                 DispatchQueue.main.async {
                     self.sentRequests = []
                 }
@@ -766,50 +738,40 @@ struct FriendsListView: View {
     private func fetchFriends() {
         guard let username = accountManager.currentUser,
               let url = URL(string: "\(baseURL)/get_friends/\(username)/") else {
-            print("❌ [FriendsListView] Invalid URL for friends")
             return
         }
 
-        print("🔍 [FriendsListView] Fetching friends for \(username)")
 
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("❌ [FriendsListView] Error fetching friends: \(error.localizedDescription)")
                 return
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ [FriendsListView] Invalid response type")
                 return
             }
             
             guard httpResponse.statusCode == 200 else {
-                print("❌ [FriendsListView] HTTP error \(httpResponse.statusCode) when fetching friends")
                 return
             }
             
             guard let data = data else {
-                print("❌ [FriendsListView] No data when fetching friends")
                 return
             }
             
-            print("📦 [FriendsListView] Raw friends response: \(String(data: data, encoding: .utf8) ?? "invalid data")")
 
             do {
                 let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                 if let friendsList = json?["friends"] as? [String] {
                     DispatchQueue.main.async {
                         self.accountManager.friends = friendsList
-                        print("✅ [FriendsListView] Updated friends list: \(friendsList)")
                     }
                 } else {
-                    print("❌ [FriendsListView] Invalid friends JSON structure")
                     DispatchQueue.main.async {
                         self.accountManager.friends = []
                     }
                 }
             } catch {
-                print("❌ [FriendsListView] Error decoding friends JSON: \(error)")
                 DispatchQueue.main.async {
                     self.accountManager.friends = []
                 }

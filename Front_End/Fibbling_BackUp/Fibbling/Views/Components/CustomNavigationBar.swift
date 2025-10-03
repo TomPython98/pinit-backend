@@ -78,7 +78,7 @@ extension CustomNavigationBar {
         // Simple navigation bar with back button
         CustomNavigationBar(
             title: "Event Details",
-            onBackPressed: { print("Back button pressed") }
+            onBackPressed: { }
         )
         
         // Navigation bar with trailing content
@@ -86,9 +86,9 @@ extension CustomNavigationBar {
             title: "Messages",
             trailingContent: CustomNavigationBar.iconButton(
                 icon: "plus",
-                action: { print("Add button pressed") }
+                action: { }
             ),
-            onBackPressed: { print("Back button pressed") }
+            onBackPressed: { }
         )
         
         // Navigation bar with multiple trailing buttons
@@ -96,11 +96,11 @@ extension CustomNavigationBar {
             title: "Calendar",
             trailingContent: CustomNavigationBar.multipleButtons(
                 buttons: [
-                    CustomNavigationBar.iconButton(icon: "magnifyingglass", action: { print("Search pressed") }),
-                    CustomNavigationBar.iconButton(icon: "slider.horizontal.3", action: { print("Filter pressed") })
+                    CustomNavigationBar.iconButton(icon: "magnifyingglass", action: { }),
+                    CustomNavigationBar.iconButton(icon: "slider.horizontal.3", action: { })
                 ]
             ),
-            onBackPressed: { print("Back button pressed") }
+            onBackPressed: { }
         )
     }
     .background(Color.gray.opacity(0.1))

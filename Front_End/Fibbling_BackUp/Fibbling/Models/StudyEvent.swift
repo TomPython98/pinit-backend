@@ -78,9 +78,7 @@ struct StudyEvent: Identifiable, Codable, Equatable {
         attendees = (try? container.decode([String].self, forKey: .attendees)) ?? []
         isAutoMatched = try? container.decodeIfPresent(Bool.self, forKey: .isAutoMatched)
         if let autoMatched = isAutoMatched {
-            print("DEBUG: Parsed isAutoMatched: \(autoMatched) for event: \(title)")
         } else {
-            print("DEBUG: isAutoMatched field missing or nil for event: \(title)")
         }
         interestTags = try? container.decodeIfPresent([String].self, forKey: .interestTags)
         matchedUsers = try? container.decodeIfPresent([String].self, forKey: .matchedUsers)
@@ -88,23 +86,18 @@ struct StudyEvent: Identifiable, Codable, Equatable {
         // In StudyEvent struct, modify the decoder for event_type:
 
         if let rawType = try? container.decode(String.self, forKey: .eventType) {
-            print("DEBUG: Received event_type raw value: '\(rawType)'")
             // Normalize the string by trimming and converting to lowercase
             let normalizedType = rawType.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            print("DEBUG: Normalized to: '\(normalizedType)'")
             
             // Try to match with the enum cases
             if let parsedType = EventType(rawValue: normalizedType) {
                 eventType = parsedType
-                print("DEBUG: Successfully matched to enum: \(parsedType.rawValue)")
             } else {
                 // If no match is found, default to .other but log the issue
                 eventType = .other
-                print("DEBUG: Could not match '\(normalizedType)' to any EventType, defaulting to 'other'")
             }
         } else {
             eventType = .other
-            print("DEBUG: No event_type in JSON data, defaulting to 'other'")
         }
         
         let isoFormatter = ISO8601DateFormatter()
@@ -123,7 +116,6 @@ struct StudyEvent: Identifiable, Codable, Equatable {
         if let endDate = StudyEvent.parseDate(from: endStr, formatter: isoFormatter) {
             endTime = endDate
         } else {
-            print("DEBUG: Failed to parse end_time: '\(endStr)' - falling back to time + 1 hour")
             // If end time can't be parsed, default to start time + 1 hour
             endTime = time.addingTimeInterval(3600)
         }
@@ -185,7 +177,6 @@ struct StudyEvent: Identifiable, Codable, Equatable {
                     let timezonePart = afterDecimal.dropFirst(6) // Drop the microseconds
                     let modifiedString = "\(beforeDecimal).\(milliseconds)\(timezonePart)"
                     
-                    print("DEBUG: Modified date string from \(string) to \(modifiedString)")
                     
                     // Try parsing with the modified string
                     if let date = formatter.date(from: modifiedString) {
@@ -205,11 +196,9 @@ struct StudyEvent: Identifiable, Codable, Equatable {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         if let date = dateFormatter.date(from: String(string.prefix(19))) {
-            print("DEBUG: Fallback date parsing succeeded for \(string)")
             return date
         }
         
-        print("DEBUG: Failed to parse date: \(string)")
         return nil
     }
     

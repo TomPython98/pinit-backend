@@ -34,16 +34,16 @@
 			<key>text-context</key>
 			<dict>
 				<key>focused</key>
-				<string>                    }
+				<string>        if percentage &lt; 0.3 {
 </string>
 				<key>leading</key>
-				<string>                        )
-                        .foregroundColor(profileCompletionColor)
+				<string>    private var profileCompletionColor: Color {
+        let percentage = effectiveProfileCompletionPercentage
 </string>
 				<key>trailing</key>
-				<string>                    .buttonStyle(PlainButtonStyle())
-                    .padding(.top, 6)
-                }
+				<string>            return .red
+        } else if percentage &lt; 0.6 {
+            return .brandWarning
 </string>
 			</dict>
 			<key>type</key>

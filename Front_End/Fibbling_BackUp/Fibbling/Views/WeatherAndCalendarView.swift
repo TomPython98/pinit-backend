@@ -81,20 +81,16 @@ struct WeatherAndCalendarView: View {
     // Function to fetch events, same as in StudyMapView
     private func fetchEvents() {
         guard let username = accountManager.currentUser else {
-            print("❌ Invalid username or URL in CompactMapView")
             return
         }
         
-        print("🔍 Weather view using events from CalendarManager")
         
         // Use calendar manager's events directly
         DispatchQueue.main.async {
             // This gives us the already filtered and properly decoded events
             if !self.calendarManager.events.isEmpty {
                 self.mapEvents = self.calendarManager.events
-                print("📍 Weather view using \(self.mapEvents.count) events from CalendarManager")
             } else {
-                print("⚠️ Weather view: CalendarManager has no events")
             }
         }
     }

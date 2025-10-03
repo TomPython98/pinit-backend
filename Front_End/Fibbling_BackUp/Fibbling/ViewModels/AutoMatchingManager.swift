@@ -23,7 +23,6 @@ class AutoMatchingManager: ObservableObject {
     
     // Tests all endpoints to find the best working one
     private func testEndpoints() {
-        print("🔍 Testing API endpoints to find the best one...")
         
         // Try a simple "ping" to each endpoint
         for (index, baseURL) in baseURLs.enumerated() {
@@ -37,10 +36,8 @@ class AutoMatchingManager: ObservableObject {
             URLSession.shared.dataTask(with: url) { data, response, error in
                 if let httpResponse = response as? HTTPURLResponse, 
                    httpResponse.statusCode == 200 {
-                    print("✅ Found working endpoint: \(urlString)")
                     success = true
                 } else {
-                    print("❌ Endpoint failed: \(urlString)")
                 }
                 semaphore.signal()
             }.resume()
@@ -51,19 +48,16 @@ class AutoMatchingManager: ObservableObject {
             if success {
                 // Set this as our primary endpoint
                 currentBaseURLIndex = index
-                print("🎯 Using \(baseURLs[currentBaseURLIndex]) as primary endpoint")
                 return
             }
         }
         
         // If we get here, no endpoint responded quickly
-        print("⚠️ No quick response from any endpoint, using default: \(baseURLs[0])")
     }
     
     // Helper to try the next URL if one fails
     private func tryNextURL() -> Bool {
         currentBaseURLIndex = (currentBaseURLIndex + 1) % baseURLs.count
-        print("🔄 Switching to next API endpoint: \(baseURL)")
         return currentBaseURLIndex != 0 // Return false if we've cycled through all URLs
     }
     
@@ -258,7 +252,6 @@ class AutoMatchingManager: ObservableObject {
                         completion(.failure(error))
                     }
                 } catch {
-                    print("Decoding error: \(error)")
                     self?.error = "Failed to decode response: \(error.localizedDescription)"
                     completion(.failure(error))
                 }
@@ -329,7 +322,6 @@ class AutoMatchingManager: ObservableObject {
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         } catch {
-            print("Failed to serialize invitation request: \(error)")
             isLoading = false
             completion(false)
             return
@@ -340,16 +332,13 @@ class AutoMatchingManager: ObservableObject {
                 self?.isLoading = false
                 
                 if let error = error {
-                    print("Invitation error: \(error)")
                     completion(false)
                     return
                 }
                 
                 if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
-                    print("Successfully invited user \(username) to event")
                     completion(true)
                 } else {
-                    print("Failed to invite user, unexpected response")
                     completion(false)
                 }
             }
@@ -374,19 +363,16 @@ class AutoMatchingManager: ObservableObject {
                                      retriesLeft: Int,
                                      completion: @escaping (Bool) -> Void) {
         guard retriesLeft > 0 else {
-            print("❌ Exhausted all API endpoint attempts")
             isLoading = false
             completion(false)
             return
         }
         
         guard let url = URL(string: "\(baseURL)/update_user_interests/") else {
-            print("❌ Invalid URL for updating user interests")
             completion(false)
             return
         }
         
-        print("📡 Sending update to \(url.absoluteString)")
         isLoading = true
         
         var request = URLRequest(url: url)
@@ -406,12 +392,10 @@ class AutoMatchingManager: ObservableObject {
             "preferred_radius": preferredRadius
         ]
         
-        print("📦 Request body: \(body)")
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         } catch {
-            print("❌ Failed to serialize interests update: \(error)")
             isLoading = false
             completion(false)
             return
@@ -422,11 +406,9 @@ class AutoMatchingManager: ObservableObject {
             
             // Check for network errors
             if let error = error {
-                print("❌ Network error: \(error.localizedDescription)")
                 
                 // Try the next URL if available
                 if self.tryNextURL() {
-                    print("🔄 Retrying with next API endpoint")
                     self.tryUpdateUserInterests(
                         username: username,
                         interests: interests, 
@@ -448,20 +430,16 @@ class AutoMatchingManager: ObservableObject {
             
             // Check HTTP response
             if let httpResponse = response as? HTTPURLResponse {
-                print("📡 Response status: \(httpResponse.statusCode)")
                 
                 if httpResponse.statusCode == 200 {
-                    print("✅ Successfully updated user interests")
                     DispatchQueue.main.async {
                         self.isLoading = false
                         completion(true)
                     }
                 } else {
-                    print("❌ Server error: \(httpResponse.statusCode)")
                     
                     // Try next URL on server error
                     if self.tryNextURL() {
-                        print("🔄 Retrying with next API endpoint due to server error")
                         self.tryUpdateUserInterests(
                             username: username,
                             interests: interests, 
@@ -480,7 +458,6 @@ class AutoMatchingManager: ObservableObject {
                     }
                 }
             } else {
-                print("❌ Unexpected response type")
                 DispatchQueue.main.async {
                     self.isLoading = false
                     completion(false)

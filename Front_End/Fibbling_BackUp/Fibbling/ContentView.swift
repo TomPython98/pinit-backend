@@ -667,14 +667,12 @@ struct ContentView: View {
     // Find the next RSVP'd event from CalendarManager
     private func findNextRSVPEvent() {
         guard let username = accountManager.currentUser else { 
-            print("⚠️ No current user found")
             self.nextRSVPEvent = nil
             return 
         }
         
         // Get events from CalendarManager
         let events = calendarManager.events
-        print("📅 Finding next RSVP'd event among \(events.count) events for user: \(username)")
         
         // Filter for events where user is attending (RSVP'd) or hosting
         let userRSVPEvents = events.filter { event in
@@ -682,18 +680,14 @@ struct ContentView: View {
             let isHosting = event.host.lowercased() == username.lowercased()
             
             if isAttending {
-                print("👤 User is attending event: \(event.title) at \(event.time)")
             }
             if isHosting {
-                print("🏠 User is hosting event: \(event.title) at \(event.time)")
             }
             return isAttending || isHosting
         }
         
-        print("👤 Found \(userRSVPEvents.count) events user is attending")
         
         if userRSVPEvents.isEmpty {
-            print("⚠️ User is not attending any events")
             self.nextRSVPEvent = nil
             return
         }
@@ -703,28 +697,20 @@ struct ContentView: View {
         
         // Find the next event (first event that hasn't ended yet)
         let now = Date()
-        print("⏰ Current time: \(now)")
         
         let upcomingEvents = sortedEvents.filter { event in
             // Consider events that haven't ended yet
             let hasNotEnded = event.endTime > now
             if hasNotEnded {
-                print("📆 Event is upcoming: \(event.title), Ends: \(event.endTime)")
             } else {
-                print("⏰ Event has ended: \(event.title), Ended: \(event.endTime)")
             }
             return hasNotEnded
         }
         
-        print("📆 Found \(upcomingEvents.count) upcoming events")
         
         for (index, event) in upcomingEvents.enumerated() {
             let timeUntilStart = event.time.timeIntervalSince(now)
             let hoursUntilStart = timeUntilStart / 3600
-            print("   Event \(index+1): \(event.title)")
-            print("      Starts: \(event.time)")
-            print("      Ends: \(event.endTime)")
-            print("      Hours until start: \(String(format: "%.1f", hoursUntilStart))")
         }
         
         // Set the next event (first in the sorted list)
@@ -733,10 +719,7 @@ struct ContentView: View {
         if let nextEvent = self.nextRSVPEvent {
             let timeUntilStart = nextEvent.time.timeIntervalSince(now)
             let hoursUntilStart = timeUntilStart / 3600
-            print("✅ Next RSVP'd event: \(nextEvent.title)")
-            print("   Starts in: \(String(format: "%.1f", hoursUntilStart)) hours")
         } else {
-            print("❌ No upcoming RSVP'd events found")
         }
     }
 }
@@ -1508,16 +1491,13 @@ struct ProfileView: View {
         guard let username = accountManager.currentUser, !username.isEmpty else {
             self.alertMessage = "Not logged in"
             self.showAlert = true
-            print("❌ Cannot load profile: No username available")
             return
         }
         
-        print("🔍 Loading profile for user: \(username) using UserProfileManager")
         
         // Use the profileManager to fetch the profile
         profileManager.fetchUserProfile(username: username) { success in
             if success {
-                print("✅ Profile loaded successfully")
                 
                 // Update local state variables with profile data
                 self.name = self.profileManager.fullName.isEmpty ? username : self.profileManager.fullName
@@ -1531,16 +1511,9 @@ struct ProfileView: View {
                 self.skillLevels = self.profileManager.skills
                 
                 // Log the loaded profile data
-                print("📊 Loaded basic info: \(self.name), \(self.university), \(self.degree), \(self.year)")
-                print("📊 Loaded bio: \(self.bio)")
-                print("📊 Loaded interests: \(self.profileManager.interests)")
-                print("📊 Loaded skills with levels: \(self.profileManager.skills)")
-                print("📊 Auto-invite enabled: \(self.profileManager.autoInviteEnabled)")
-                print("📊 Preferred radius: \(self.profileManager.preferredRadius)")
             } else {
                 self.alertMessage = self.profileManager.errorMessage ?? "Failed to load profile"
                 self.showAlert = true
-                print("❌ Failed to load profile: \(self.profileManager.errorMessage ?? "Unknown error")")
             }
         }
     }
@@ -1549,11 +1522,9 @@ struct ProfileView: View {
         guard let username = accountManager.currentUser, !username.isEmpty else {
             alertMessage = "Not logged in"
             showAlert = true
-            print("❌ Cannot save profile: No username available")
             return
         }
         
-        print("💾 Saving preferences for user: \(username) using UserProfileManager")
         
         // Update skill levels for any skills that don't have levels yet
         for skill in skills {
@@ -1578,11 +1549,9 @@ struct ProfileView: View {
             if success {
                 self.alertMessage = "Profile saved successfully"
                 self.showAlert = true
-                print("✅ Profile saved successfully")
             } else {
                 self.alertMessage = self.profileManager.errorMessage ?? "Failed to save profile"
                 self.showAlert = true
-                print("❌ Failed to save profile: \(self.profileManager.errorMessage ?? "Unknown error")")
             }
         }
     }
@@ -2210,15 +2179,8 @@ struct ProfileView: View {
                     DispatchQueue.main.async {
                         self.eventsHosted = self.reputationManager.userStats.eventsHosted
                         self.eventsAttended = self.reputationManager.userStats.eventsAttended
-                        print("📊 Real backend data for \(username):")
-                        print("   Events hosted: \(self.eventsHosted)")
-                        print("   Events attended: \(self.eventsAttended)")
-                        print("   Total ratings: \(self.reputationManager.userStats.totalRatings)")
-                        print("   Average rating: \(String(format: "%.1f", self.reputationManager.userStats.averageRating))")
-                        print("   Trust level: \(self.reputationManager.userStats.trustLevel.title)")
                     }
                 } else {
-                    print("❌ Failed to fetch real reputation data, using fallback")
                     // Fallback to mock data if backend fails
                     self.reputationManager.mockFetchUserReputation(username: username) { mockSuccess in
                         if mockSuccess {

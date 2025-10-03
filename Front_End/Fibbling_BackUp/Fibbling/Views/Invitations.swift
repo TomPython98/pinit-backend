@@ -135,39 +135,32 @@ struct InvitationsView: View {
         guard let username = accountManager.currentUser,
               let url = URL(string: "https://pinit-backend-production.up.railway.app/api/get_invitations/\(username)/")
         else {
-            print("❌ [InvitationsView] Invalid username or URL")
             return
         }
         
-        print("🔍 [InvitationsView] Fetching invitations for user: \(username)")
         isLoading = true
         
         URLSession.shared.dataTask(with: url) { data, response, error in
             defer { DispatchQueue.main.async { isLoading = false } }
             
             if let error = error {
-                print("❌ [InvitationsView] Error fetching invitations: \(error.localizedDescription)")
                 return
             }
             
             // Log HTTP status code
             if let httpResponse = response as? HTTPURLResponse {
-                print("📡 [InvitationsView] HTTP Status: \(httpResponse.statusCode)")
             }
             
             guard let data = data else {
-                print("❌ [InvitationsView] No data received")
                 return
             }
             
             // Debug: Print raw JSON response
-            print("📦 [InvitationsView] Raw response: \(String(data: data, encoding: .utf8) ?? "invalid data")")
             
             do {
                 let response = try JSONDecoder().decode(InvitationsResponse.self, from: data)
                 
                 // Debug: Print decoded invitations
-                print("✅ [InvitationsView] Decoded \(response.invitations.count) invitation(s)")
                 
                 // Map each returned event to an Invitation object.
                 let invitationObjects = response.invitations.map { event in
@@ -184,12 +177,8 @@ struct InvitationsView: View {
                 
                 DispatchQueue.main.async {
                     self.invitations = invitationObjects
-                    print("📊 [InvitationsView] \(self.invitations.count) pending invitation(s) found")
-                    print("   👤 Direct invitations: \(self.directInvitations.count)")
-                    print("   🔄 Potential matches: \(self.potentialMatches.count)")
                 }
             } catch {
-                print("❌ [InvitationsView] Decoding error: \(error)")
             }
         }.resume()
     }
@@ -200,7 +189,6 @@ struct InvitationsView: View {
               let url = URL(string: "\(APIConfig.primaryBaseURL)/rsvp_study_event/")
         else { return }
         
-        print("🔍 [InvitationsView] Accepting invitation for event: \(invitation.event.title) (ID: \(invitation.event.id))")
         isLoading = true
         
         var request = URLRequest(url: url)
@@ -211,7 +199,6 @@ struct InvitationsView: View {
         ]
         
         // Debug: Print request body
-        print("📤 [InvitationsView] RSVP request body: \(body)")
         
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -219,19 +206,16 @@ struct InvitationsView: View {
         URLSession.shared.dataTask(with: request) { data, response, error in
             // Capture HTTP status for debugging
             if let httpResponse = response as? HTTPURLResponse {
-                print("📡 [InvitationsView] RSVP HTTP Status: \(httpResponse.statusCode)")
             }
             
             // Print raw response for debugging
             if let data = data, let responseStr = String(data: data, encoding: .utf8) {
-                print("📦 [InvitationsView] RSVP response data: \(responseStr)")
             }
             
             DispatchQueue.main.async {
                 isLoading = false
                 
                 if let error = error {
-                    print("❌ [InvitationsView] RSVP error: \(error.localizedDescription)")
                     alertMessage = "Failed to accept invitation: \(error.localizedDescription)"
                     showAlert = true
                     return
@@ -262,19 +246,14 @@ struct InvitationsView: View {
                     eventType: event.eventType
                 )
                 
-                print("✅ [InvitationsView] Created updated event with user in attendees")
-                print("   👥 Updated attendees: \(updatedEvent.attendees)")
                 
                 // Add the event to CalendarManager and force a refresh
                 self.calendarManager.addEvent(updatedEvent)
-                print("📆 [InvitationsView] Added event to CalendarManager")
                 
                 // Refresh invitations & calendar data
                 fetchInvitations()
-                print("🔄 [InvitationsView] Fetching fresh invitations")
                 
                 // self.calendarManager.fetchEvents() // REMOVED - WebSocket will handle updates
-                print("🔄 [InvitationsView] Relying on WebSocket for calendar updates")
                 
                 // Show success message
                 alertMessage = "You've accepted the invitation to \(updatedEvent.title)"
@@ -289,7 +268,6 @@ struct InvitationsView: View {
               let url = URL(string: "\(APIConfig.primaryBaseURL)/decline_invitation/")
         else { return }
         
-        print("🔍 [InvitationsView] Declining invitation for event: \(invitation.event.title) (ID: \(invitation.event.id))")
         isLoading = true
         
         var request = URLRequest(url: url)
@@ -307,7 +285,6 @@ struct InvitationsView: View {
                 isLoading = false
                 
                 if let error = error {
-                    print("❌ [InvitationsView] Decline error: \(error.localizedDescription)")
                     alertMessage = "Failed to decline invitation: \(error.localizedDescription)"
                     showAlert = true
                     return
@@ -315,7 +292,6 @@ struct InvitationsView: View {
                 
                 // Remove the event from calendar manager if it exists there
                 self.calendarManager.removeEvent(withID: invitation.event.id)
-                print("🗑 [InvitationsView] Removed event from CalendarManager")
                 
                 // Refresh invitations
                 fetchInvitations()

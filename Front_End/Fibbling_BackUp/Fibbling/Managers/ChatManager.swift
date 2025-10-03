@@ -68,7 +68,6 @@ class ChatManager: ObservableObject {
             let encodedData = try JSONEncoder().encode(chatSessions)
             UserDefaults.standard.set(encodedData, forKey: storageKey)
         } catch {
-            print("❌ Error saving messages: \(error)")
         }
     }
 
@@ -81,7 +80,6 @@ class ChatManager: ObservableObject {
                     self.chatSessions = decodedMessages
                 }
             } catch {
-                print("❌ Error loading messages: \(error)")
             }
         }
     }

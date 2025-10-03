@@ -81,17 +81,13 @@ struct CustomCalendarView: View {
         }
         .onAppear {
             // // Fetch events (including RSVP data) when this view appears. - REMOVED
-            // print("📅 [CalendarView] View appeared - fetching latest events")
             // calendarManager.fetchEvents() // REMOVED
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("EventRSVPStatusChanged"))) { notification in
-            print("📅 [CalendarView] Received RSVP status change notification from WebSocket")
             if let eventID = notification.userInfo?["eventID"] as? UUID {
-                print("📅 [CalendarView] RSVP status change for event ID: \(eventID)")
 
                 // Force UI update by refreshing selectedDayEvents if the updated event is part of the current selection
                 if let index = selectedDayEvents.firstIndex(where: { $0.id == eventID }) {
-                    print("📅 [CalendarView] Updated event is in currently displayed day events")
                     selectedDayEvents = calendarManager.events.filter { calendar.isDate($0.time, inSameDayAs: selectedDate) }
                 }
 
@@ -102,9 +98,7 @@ struct CustomCalendarView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("EventRSVPUpdated"))) { notification in
-            print("📅 [CalendarView] Received RSVP update notification")
             if let eventID = notification.userInfo?["eventID"] as? UUID {
-                print("📅 [CalendarView] RSVP update for event ID: \(eventID)")
             }
             // // Regardless of specific event, refresh all events - REMOVED
             // DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -112,13 +106,10 @@ struct CustomCalendarView: View {
             // }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("EventUpdatedFromWebSocket"))) { notification in
-            print("📅 [CalendarView] Received WebSocket event update notification")
             if let eventID = notification.userInfo?["eventID"] as? UUID {
-                print("📅 [CalendarView] WebSocket update for event ID: \(eventID)")
                 
                 // Force UI update by refreshing selectedDayEvents if the updated event is part of the current selection
                 if let index = selectedDayEvents.firstIndex(where: { $0.id == eventID }) {
-                    print("📅 [CalendarView] Updated event is in currently displayed day events")
                     
                     // If the event is in the currently displayed day events, refresh the view
                     // by getting the updated events for the selected date
@@ -1714,7 +1705,6 @@ struct EventCreationSheet: View {
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: jsonBody)
-            print("📤 Sending event data: \(jsonBody)")
         } catch {
             isLoading = false
             errorMessage = "JSON encoding error: \(error.localizedDescription)"
@@ -1731,7 +1721,6 @@ struct EventCreationSheet: View {
                     return
                 }
                 if let httpResponse = response as? HTTPURLResponse {
-                    print("📡 HTTP Status: \(httpResponse.statusCode)")
                     if httpResponse.statusCode != 201 {
                         self.errorMessage = "Server error: HTTP \(httpResponse.statusCode)"
                         self.showAlert = true
@@ -1739,7 +1728,6 @@ struct EventCreationSheet: View {
                     }
                 }
                 if let data = data, let responseStr = String(data: data, encoding: .utf8) {
-                    print("📦 Response: \(responseStr)")
                     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         // Parse event data from backend response
                         if let eventId = json["event_id"] as? String {
@@ -1769,7 +1757,6 @@ struct EventCreationSheet: View {
                             if enabled && invitesSent > 0 {
                                 self.errorMessage = nil
                                 self.showAlert = true
-                                print("✅ Auto-matched and invited \(invitesSent) users")
                             } else {
                                 self.errorMessage = nil
                                 self.showAlert = true
@@ -1781,7 +1768,6 @@ struct EventCreationSheet: View {
                     }
                 }
                 // Let WebSocket handle the update
-                print("📢 [EventCreationSheet] Created event, WebSocket will handle refresh")
             }
         }.resume()
     }

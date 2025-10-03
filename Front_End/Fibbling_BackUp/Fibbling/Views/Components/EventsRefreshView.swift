@@ -67,7 +67,6 @@ struct EventsRefreshView: View {
         .shadow(color: Color.cardShadow.opacity(0.05), radius: 2, x: 0, y: 1)
         .padding(.horizontal)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("EventRSVPUpdated"))) { _ in
-            print("📅 [EventsRefreshView] Received RSVP update notification, refreshing events")
             // Debounce RSVP-triggered refreshes
             refreshDebounceTimer?.invalidate()
             refreshDebounceTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
@@ -75,7 +74,6 @@ struct EventsRefreshView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("EventUpdatedFromWebSocket"))) { _ in
-            print("📅 [EventsRefreshView] Received WebSocket update notification")
             
             // Update the last refresh time to now, but don't reload events (they're already updated)
             self.refreshTimerTick += 1
@@ -85,10 +83,8 @@ struct EventsRefreshView: View {
             // Refresh events when this view appears, but only if we haven't refreshed recently
             let timeSinceLastRefresh = Date().timeIntervalSince(lastRefreshTime)
             if timeSinceLastRefresh > 30 { // Only refresh if it's been more than 30 seconds
-                print("📅 [EventsRefreshView] View appeared, refreshing events (last refresh was \(Int(timeSinceLastRefresh))s ago)")
                 refreshEvents()
             } else {
-                print("📅 [EventsRefreshView] View appeared, skipping refresh (last refresh was \(Int(timeSinceLastRefresh))s ago)")
             }
         }
         // This id modifier will force the view to update when the timer ticks
@@ -98,11 +94,9 @@ struct EventsRefreshView: View {
     private func refreshEvents(forceUpdate: Bool = false) {
         // Prevent multiple simultaneous refresh calls
         if calendarManager.isLoading && !forceUpdate {
-            print("📅 [EventsRefreshView] Skipping refresh - already loading")
             return
         }
         
-        print("📅 [EventsRefreshView] Refreshing events...")
         calendarManager.fetchEvents()
     }
     

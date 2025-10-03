@@ -109,7 +109,6 @@ struct ImageGridView: View {
             ],
             columns: 3,
             onImageTap: { index in
-                print("Tapped image at index: \(index)")
             }
         )
     }

@@ -16,7 +16,6 @@ class UserAccountManager: ObservableObject {
         if UserDefaults.standard.bool(forKey: "isLoggedIn"),
            let savedUsername = UserDefaults.standard.string(forKey: "username") {
             self.currentUser = savedUsername
-            print("✅ UserAccountManager: Retrieved user from UserDefaults: \(savedUsername)")
             
             // Fetch friends and requests on init if user is logged in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -24,7 +23,6 @@ class UserAccountManager: ObservableObject {
                 self.fetchFriendRequests()
             }
         } else {
-            print("ℹ️ UserAccountManager: No logged in user found in UserDefaults")
         }
     }
 
@@ -62,7 +60,6 @@ class UserAccountManager: ObservableObject {
                         // Also save to UserDefaults for persistence
                         UserDefaults.standard.set(true, forKey: "isLoggedIn")
                         UserDefaults.standard.set(username, forKey: "username")
-                        print("✅ UserAccountManager: Saved username to UserDefaults: \(username)")
                     }
                     completion(success, message)
                 }
@@ -106,7 +103,6 @@ class UserAccountManager: ObservableObject {
                         // Also save to UserDefaults for persistence
                         UserDefaults.standard.set(true, forKey: "isLoggedIn")
                         UserDefaults.standard.set(username, forKey: "username")
-                        print("✅ UserAccountManager: Saved username to UserDefaults: \(username)")
                         
                         self.fetchFriends()
                         self.fetchFriendRequests()
@@ -124,53 +120,43 @@ class UserAccountManager: ObservableObject {
     func fetchFriends() {
         guard let username = currentUser,
               let url = URL(string: "\(baseURL)/get_friends/\(username)/") else { 
-            print("❌ UserAccountManager: Invalid URL for fetching friends")
             return 
         }
 
-        print("🔍 UserAccountManager: Fetching friends for \(username)")
 
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("❌ UserAccountManager: Network error fetching friends: \(error.localizedDescription)")
                 return
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ UserAccountManager: Invalid response type")
                 return
             }
             
             guard httpResponse.statusCode == 200 else {
-                print("❌ UserAccountManager: HTTP error \(httpResponse.statusCode) when fetching friends")
                 return
             }
             
             guard let data = data else {
-                print("❌ UserAccountManager: No data when fetching friends")
                 return
             }
 
             do {
                 // ✅ Print raw response before decoding
                 let rawJSON = String(data: data, encoding: .utf8) ?? "N/A"
-                print("📩 UserAccountManager: Raw Friends API Response: \(rawJSON)")
 
                 let decodedResponse = try JSONDecoder().decode([String: [String]].self, from: data)
 
                 if let friendsList = decodedResponse["friends"] {
                     DispatchQueue.main.async {
                         self.friends = friendsList
-                        print("✅ UserAccountManager: Updated Friends List: \(friendsList)")
                     }
                 } else {
-                    print("❌ UserAccountManager: 'friends' key not found in JSON")
                     DispatchQueue.main.async {
                         self.friends = []
                     }
                 }
             } catch {
-                print("❌ UserAccountManager: Error decoding friends JSON: \(error)")
                 DispatchQueue.main.async {
                     self.friends = []
                 }
@@ -181,48 +167,39 @@ class UserAccountManager: ObservableObject {
     func fetchFriendRequests() {
         guard let username = currentUser,
               let url = URL(string: "\(baseURL)/get_pending_requests/\(username)/") else { 
-            print("❌ UserAccountManager: Invalid URL for fetching friend requests")
             return 
         }
 
-        print("🔍 UserAccountManager: Fetching friend requests for \(username)")
 
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("❌ UserAccountManager: Network error fetching friend requests: \(error.localizedDescription)")
                 return
             }
             
             if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-                print("❌ UserAccountManager: Invalid API response for friend requests (\(httpResponse.statusCode))")
                 return
             }
             
             guard let data = data else {
-                print("❌ UserAccountManager: No data when fetching friend requests")
                 return
             }
             
             do {
                 // Parse the response properly
                 let rawJSON = String(data: data, encoding: .utf8) ?? "N/A"
-                print("📩 UserAccountManager: Raw Friend Requests Response: \(rawJSON)")
                 
                 let decodedResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                 
                 if let pendingRequests = decodedResponse?["pending_requests"] as? [String] {
                     DispatchQueue.main.async {
                         self.friendRequests = pendingRequests
-                        print("✅ UserAccountManager: Fetched \(pendingRequests.count) Friend Requests: \(pendingRequests)")
                     }
                 } else {
-                    print("❌ UserAccountManager: Invalid friend requests JSON structure")
                     DispatchQueue.main.async {
                         self.friendRequests = []
                     }
                 }
             } catch {
-                print("❌ UserAccountManager: Error decoding friend requests JSON: \(error)")
                 DispatchQueue.main.async {
                     self.friendRequests = []
                 }
@@ -234,11 +211,9 @@ class UserAccountManager: ObservableObject {
     func sendFriendRequest(to username: String) {
         guard let currentUser = currentUser, 
               let url = URL(string: "\(baseURL)/send_friend_request/") else { 
-            print("❌ UserAccountManager: Invalid URL for sending friend request")
             return 
         }
         
-        print("🔍 UserAccountManager: Sending friend request from \(currentUser) to \(username)")
         
         let body: [String: String] = ["from_user": currentUser, "to_user": username]
         let jsonData = try? JSONSerialization.data(withJSONObject: body)
@@ -250,13 +225,11 @@ class UserAccountManager: ObservableObject {
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("❌ UserAccountManager: Error sending friend request: \(error.localizedDescription)")
                 return
             }
             
             if let data = data {
                 let responseString = String(data: data, encoding: .utf8) ?? "N/A"
-                print("📩 UserAccountManager: Friend request response: \(responseString)")
             }
             
             DispatchQueue.main.async {
@@ -271,7 +244,6 @@ class UserAccountManager: ObservableObject {
 
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data else {
-                print("❌ Error: No response when fetching pending requests")
                 return
             }
 
@@ -280,13 +252,10 @@ class UserAccountManager: ObservableObject {
                 if let pendingRequestsList = json?["pending_requests"] as? [String] {
                     DispatchQueue.main.async {
                         self.friendRequests = pendingRequestsList
-                        print("✅ Fetched Pending Requests: \(pendingRequestsList)")
                     }
                 } else {
-                    print("❌ Error: Invalid pending requests JSON structure")
                 }
             } catch {
-                print("❌ Error decoding pending requests JSON: \(error)")
             }
         }.resume()
     }
@@ -295,11 +264,9 @@ class UserAccountManager: ObservableObject {
     func acceptFriendRequest(from username: String) {
         guard let currentUser = currentUser,
               let url = URL(string: "\(baseURL)/accept_friend_request/") else { 
-            print("❌ UserAccountManager: Invalid URL for accepting friend request")
             return 
         }
 
-        print("🔍 UserAccountManager: Accepting friend request from \(username) to \(currentUser)")
 
         let body: [String: String] = ["from_user": username, "to_user": currentUser]
         let jsonData = try? JSONSerialization.data(withJSONObject: body)
@@ -311,13 +278,11 @@ class UserAccountManager: ObservableObject {
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("❌ UserAccountManager: Error accepting friend request: \(error.localizedDescription)")
                 return
             }
             
             if let data = data {
                 let responseString = String(data: data, encoding: .utf8) ?? "N/A"
-                print("📩 UserAccountManager: Accept friend request response: \(responseString)")
             }
             
             DispatchQueue.main.async {
@@ -338,7 +303,6 @@ class UserAccountManager: ObservableObject {
 
     // ✅ LOGOUT FUNCTION
     func logout(completion: @escaping (Bool, String) -> Void) {
-        print("🔒 [UserAccountManager] Starting logout process")
         
         // Post a notification to let all subscribers know we're about to logout
         // This gives any active managers a chance to clean up resources
@@ -354,7 +318,6 @@ class UserAccountManager: ObservableObject {
             // Clear user data from UserDefaults
             UserDefaults.standard.set(false, forKey: "isLoggedIn")
             UserDefaults.standard.removeObject(forKey: "username")
-            print("🧹 [UserAccountManager] Removed username from UserDefaults")
             
             completion(true, "Logged out successfully.")
         }
@@ -429,7 +392,6 @@ extension UserAccountManager {
                         self.isCertified = certified
                     }
                 } catch {
-                    print("Error parsing user profile: \(error)")
                 }
             }
         }.resume()

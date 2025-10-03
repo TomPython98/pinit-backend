@@ -34,7 +34,6 @@ class UserProfileManager: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        print("🔴 Attempting to fetch profile for: \(username)")
         
         // Try each URL in sequence
         tryNextURL(index: 0, username: username, completion: completion)
@@ -46,14 +45,12 @@ class UserProfileManager: ObservableObject {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.errorMessage = "Failed to connect to any server"
-                print("❌ Tried all base URLs, none responded")
                 completion(false)
             }
             return
         }
         
         let baseURL = baseURLs[index]
-        print("🔴 Trying API URL: \(baseURL)/get_user_profile/\(username)/")
         
         guard let url = URL(string: "\(baseURL)/get_user_profile/\(username)/") else {
             // Skip to next URL if this one can't be constructed
@@ -65,11 +62,9 @@ class UserProfileManager: ObservableObject {
             guard let self = self else { return }
             
             if let httpResponse = response as? HTTPURLResponse {
-                print("🔴 HTTP Status Code: \(httpResponse.statusCode)")
                 
                 // If we got a valid response (even an error), log it
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {
-                    print("🔴 Response Data: \(dataString)")
                 }
                 
                 // If we got a successful response, parse it
@@ -80,16 +75,13 @@ class UserProfileManager: ObservableObject {
             }
             
             if let error = error {
-                print("🔴 Network Error with \(baseURL): \(error.localizedDescription)")
             }
             
             // Try the next URL
             self.tryNextURL(index: index + 1, username: username, completion: completion)
         }
         
-        print("🔴 Starting URLSession task to fetch profile from \(baseURL)")
         task.resume()
-        print("🔴 URLSession task started")
     }
     
     private func parseProfileData(data: Data?, completion: @escaping (Bool) -> Void) {
@@ -97,102 +89,78 @@ class UserProfileManager: ObservableObject {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.errorMessage = "No data received from server"
-                print("❌ No data received from server")
                 completion(false)
             }
             return
         }
         
         do {
-            print("🔴 Attempting to parse JSON data")
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             
             DispatchQueue.main.async {
                 // Parse basic profile information
                 if let fullName = json?["full_name"] as? String {
                     self.fullName = fullName
-                    print("✅ Successfully parsed full_name: \(fullName)")
                 } else {
-                    print("⚠️ No full_name found in response")
                 }
                 
                 if let university = json?["university"] as? String {
                     self.university = university
-                    print("✅ Successfully parsed university: \(university)")
                 } else {
-                    print("⚠️ No university found in response")
                 }
                 
                 if let degree = json?["degree"] as? String {
                     self.degree = degree
-                    print("✅ Successfully parsed degree: \(degree)")
                 } else {
-                    print("⚠️ No degree found in response")
                 }
                 
                 if let year = json?["year"] as? String {
                     self.year = year
-                    print("✅ Successfully parsed year: \(year)")
                 } else {
-                    print("⚠️ No year found in response")
                 }
                 
                 if let bio = json?["bio"] as? String {
                     self.bio = bio
-                    print("✅ Successfully parsed bio: \(bio)")
                 } else {
-                    print("⚠️ No bio found in response")
                 }
                 
                 // Parse interests
                 if let interestsArray = json?["interests"] as? [String] {
                     self.interests = interestsArray
-                    print("✅ Successfully parsed interests: \(interestsArray)")
                 } else {
-                    print("⚠️ No interests found in response")
                 }
                 
                 // Parse skills
                 if let skillsDict = json?["skills"] as? [String: String] {
                     self.skills = skillsDict
-                    print("✅ Successfully parsed skills: \(skillsDict)")
                 } else {
-                    print("⚠️ No skills found in response")
                 }
                 
                 // Parse auto-matching preferences
                 if let autoInviteEnabled = json?["auto_invite_enabled"] as? Bool {
                     self.autoInviteEnabled = autoInviteEnabled
-                    print("✅ Successfully parsed auto_invite_enabled: \(autoInviteEnabled)")
                 } else {
-                    print("⚠️ No auto_invite_enabled found in response")
                 }
                 
                 // Parse preferred radius
                 if let radius = json?["preferred_radius"] as? Double {
                     self.preferredRadius = radius
-                    print("✅ Successfully parsed preferred_radius: \(radius)")
                 } else {
-                    print("⚠️ No preferred_radius found in response")
                 }
                 
                 // Parse certification status
                 if let isCertified = json?["is_certified"] as? Bool {
                     self.isCertified = isCertified
-                    print("✅ Successfully parsed is_certified: \(isCertified)")
                 } else {
-                    print("⚠️ No is_certified found in response")
                 }
                 
                 self.isLoading = false
-                print("✅ Profile data successfully parsed")
                 completion(true)
             }
         } catch {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.errorMessage = "Error parsing profile data: \(error.localizedDescription)"
-                print("❌ Error parsing profile data: \(error.localizedDescription)")
                 completion(false)
             }
         }
@@ -214,7 +182,6 @@ class UserProfileManager: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        print("🔵 Attempting to update profile for: \(username)")
         
         // Try each URL in sequence
         tryUpdateWithNextURL(index: 0, 
@@ -250,14 +217,12 @@ class UserProfileManager: ObservableObject {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.errorMessage = "Failed to connect to any server"
-                print("❌ Tried all base URLs for update, none responded")
                 completion(false)
             }
             return
         }
         
         let baseURL = baseURLs[index]
-        print("🔵 Trying API URL: \(baseURL)/update_user_interests/")
         
         guard let url = URL(string: "\(baseURL)/update_user_interests/") else {
             // Skip to next URL if this one can't be constructed
@@ -293,39 +258,32 @@ class UserProfileManager: ObservableObject {
             "preferred_radius": preferredRadius
         ]
         
-        print("🔵 Request parameters: \(parameters)")
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-            print("🔵 Successfully encoded request body")
         } catch {
             DispatchQueue.main.async {
                 self.isLoading = false
                 self.errorMessage = "Error encoding data: \(error.localizedDescription)"
-                print("❌ Error encoding data: \(error.localizedDescription)")
                 completion(false)
             }
             return
         }
         
-        print("🔵 Starting URLSession task to update profile from \(baseURL)")
         
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
             
             if let httpResponse = response as? HTTPURLResponse {
-                print("🔵 HTTP Status Code: \(httpResponse.statusCode)")
                 
                 // If we got a valid response (even an error), log it
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {
-                    print("🔵 Response Data: \(dataString)")
                 }
                 
                 // If we got a successful response, return success
                 if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
                     DispatchQueue.main.async {
                         self.isLoading = false
-                        print("✅ Profile updated successfully")
                         completion(true)
                     }
                     return
@@ -333,7 +291,6 @@ class UserProfileManager: ObservableObject {
             }
             
             if let error = error {
-                print("🔵 Network Error with \(baseURL): \(error.localizedDescription)")
             }
             
             // Try the next URL
@@ -354,7 +311,6 @@ class UserProfileManager: ObservableObject {
         }
         
         task.resume()
-        print("🔵 URLSession task started")
     }
     
     // Fetch profile completion details from backend
@@ -380,7 +336,6 @@ class UserProfileManager: ObservableObject {
             guard let self = self else { return }
             if let httpResponse = response as? HTTPURLResponse {
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {
-                    print("🟢 Profile Completion Response Data: \(dataString)")
                 }
                 if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
                     self.parseProfileCompletionData(data: data, completion: completion)
@@ -388,7 +343,6 @@ class UserProfileManager: ObservableObject {
                 }
             }
             if let error = error {
-                print("🟢 Network Error (profile completion): \(error.localizedDescription)")
             }
             self.tryNextCompletionURL(index: index + 1, username: username, completion: completion)
         }

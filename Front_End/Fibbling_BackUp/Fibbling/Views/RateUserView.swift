@@ -213,14 +213,12 @@ struct RateUserView: View {
         // Make the request
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("🔵 Network Error with \(baseURL): \(error.localizedDescription)")
                 // Try the next URL
                 self.tryNextURL(index: index + 1, baseURLs: baseURLs, ratingData: ratingData)
                 return
             }
             
             if let httpResponse = response as? HTTPURLResponse {
-                print("🔵 HTTP Status Code: \(httpResponse.statusCode)")
                 
                 // If we got a successful response, return success
                 if (200...299).contains(httpResponse.statusCode) {
@@ -234,7 +232,6 @@ struct RateUserView: View {
                 
                 // If we got a response but with an error status code
                 if let data = data, let errorString = String(data: data, encoding: .utf8) {
-                    print("🔵 Error response: \(errorString)")
                     DispatchQueue.main.async {
                         self.errorMessage = "Server error: \(errorString)"
                         self.isSubmitting = false

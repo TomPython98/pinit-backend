@@ -34,7 +34,6 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
                     #if os(iOS)
                     DispatchQueue.main.async {
                         #if targetEnvironment(simulator)
-                        print("⚠️ [NotificationManager] Running in simulator, skipping remote notification registration")
                         #else
                         UIApplication.shared.registerForRemoteNotifications()
                         #endif
@@ -43,7 +42,6 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
                 }
                 
                 if let error = error {
-                    print("❌ [NotificationManager] Error requesting notification permissions: \(error.localizedDescription)")
                 }
             }
         }
@@ -77,7 +75,6 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
     // This is a simplified version - it will be implemented fully when the StudyEvent model is accessible
     func scheduleEventNotification(title: String, eventId: UUID, startTime: Date, reminderMinutes: Int = 30) {
         guard hasPermission else {
-            print("⚠️ [NotificationManager] No notification permission")
             return
         }
         
@@ -99,9 +96,7 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
         
         notificationCenter.add(request) { error in
             if let error = error {
-                print("❌ [NotificationManager] Error scheduling notification: \(error.localizedDescription)")
             } else {
-                print("✅ [NotificationManager] Notification scheduled for event: \(title)")
             }
         }
     }
@@ -110,7 +105,6 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
     func cancelEventNotification(for eventId: UUID) {
         let identifier = "event-reminder-\(eventId.uuidString)"
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
-        print("🔄 [NotificationManager] Cancelled notification for event: \(eventId.uuidString)")
     }
     
     // Handle incoming notifications
@@ -144,7 +138,6 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
     func handlePushNotification(userInfo: [AnyHashable: Any]) {
         guard let type = userInfo["type"] as? String else { return }
         
-        print("📲 [NotificationManager] Received push notification: \(type)")
         
         // Process different notification types
         switch type {
@@ -229,7 +222,7 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
             }
             
         default:
-            print("⚠️ [NotificationManager] Unknown notification type: \(type)")
+            break
         }
     }
     
@@ -250,14 +243,12 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
         
         notificationCenter.add(request) { error in
             if let error = error {
-                print("❌ [NotificationManager] Error creating local notification: \(error.localizedDescription)")
             }
         }
     }
     
     // Handle WebSocket event updates for RSVPs
     func handleEventRSVPUpdate(eventID: UUID) {
-        print("📱 [NotificationManager] Processing RSVP update for event: \(eventID)")
         
         // Post notification for other components to listen for
         NotificationCenter.default.post(
@@ -276,7 +267,6 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
     func handleNewRatingNotification(userInfo: [AnyHashable: Any]) {
         guard let fromUser = userInfo["from_user"] as? String,
               let rating = userInfo["rating"] as? Int else {
-            print("⚠️ [NotificationManager] Invalid new rating notification payload")
             return
         }
         
@@ -294,14 +284,12 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
             userInfo: userInfo
         )
         
-        print("✅ [NotificationManager] Processed new rating notification from \(fromUser)")
     }
     
     // Handle trust level change notification
     func handleTrustLevelChange(userInfo: [AnyHashable: Any]) {
         guard let newLevel = userInfo["trust_level"] as? Int,
               let levelTitle = userInfo["level_title"] as? String else {
-            print("⚠️ [NotificationManager] Invalid trust level change notification payload")
             return
         }
         
@@ -319,13 +307,11 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
             userInfo: userInfo
         )
         
-        print("✅ [NotificationManager] Processed trust level change notification to level \(newLevel)")
     }
     
     // Remind user to rate an event host after event completion
     func schedulePostEventRatingReminder(eventId: UUID, hostName: String, eventTitle: String) {
         guard hasPermission else {
-            print("⚠️ [NotificationManager] No notification permission")
             return
         }
         
@@ -349,9 +335,7 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
         
         notificationCenter.add(request) { error in
             if let error = error {
-                print("❌ [NotificationManager] Error scheduling rating reminder: \(error.localizedDescription)")
             } else {
-                print("✅ [NotificationManager] Rating reminder scheduled for event: \(eventTitle)")
             }
         }
     }
@@ -359,7 +343,6 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
     // Schedule a notification to remind users to rate event attendees
     func scheduleEventRatingReminder(eventId: UUID, eventTitle: String, attendees: [String]) {
         guard hasPermission, !attendees.isEmpty else {
-            print("⚠️ [NotificationManager] No notification permission or no attendees")
             return
         }
         
@@ -383,9 +366,7 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
         
         notificationCenter.add(request) { error in
             if let error = error {
-                print("❌ [NotificationManager] Error scheduling rating reminder: \(error.localizedDescription)")
             } else {
-                print("✅ [NotificationManager] Rating reminder scheduled for event: \(eventTitle)")
             }
         }
     }
