@@ -703,6 +703,11 @@ struct StudyMapBoxView: UIViewRepresentable {
         locationProvider.options.activityType = .automotiveNavigation
         mapView.location.override(provider: locationProvider)
         
+        // Enable user location display
+        mapView.location.options.puckType = .puck2D()
+        mapView.location.options.puckBearingEnabled = true
+        mapView.location.options.puckBearingSource = .heading
+        
         mapView.mapboxMap.onCameraChanged.observe { [weak mapView] event in
             guard let mapView = mapView else { return }
             let topLeft = mapView.mapboxMap.coordinate(for: CGPoint(x: 0, y: 0))
@@ -722,6 +727,20 @@ struct StudyMapBoxView: UIViewRepresentable {
                 updateAnnotations(on: mapView, region: initialRegion, events: events)
             }
             .store(in: &context.coordinator.cancelables)
+        
+        // Center map on user location when available
+        mapView.location.onLocationChange.observe { [weak mapView] location in
+            guard let mapView = mapView, let location = location else { return }
+            DispatchQueue.main.async {
+                let cameraOptions = CameraOptions(
+                    center: location.coordinate,
+                    zoom: 15,
+                    bearing: 0,
+                    pitch: 0
+                )
+                mapView.mapboxMap.setCamera(to: cameraOptions)
+            }
+        }.store(in: &context.coordinator.cancelables)
         
         return mapView
     }
@@ -1062,6 +1081,11 @@ struct StudyMapView: View {
                     showLocationPermission = true
                 } else {
                     locationManager.startLocationUpdates()
+                }
+                
+                // Also request location permission for the map
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    locationManager.requestLocationPermission()
                 }
             }
             .onChange(of: locationManager.location) { newLocation in
