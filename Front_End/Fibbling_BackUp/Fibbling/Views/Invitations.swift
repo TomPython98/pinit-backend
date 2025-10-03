@@ -506,10 +506,10 @@ struct ModernInvitationCard: View {
         case .social: return "person.3.fill"
         case .business: return "briefcase.fill"
         case .cultural: return "theatermasks.fill"
-        case .sports: return "sportscourt.fill"
         case .party: return "party.popper.fill"
-        case .language: return "globe"
+        case .language_exchange: return "globe"
         case .academic: return "graduationcap.fill"
+        case .networking: return "network"
         case .other: return "star.fill"
         }
     }
@@ -520,10 +520,10 @@ struct ModernInvitationCard: View {
         case .social: return .green
         case .business: return .purple
         case .cultural: return .orange
-        case .sports: return .red
         case .party: return .pink
-        case .language: return .cyan
+        case .language_exchange: return .cyan
         case .academic: return .indigo
+        case .networking: return .teal
         case .other: return .gray
         }
     }
