@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 import json
 from .models import FriendRequest, UserProfile, StudyEvent, EventInvitation, DeclinedInvitation, Device, UserRating, UserReputationStats, UserTrustLevel
 from django.utils import timezone
@@ -2115,7 +2116,6 @@ def perform_auto_matching(event_id, max_invites=10, radius_km=10.0, min_interest
     """Helper function to perform auto-matching logic with better performance"""
     from myapp.models import StudyEvent, UserProfile, EventInvitation
     from django.db.models import Q, F
-    from django.db import transaction
     
     try:
         # Get the event with a prefetch for existing invitations
@@ -3211,10 +3211,15 @@ def get_user_reputation(request, username):
         # Get or create reputation stats
         reputation, created = UserReputationStats.objects.get_or_create(user=user)
         
-        # If newly created, update stats
-        if created:
-            reputation.update_trust_level()
-            reputation.update_event_counts()
+        # Always update stats to ensure they're current
+        reputation.update_event_counts()
+        reputation.update_trust_level()
+        
+        print(f"📊 Updated stats for {username}:")
+        print(f"   Events hosted: {reputation.events_hosted}")
+        print(f"   Events attended: {reputation.events_attended}")
+        print(f"   Total ratings: {reputation.total_ratings}")
+        print(f"   Average rating: {reputation.average_rating}")
             
         # Build response data
         data = {
@@ -3805,3 +3810,5 @@ def update_matching_preferences(request, username):
         print(f"❌ Error updating matching preferences: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
+# Auto-matching fix deployed Wed Oct  1 12:27:33 -03 2025
+DEPLOYMENT_TEST_1759333270
