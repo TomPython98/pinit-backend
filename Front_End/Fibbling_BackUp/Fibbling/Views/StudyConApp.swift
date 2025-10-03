@@ -4,6 +4,7 @@ import Foundation
 @main
 struct PinItApp: App {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @StateObject private var accountManager:     UserAccountManager
     @StateObject private var chatManager = ChatManager()  // Global ChatManager
     @StateObject private var calendarManager: CalendarManager
@@ -27,7 +28,9 @@ struct PinItApp: App {
     
     var body: some Scene {
         WindowGroup {
-            if isLoggedIn {
+            if !hasCompletedOnboarding {
+                OnboardingView()
+            } else if isLoggedIn {
                 ContentView()
                     .environmentObject(accountManager)
                     .environmentObject(calendarManager)

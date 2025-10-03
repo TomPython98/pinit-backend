@@ -1542,12 +1542,10 @@ struct StudyMapView: View {
             
             // Force immediate UI update by replacing the entire array 
             DispatchQueue.main.async {
-                print("🔵 Replacing study events array to force UI update")
                 self.calendarManager.events = newEventsList
 
                 // If the selectedEvent is the one being modified, update it too for consistency
                 if self.selectedEvent?.id == eventID {
-                    print("🔄 Updating selectedEvent to match the updated event")
                     self.selectedEvent = updatedEvent
                 }
 
@@ -1559,11 +1557,11 @@ struct StudyMapView: View {
                 )
             }
         } else {
-            print("❌ CRITICAL ERROR: Could not find event with ID \(eventID) in studyEvents array")
+            // Could not find event with ID in studyEvents array
+            return
         }
         
         guard let url = URL(string: "\(APIConfig.primaryBaseURL)/rsvp_study_event/") else { 
-            print("❌ Invalid RSVP URL")
             return 
         }
         
@@ -1572,41 +1570,26 @@ struct StudyMapView: View {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let rsvpData = ["username": username, "event_id": eventID.uuidString]
-        print("📤 Sending RSVP data: \(rsvpData)")
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: rsvpData)
-            print("✅ Successfully serialized RSVP JSON data")
             
             // Start the task
-            print("🚀 Starting RSVP network request")
-            
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
-                print("🔄 RSVP network request completed")
                 
                 if let error = error {
-                    print("❌ RSVP network error: \(error.localizedDescription)")
-
-                    // // Force a refresh anyway - REMOVED - Rely on optimistic update / WS
-                    // DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    //     // Refresh the data from the server
-                    //     self.calendarManager.fetchEvents() // REMOVED
-                    // }
+                    // Network error occurred
                     return
                 }
                 
                 let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-                print("📊 RSVP HTTP Status: \(statusCode)")
                 
-                // Log response data for debugging
+                // Handle response data
                 if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                    print("📥 RSVP response: \(responseString)")
-                    
                     // Try to parse response to check for success
                     do {
                         if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                             let success = json["success"] as? Bool ?? false
-                            print("🔄 RSVP operation success: \(success)")
                             
                             // If the operation was successful, update UI immediately
                             if success {

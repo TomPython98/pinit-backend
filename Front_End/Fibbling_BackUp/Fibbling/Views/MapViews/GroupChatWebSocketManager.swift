@@ -23,10 +23,9 @@ class GroupChatWebSocketManager: ObservableObject {
     }
     
     func connect() {
-        // Ensure your Django Channels routing uses a URL like:
-        // ws://127.0.0.1:8000/ws/group_chat/<event_id>/
-        guard let url = URL(string: "ws://127.0.0.1:8000/ws/group_chat/\(eventID.uuidString)/") else {
-            print("❌ Invalid WebSocket URL")
+        // Use production WebSocket URL
+        let wsURL = APIConfig.serverBaseURL.replacingOccurrences(of: "https://", with: "wss://").replacingOccurrences(of: "http://", with: "ws://")
+        guard let url = URL(string: "\(wsURL)/ws/group_chat/\(eventID.uuidString)/") else {
             return
         }
         

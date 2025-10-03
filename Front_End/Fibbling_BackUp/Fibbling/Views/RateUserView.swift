@@ -61,7 +61,7 @@ struct RateUserView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section {
                     VStack(alignment: .center, spacing: 15) {
@@ -85,11 +85,13 @@ struct RateUserView: View {
                         Spacer()
                         ForEach(1...5, id: \.self) { index in
                             Image(systemName: index <= rating ? "star.fill" : "star")
-                                .foregroundColor(.yellow)
+                                .foregroundColor(Color.brandPrimary)
                                 .font(.title3)
                                 .onTapGesture {
                                     rating = index
                                 }
+                                .accessibilityLabel("Rate \(index) star\(index == 1 ? "" : "s")")
+                                .accessibilityAddTraits(index <= rating ? .isSelected : [])
                         }
                     }
                     .padding(.vertical, 5)
@@ -99,12 +101,14 @@ struct RateUserView: View {
                     TextField("What did you like or dislike?", text: $reference, axis: .vertical)
                         .lineLimit(4...6)
                         .padding(.vertical, 5)
+                        .accessibilityLabel("Reference text field")
+                        .accessibilityHint("Optional feedback about your experience")
                 }
                 
                 if let errorMessage = errorMessage {
                     Section {
                         Text(errorMessage)
-                            .foregroundColor(.red)
+                            .foregroundColor(Color.textMuted)
                             .font(.footnote)
                     }
                 }
@@ -123,6 +127,8 @@ struct RateUserView: View {
                         }
                     }
                     .disabled(isSubmitting)
+                    .accessibilityLabel("Submit rating")
+                    .accessibilityHint("Submit your \(rating) star rating for \(targetUser)")
                 }
             }
             .navigationTitle("Rate Host")

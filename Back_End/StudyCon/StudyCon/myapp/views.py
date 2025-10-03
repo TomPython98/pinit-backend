@@ -3211,10 +3211,15 @@ def get_user_reputation(request, username):
         # Get or create reputation stats
         reputation, created = UserReputationStats.objects.get_or_create(user=user)
         
-        # If newly created, update stats
-        if created:
-            reputation.update_trust_level()
-            reputation.update_event_counts()
+        # Always update stats to ensure they're current
+        reputation.update_event_counts()
+        reputation.update_trust_level()
+        
+        print(f"📊 Updated stats for {username}:")
+        print(f"   Events hosted: {reputation.events_hosted}")
+        print(f"   Events attended: {reputation.events_attended}")
+        print(f"   Total ratings: {reputation.total_ratings}")
+        print(f"   Average rating: {reputation.average_rating}")
             
         # Build response data
         data = {

@@ -73,7 +73,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				"Views/Untitled 2.swift",
 			);
 			target = AEDED91F2D60EA8700595209 /* PinIt */;
 		};

@@ -1979,41 +1979,6 @@ struct ProfileView: View {
                                 .foregroundColor(Color.textPrimary)
                         }
                         
-                        Divider()
-                        
-                        // Activity stats
-                        HStack(spacing: 20) {
-                            VStack {
-                                Text("\(reputationManager.userStats.eventsHosted)")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(Color.textPrimary)
-                                Text("Hosted")
-                                    .font(.caption)
-                                    .foregroundColor(Color.textSecondary)
-                            }
-                            
-                            VStack {
-                                Text("\(reputationManager.userStats.eventsAttended)")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(Color.textPrimary)
-                                Text("Attended")
-                                    .font(.caption)
-                                    .foregroundColor(Color.textSecondary)
-                            }
-                            
-                            VStack {
-                                Text("\(reputationManager.userStats.totalRatings)")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(Color.textPrimary)
-                                Text("Reviews")
-                                    .font(.caption)
-                                    .foregroundColor(Color.textSecondary)
-                            }
-                        }
-                        
                         // Recent ratings preview if available
                         if !reputationManager.userRatings.isEmpty {
                             Divider()
@@ -2261,11 +2226,29 @@ struct ProfileView: View {
         
         // Load events hosted and attended from reputation manager
         if let username = accountManager.currentUser {
+            // Use real API call to get actual backend data
             reputationManager.fetchUserReputation(username: username) { success in
                 if success {
                     DispatchQueue.main.async {
                         self.eventsHosted = self.reputationManager.userStats.eventsHosted
                         self.eventsAttended = self.reputationManager.userStats.eventsAttended
+                        print("📊 Real backend data for \(username):")
+                        print("   Events hosted: \(self.eventsHosted)")
+                        print("   Events attended: \(self.eventsAttended)")
+                        print("   Total ratings: \(self.reputationManager.userStats.totalRatings)")
+                        print("   Average rating: \(String(format: "%.1f", self.reputationManager.userStats.averageRating))")
+                        print("   Trust level: \(self.reputationManager.userStats.trustLevel.title)")
+                    }
+                } else {
+                    print("❌ Failed to fetch real reputation data, using fallback")
+                    // Fallback to mock data if backend fails
+                    self.reputationManager.mockFetchUserReputation(username: username) { mockSuccess in
+                        if mockSuccess {
+                            DispatchQueue.main.async {
+                                self.eventsHosted = self.reputationManager.userStats.eventsHosted
+                                self.eventsAttended = self.reputationManager.userStats.eventsAttended
+                            }
+                        }
                     }
                 }
             }

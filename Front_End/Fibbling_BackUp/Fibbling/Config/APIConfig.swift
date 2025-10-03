@@ -45,6 +45,7 @@ struct APIConfig {
         "getFriendRequests": "/get_friend_requests/",
         "acceptFriendRequest": "/accept_friend_request/",
         "getUserReputation": "/get_user_reputation/",
+        "getUserRatings": "/get_user_ratings/",
         "rateUser": "/rate_user/",
         "getPotentialMatches": "/get_potential_matches/",
         "getMatchDetails": "/get_match_details/"

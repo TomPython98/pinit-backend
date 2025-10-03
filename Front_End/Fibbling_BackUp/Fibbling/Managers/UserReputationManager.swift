@@ -19,7 +19,7 @@ class UserReputationManager: ObservableObject {
         print("🔵 Attempting to fetch reputation for: \(username)")
         
         // Try each URL in sequence
-        tryNextURL(index: 0, endpoint: "get_user_reputation", username: username) { [weak self] success, data in
+        tryNextURL(index: 0, endpoint: "getUserReputation", username: username) { [weak self] success, data in
             guard let self = self, success, let data = data else {
                 DispatchQueue.main.async {
                     self?.isLoading = false
@@ -40,7 +40,7 @@ class UserReputationManager: ObservableObject {
         print("🔵 Attempting to fetch ratings for: \(username)")
         
         // Try each URL in sequence
-        tryNextURL(index: 0, endpoint: "get_user_ratings", username: username) { [weak self] success, data in
+        tryNextURL(index: 0, endpoint: "getUserRatings", username: username) { [weak self] success, data in
             guard let self = self, success, let data = data else {
                 DispatchQueue.main.async {
                     self?.isLoading = false
@@ -84,9 +84,11 @@ class UserReputationManager: ObservableObject {
         }
         
         let baseURL = baseURLs[index]
-        print("🔵 Trying API URL: \(baseURL)/\(endpoint)/\(username)/")
+        let endpointPath = APIConfig.endpoints[endpoint] ?? endpoint
+        let fullURL = "\(baseURL)\(endpointPath)\(username)/"
+        print("🔵 Trying API URL: \(fullURL)")
         
-        guard let url = URL(string: "\(baseURL)/\(endpoint)/\(username)/") else {
+        guard let url = URL(string: fullURL) else {
             // Skip to next URL if this one can't be constructed
             tryNextURL(index: index + 1, endpoint: endpoint, username: username, completion: completion)
             return
@@ -268,17 +270,30 @@ class UserReputationManager: ObservableObject {
     // Mock implementation for testing without backend
     func mockFetchUserReputation(username: String, completion: @escaping (Bool) -> Void) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            // Mock data based on username
-            // More characters in username = higher trust level for demo purposes
-            let totalRatings = min(username.count * 5, 60)
-            let averageRating = min(Double(username.count) * 0.5, 5.0)
+            // More realistic mock data based on username
+            let baseMultiplier = username.count
+            
+            // Generate realistic stats that match trust level requirements
+            let totalRatings = min(baseMultiplier * 2, 15) // Max 15 ratings for demo
+            let averageRating = min(3.0 + Double(baseMultiplier) * 0.2, 4.8) // Range 3.0-4.8
+            
+            // Ensure trust level is appropriate for the stats
+            let eventsHosted = baseMultiplier + 2
+            let eventsAttended = baseMultiplier * 3 + 5
             
             self.userStats = UserReputationStats(
                 totalRatings: totalRatings,
                 averageRating: averageRating,
-                eventsHosted: username.count + 3,
-                eventsAttended: username.count * 2 + 5
+                eventsHosted: eventsHosted,
+                eventsAttended: eventsAttended
             )
+            
+            print("🎭 Mock reputation data for \(username):")
+            print("   Total ratings: \(totalRatings)")
+            print("   Average rating: \(String(format: "%.1f", averageRating))")
+            print("   Trust level: \(self.userStats.trustLevel.title)")
+            print("   Events hosted: \(eventsHosted)")
+            print("   Events attended: \(eventsAttended)")
             
             completion(true)
         }
