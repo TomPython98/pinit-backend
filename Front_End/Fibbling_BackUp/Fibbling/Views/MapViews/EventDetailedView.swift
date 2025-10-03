@@ -86,29 +86,28 @@ struct EventDetailView: View {
     @State private var showAlert = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
+    @State private var showShareSheet = false
 
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>, onRSVP: @escaping (UUID) -> Void) {
         self.event = event
         self._studyEvents = studyEvents
         self.onRSVP = onRSVP
         
-        // Log the initial event's tags for debugging
+        // Check initial event's tags
         if let tags = event.interestTags, !tags.isEmpty {
-            print("📋 Initial event has tags: \(tags)")
+            // Tags already available
         } else {
-            print("⚠️ Initial event has no tags")
-            
-            // Check if tags exist in UserDefaults by event ID
+            // No tags available - check UserDefaults
             let eventTagsKey = "event_tags_\(event.id.uuidString)"
             if let savedTags = UserDefaults.standard.array(forKey: eventTagsKey) as? [String], !savedTags.isEmpty {
-                print("📋 Found tags in UserDefaults by ID: \(savedTags)")
+                // Found tags in UserDefaults
             } else {
                 // Try by title as well
                 let titleKey = "event_tags_title_\(event.title.lowercased())"
                 if let savedTagsByTitle = UserDefaults.standard.array(forKey: titleKey) as? [String], !savedTagsByTitle.isEmpty {
-                    print("📋 Found tags in UserDefaults by title: \(savedTagsByTitle)")
+                    // Found tags by title
                 } else {
-                    print("❌ No tags found anywhere for this event")
+                    // No tags found anywhere
                 }
             }
         }
@@ -117,7 +116,7 @@ struct EventDetailView: View {
         if let updatedEventInArray = studyEvents.wrappedValue.first(where: { $0.id == event.id }),
            let tags = updatedEventInArray.interestTags,
            !tags.isEmpty {
-            print("🔄 Found more complete event data in studyEvents with tags: \(tags)")
+            // Found more complete event data with tags
             self._localEvent = State(initialValue: updatedEventInArray)
         } else {
             self._localEvent = State(initialValue: event)
@@ -151,7 +150,25 @@ struct EventDetailView: View {
                 contentView
             }
         }
-        .navigationBarHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.bgCard, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.title2)
+                        .foregroundColor(Color.textPrimary)
+                }
+                .accessibilityLabel("Back")
+            }
+            ToolbarItem(placement: .principal) {
+                Text(localEvent.title)
+                    .font(.headline)
+                    .foregroundColor(Color.textPrimary)
+                    .lineLimit(1)
+            }
+        }
         .sheet(isPresented: $showImagePicker) {
             EventImagePicker(selectedImages: $selectedImages)
         }
@@ -160,6 +177,9 @@ struct EventDetailView: View {
                 EventSocialFeedView(event: localEvent)
                     .environmentObject(accountManager)
             }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareEventView(event: localEvent)
         }
         .alert("Calendar Access Required", isPresented: $showCalendarError) {
             Button("Open Settings", role: .none) { openSettings() }
@@ -177,7 +197,7 @@ struct EventDetailView: View {
             // Check if this notification is for our event
             if let eventID = notification.userInfo?["eventID"] as? UUID, 
                eventID == localEvent.id {
-                print("📣 Received RSVP update notification for this event")
+                // Received RSVP update notification
                 // End loading state immediately
                 if isLoadingContent {
                     withAnimation {
@@ -197,7 +217,7 @@ struct EventDetailView: View {
     
     private var loadingView: some View {
         ProgressView("Loading...")
-            .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+            .progressViewStyle(CircularProgressViewStyle(tint: Color.brandPrimary))
             .scaleEffect(1.5)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.bgSurface)
@@ -206,7 +226,6 @@ struct EventDetailView: View {
     private var contentView: some View {
         ScrollView {
             VStack(spacing: 20) {
-                headerSection
                 eventInfoCard
                 attendeesCard
                 actionButtons
@@ -231,7 +250,7 @@ struct EventDetailView: View {
                 )
             } else if let currentUser = accountManager.currentUser {
                 // Show a list of attendees to rate
-                NavigationView {
+                NavigationStack {
                     List {
                         Section(header: Text("Select an attendee to rate")) {
                             ForEach(localEvent.attendees.filter { $0 != currentUser }, id: \.self) { attendee in
@@ -242,7 +261,7 @@ struct EventDetailView: View {
                                         Text(attendee)
                                         Spacer()
                                         Image(systemName: "chevron.right")
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(Color.textMuted)
                                     }
                                 }
                             }
@@ -302,13 +321,13 @@ struct EventDetailView: View {
     private func fetchEventTags() {
         // Check if we already have tags in the event object
         if let existingTags = localEvent.interestTags, !existingTags.isEmpty {
-            print("✅ Already have tags for event: \(existingTags)")
+            // Already have tags for this event
             return
         }
 
         // First check the original event passed to this view
         if let originalTags = event.interestTags, !originalTags.isEmpty {
-            print("✅ Using tags from original event parameter: \(originalTags)")
+            // Using tags from original event parameter
             DispatchQueue.main.async {
                 var updatedEvent = self.localEvent
                 updatedEvent.interestTags = originalTags
@@ -636,7 +655,7 @@ extension EventDetailView {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Image(systemName: "sparkles")
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color.brandPrimary)
                         Text("Auto-Matched Event")
                             .font(.headline)
                             .foregroundColor(Color.textPrimary)
@@ -645,14 +664,14 @@ extension EventDetailView {
                         
                         // Add a refresh button for debugging purposes
                         Button(action: {
-                            print("🔄 Manually refreshing tags for event: \(localEvent.id)")
                             fetchEventTags()
                         }) {
                             Image(systemName: "arrow.clockwise")
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color.brandPrimary)
                                 .font(.caption)
                         }
                         .accessibilityLabel("Refresh tags")
+                        .accessibilityHint("Refresh interest tags for this event")
                     }
                     
                     Text("This event uses interest matching to connect people with similar interests.")
@@ -690,7 +709,7 @@ extension EventDetailView {
                                             Capsule()
                                                 .stroke(Color.blue.opacity(0.25), lineWidth: 1)
                                         )
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(Color.brandPrimary)
                                         .onAppear {
                                             print("🏷️ Displaying tag: \(tag)")
                                         }
@@ -714,7 +733,7 @@ extension EventDetailView {
                             }) {
                                 Label("Refresh Tags", systemImage: "arrow.clockwise")
                                     .font(.caption)
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(Color.brandPrimary)
                             }
                             .padding(.vertical, 4)
                             
@@ -890,7 +909,7 @@ extension EventDetailView {
             VStack(spacing: 8) {
                 HStack {
                     Image(systemName: "person.2.fill")
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color.brandPrimary)
                     Text("Manage Attendance")
                         .font(.caption)
                         .fontWeight(.medium)
@@ -920,7 +939,7 @@ extension EventDetailView {
                                 .font(.caption2)
                                 .fontWeight(.medium)
                         }
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color.brandPrimary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(Color.blue.opacity(0.1))
@@ -928,10 +947,7 @@ extension EventDetailView {
                     }
                     
                     Button(action: {
-                        // TODO: Add share event functionality
-                        showAlert = true
-                        alertTitle = "Coming Soon"
-                        alertMessage = "Share event feature will be available soon!"
+                        showShareSheet = true
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "square.and.arrow.up")
@@ -1192,7 +1208,7 @@ struct EventSocialFeedView: View {
                             isShowingImagePicker = true
                         } label: {
                             Image(systemName: "photo")
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color.brandPrimary)
                                 .font(.title3)
                         }
                         .accessibilityLabel("Add Photos")
@@ -1213,7 +1229,7 @@ struct EventSocialFeedView: View {
                                 .foregroundColor(.white)
                                 .padding(.vertical, 6)
                                 .padding(.horizontal, 16)
-                                .background(isPostButtonEnabled ? Color.blue : Color.gray)
+                                .background(isPostButtonEnabled ? Color.brandPrimary : Color.textMuted)
                                 .cornerRadius(16)
                         }
                         .disabled(!isPostButtonEnabled)
@@ -1361,9 +1377,9 @@ struct EventSocialFeedView: View {
     
     private var characterCountColor: Color {
         if newPostText.count > 260 {
-            return newPostText.count > 280 ? .red : .orange
+            return newPostText.count > 280 ? Color.textMuted : Color.brandPrimary
         } else {
-            return .gray
+            return Color.textMuted
         }
     }
     
@@ -1421,7 +1437,6 @@ struct EventSocialFeedView: View {
         if let lastForbiddenEventId = UserDefaults.standard.string(forKey: "lastForbiddenEventId"),
            lastForbiddenEventId == event.id.uuidString {
             // User previously got a 403 for this event, show appropriate message instead of retrying
-            print("⛔ Skipping API call for event \(event.id) - previously received 403 Forbidden")
             self.errorMessage = "You don't have access to this event's social feed."
             return
         }
@@ -2190,7 +2205,7 @@ struct PostDetailView: View {
                         Image(systemName: "person.circle.fill")
                             .resizable()
                             .frame(width: 30, height: 30)
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color.brandPrimary)
                         
                         VStack(alignment: .trailing, spacing: 8) {
                             TextField("Add your reply...", text: $replyText, axis: .vertical)
@@ -2205,7 +2220,7 @@ struct PostDetailView: View {
                                     .foregroundColor(.white)
                                     .padding(.vertical, 6)
                                     .padding(.horizontal, 12)
-                                    .background(isReplyButtonEnabled ? Color.blue : Color.gray)
+                                    .background(isReplyButtonEnabled ? Color.brandPrimary : Color.textMuted)
                                     .cornerRadius(16)
                             }
                             .disabled(!isReplyButtonEnabled)
