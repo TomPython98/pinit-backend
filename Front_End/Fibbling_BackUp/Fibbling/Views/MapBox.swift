@@ -703,8 +703,17 @@ struct StudyMapBoxView: UIViewRepresentable {
         locationProvider.options.activityType = .automotiveNavigation
         mapView.location.override(provider: locationProvider)
         
-        // Enable user location display
-        mapView.location.options.puckType = .puck2D()
+        // Enable user location display with beautiful custom styling
+        let puck2DConfiguration = Puck2DConfiguration(
+            topImage: createCustomLocationIcon(),
+            bearingImage: createCustomBearingIcon(),
+            shadowImage: nil,
+            scale: .constant(1.2),
+            showsAccuracyRing: true,
+            accuracyRingColor: UIColor.systemBlue.withAlphaComponent(0.2),
+            accuracyRingBorderColor: UIColor.systemBlue.withAlphaComponent(0.4)
+        )
+        mapView.location.options.puckType = .puck2D(puck2DConfiguration)
         mapView.location.options.puckBearingEnabled = true
         
         mapView.mapboxMap.onCameraChanged.observe { [weak mapView] event in
@@ -803,6 +812,59 @@ struct StudyMapBoxView: UIViewRepresentable {
         var cancelables = Set<AnyCancellable>()
         var lastClusters: [Cluster] = []
         var forceRefresh: Int = 0
+    }
+    
+    // MARK: - Custom Icon Creation
+    private func createCustomLocationIcon() -> UIImage? {
+        let size = CGSize(width: 24, height: 24)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        
+        return renderer.image { context in
+            let cgContext = context.cgContext
+            
+            // Create a beautiful gradient circle
+            let colors = [UIColor.systemBlue.cgColor, UIColor.systemBlue.withAlphaComponent(0.8).cgColor]
+            let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: [0.0, 1.0])!
+            
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let radius = size.width / 2 - 2
+            
+            // Draw gradient circle
+            cgContext.addEllipse(in: CGRect(x: 2, y: 2, width: radius * 2, height: radius * 2))
+            cgContext.clip()
+            cgContext.drawRadialGradient(gradient, startCenter: center, startRadius: 0, endCenter: center, endRadius: radius, options: [])
+            
+            // Add white center dot
+            cgContext.setFillColor(UIColor.white.cgColor)
+            cgContext.addEllipse(in: CGRect(x: center.x - 4, y: center.y - 4, width: 8, height: 8))
+            cgContext.fillPath()
+        }
+    }
+    
+    private func createCustomBearingIcon() -> UIImage? {
+        let size = CGSize(width: 16, height: 16)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        
+        return renderer.image { context in
+            let cgContext = context.cgContext
+            
+            // Create a small arrow pointing north
+            cgContext.setFillColor(UIColor.white.cgColor)
+            cgContext.setStrokeColor(UIColor.systemBlue.cgColor)
+            cgContext.setLineWidth(1.5)
+            
+            let path = UIBezierPath()
+            path.move(to: CGPoint(x: size.width / 2, y: 2))
+            path.addLine(to: CGPoint(x: size.width - 2, y: size.height - 2))
+            path.addLine(to: CGPoint(x: size.width / 2, y: size.height - 4))
+            path.addLine(to: CGPoint(x: 2, y: size.height - 2))
+            path.close()
+            
+            cgContext.addPath(path.cgPath)
+            cgContext.fillPath()
+            cgContext.addPath(path.cgPath)
+            cgContext.strokePath()
+        }
     }
 }
 
@@ -1834,6 +1896,7 @@ struct EventSearchView: View {
         }
     }
 }
+
 
 
 
