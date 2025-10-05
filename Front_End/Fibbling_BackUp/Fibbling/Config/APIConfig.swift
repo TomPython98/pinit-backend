@@ -34,8 +34,8 @@ struct APIConfig {
     
     // Common endpoints
     static let endpoints = [
-        "register": "/register_user/",
-        "login": "/login_user/",
+        "register": "/register/",
+        "login": "/login/",
         "getUserProfile": "/get_user_profile/",
         "updateProfile": "/update_user_profile/",
         "getEvents": "/get_study_events/",

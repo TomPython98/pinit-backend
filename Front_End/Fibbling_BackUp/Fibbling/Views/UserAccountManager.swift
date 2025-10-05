@@ -28,13 +28,17 @@ class UserAccountManager: ObservableObject {
 
     // ✅ REGISTER USER
     func register(username: String, password: String, completion: @escaping (Bool, String) -> Void) {
-        guard let url = URL(string: "\(baseURL)/register/") else {
+        let registerURL = APIConfig.fullURL(for: "register")
+        print("🔍 Registration URL: \(registerURL)")
+        
+        guard let url = URL(string: registerURL) else {
             completion(false, "Invalid URL")
             return
         }
         
         let body: [String: String] = ["username": username, "password": password]
         let jsonData = try? JSONSerialization.data(withJSONObject: body)
+        print("📤 Registration body: \(body)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -42,17 +46,33 @@ class UserAccountManager: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         URLSession.shared.dataTask(with: request) { data, response, error in
+            print("📡 Registration response received")
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("📊 Registration status code: \(httpResponse.statusCode)")
+            }
+            
+            if let error = error {
+                print("❌ Registration error: \(error.localizedDescription)")
+            }
+            
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(false, "No response from server.")
                 }
                 return
             }
+            
+            if let dataString = String(data: data, encoding: .utf8) {
+                print("📄 Registration response data: \(dataString)")
+            }
 
             do {
                 let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                 let success = json?["success"] as? Bool ?? false
                 let message = json?["message"] as? String ?? "Unknown error."
+                
+                print("✅ Registration success: \(success), message: \(message)")
 
                 DispatchQueue.main.async {
                     if success {
@@ -60,10 +80,12 @@ class UserAccountManager: ObservableObject {
                         // Also save to UserDefaults for persistence
                         UserDefaults.standard.set(true, forKey: "isLoggedIn")
                         UserDefaults.standard.set(username, forKey: "username")
+                        print("💾 User data saved to UserDefaults")
                     }
                     completion(success, message)
                 }
             } catch {
+                print("❌ Registration JSON parsing error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(false, "Invalid response from server.")
                 }
@@ -73,7 +95,8 @@ class UserAccountManager: ObservableObject {
 
     // ✅ LOGIN USER & FETCH FRIENDS
     func login(username: String, password: String, completion: @escaping (Bool, String) -> Void) {
-        guard let url = URL(string: "\(baseURL)/login/") else {
+        let loginURL = APIConfig.fullURL(for: "login")
+        guard let url = URL(string: loginURL) else {
             completion(false, "Invalid URL")
             return
         }

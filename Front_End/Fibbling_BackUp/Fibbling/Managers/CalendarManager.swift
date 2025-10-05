@@ -291,26 +291,40 @@ class CalendarManager: ObservableObject {
                         // Check if the user is invited to this event
                         let isInvitedEvent = event.invitedFriends.contains(self.username)
                         
+                        // Check if this is a public event that anyone can join
+                        let isPublicEvent = event.isPublic ?? false
+                        
                         // For debugging
                         let isExpired = event.endTime <= Date()
                         
-                        // UPDATED: Include events where the user is attending, hosting, auto-matched, OR invited
-                        // This ensures RSVPed, created, auto-matched, and invited events are shown
-                        let include = !isExpired && (isUserEvent || isAutoMatchedEvent || isInvitedEvent)
+                        // UPDATED: Include events where the user is attending, hosting, auto-matched, invited, OR public events
+                        // This ensures RSVPed, created, auto-matched, invited, and discoverable public events are shown
+                        let include = !isExpired && (isUserEvent || isAutoMatchedEvent || isInvitedEvent || isPublicEvent)
                         
                         if include {
+                            print("✅ Including event: \(event.title)")
                             
-                            // Debug output to identify RSVPed events
+                            // Debug output to identify different event types
                             if event.attendees.contains(self.username) {
+                                print("  📍 User is attendee")
                             }
                             if event.host == self.username {
+                                print("  👑 User is host")
                             }
                             if isAutoMatchedEvent {
+                                print("  🤖 Auto-matched event")
                             }
                             if isInvitedEvent {
+                                print("  📨 Invited event")
                             }
-                        } else if isExpired {
+                            if isPublicEvent {
+                                print("  🌍 Public event")
+                            }
                         } else {
+                            print("❌ Excluding event: \(event.title)")
+                            if isExpired {
+                                print("  ⏰ Event expired")
+                            }
                         }
                         
                         return include
