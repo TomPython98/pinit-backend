@@ -36,13 +36,13 @@
 				<key>focused</key>
 				<string></string>
 				<key>leading</key>
-				<string>        .sheet(isPresented: $showEventDetailSheet, onDismiss: {
-            selectedEvent = nil
+				<string>                .safeAreaInset(edge: .top) {
+                    customTopBar
 </string>
 				<key>trailing</key>
-				<string>        }) {
-            if let event = selectedEvent {
-                EventDetailView(event: event, studyEvents: .constant([event]), onRSVP: { _ in
+				<string>                }
+            }
+        }
 </string>
 			</dict>
 			<key>type</key>

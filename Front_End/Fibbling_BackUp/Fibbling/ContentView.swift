@@ -45,6 +45,7 @@ struct ContentView: View {
     // State for next RSVP'd event
     @State private var nextRSVPEvent: StudyEvent? = nil
     @State private var isLoadingEvents = false
+    @State private var isEventDetailLoading = false
     
     // Animation state
     @State private var isAnimating = false
@@ -98,6 +99,10 @@ struct ContentView: View {
                         withAnimation {
                             isAnimating = true
                         }
+                        // Ensure events are loaded before finding next event
+                        if calendarManager.events.isEmpty && !calendarManager.isLoading && !calendarManager.username.isEmpty {
+                            calendarManager.fetchEvents()
+                        }
                         // Find next RSVP'd event from CalendarManager
                         findNextRSVPEvent()
                     }
@@ -113,12 +118,30 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showEventDetailSheet, onDismiss: {
             selectedEvent = nil
+            isEventDetailLoading = false
         }) {
             if let event = selectedEvent {
-                EventDetailView(event: event, studyEvents: .constant([event]), onRSVP: { _ in
-                    // Event update logic would go here
+                EventDetailView(event: event, studyEvents: $calendarManager.events, onRSVP: { eventId in
+                    // Handle RSVP updates
+                    if let eventIndex = calendarManager.events.firstIndex(where: { $0.id == eventId }) {
+                        // Update the event in the calendar manager
+                        calendarManager.events[eventIndex].attendees.append(accountManager.currentUser ?? "")
+                    }
                 })
                 .environmentObject(accountManager)
+                .environmentObject(calendarManager)
+            } else {
+                // Fallback view if event is nil
+                VStack {
+                    Text("Event not found")
+                        .font(.headline)
+                        .foregroundColor(.textPrimary)
+                    Button("Close") {
+                        showEventDetailSheet = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding()
             }
         }
 
@@ -343,9 +366,22 @@ struct ContentView: View {
             
             // Event Card - Now showing next RSVP'd event or fallback
             Button(action: {
+                // Prevent multiple taps while sheet is already showing
+                guard !showEventDetailSheet && !isEventDetailLoading else { return }
+                
                 if let event = nextRSVPEvent {
+                    isEventDetailLoading = true
                     selectedEvent = event
-                    showEventDetailSheet = true
+                    
+                    // Always fetch events to ensure we have the latest data
+                    if !calendarManager.isLoading && !calendarManager.username.isEmpty {
+                        calendarManager.fetchEvents()
+                    }
+                    
+                    // Show the detail view after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        showEventDetailSheet = true
+                    }
                 } else {
                     showCalendarView = true
                 }

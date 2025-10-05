@@ -118,14 +118,13 @@ struct EventDetailView: View {
             }
         }
         
-        // Check if the same event exists in studyEvents with more data
-        if let updatedEventInArray = studyEvents.wrappedValue.first(where: { $0.id == event.id }),
-           let tags = updatedEventInArray.interestTags,
-           !tags.isEmpty {
-            // Found more complete event data with tags
+        // Always use the passed event as the primary source, only use array for updates
+        self._localEvent = State(initialValue: event)
+        
+        // Try to find a more complete version in the array, but don't fail if not found
+        if let updatedEventInArray = studyEvents.wrappedValue.first(where: { $0.id == event.id }) {
+            // Found event in array, use it for any additional data
             self._localEvent = State(initialValue: updatedEventInArray)
-        } else {
-            self._localEvent = State(initialValue: event)
         }
     }
     
