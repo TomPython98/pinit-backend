@@ -54,6 +54,7 @@ data class EventResponse(
             description = description,
             invitedFriends = invitedFriends ?: emptyList(),
             attendees = attendees?.size ?: 0,
+            attendeesList = attendees ?: emptyList(), // Store actual attendees list
             isPublic = isPublic,
             host = host,
             hostIsCertified = hostIsCertified,

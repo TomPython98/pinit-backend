@@ -64,7 +64,40 @@ def login_user(request):
 
     return JsonResponse({"success": False, "message": "Invalid request method."}, status=405)
 
+# ✅ Change Password
+@csrf_exempt  # Remove in production
+def change_password(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            username = data.get("username")
+            current_password = data.get("current_password")
+            new_password = data.get("new_password")
 
+            if not username or not current_password or not new_password:
+                return JsonResponse({"success": False, "message": "Username, current password, and new password are required."}, status=400)
+
+            # Validate new password length
+            if len(new_password) < 6:
+                return JsonResponse({"success": False, "message": "New password must be at least 6 characters long."}, status=400)
+
+            # Authenticate user with current password
+            user = authenticate(username=username, password=current_password)
+            if user is None:
+                return JsonResponse({"success": False, "message": "Invalid current password."}, status=401)
+
+            # Change the password
+            user.set_password(new_password)
+            user.save()
+
+            return JsonResponse({"success": True, "message": "Password changed successfully."}, status=200)
+
+        except User.DoesNotExist:
+            return JsonResponse({"success": False, "message": "User not found."}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "message": "Invalid JSON data."}, status=400)
+
+    return JsonResponse({"success": False, "message": "Invalid request method."}, status=405)
 
 
 # ✅ Send Friend Request

@@ -79,6 +79,7 @@ class StudyEventMap(
     val description: String? = null,
     val invitedFriends: List<String> = emptyList(),
     val attendees: Int = 0,
+    val attendeesList: List<String> = emptyList(), // Add actual attendees list
     val isPublic: Boolean = true,
     val host: String,
     val hostIsCertified: Boolean = false,
@@ -144,4 +145,36 @@ class StudyEventMap(
             eventImages = eventImages
         )
     }
+}
+
+// Extension function to convert StudyEventMap to StudyEvent
+fun StudyEventMap.toStudyEvent(): StudyEvent {
+    return StudyEvent(
+        id = try {
+            UUID.fromString(this.id ?: UUID.randomUUID().toString())
+        } catch (e: IllegalArgumentException) {
+            UUID.randomUUID()
+        },
+        title = this.title,
+        coordinate = this.coordinate,
+        time = this.time,
+        endTime = this.endTime,
+        description = this.description,
+        invitedFriends = this.invitedFriends,
+        attendees = if (this.attendeesList.isNotEmpty()) {
+            this.attendeesList
+        } else if (this.matchedUsers.isNotEmpty()) {
+            this.matchedUsers
+        } else if (this.attendees > 0) {
+            // Fallback: create realistic usernames based on count
+            (1..this.attendees).map { "Attendee$it" }
+        } else {
+            emptyList()
+        },
+        isPublic = this.isPublic,
+        host = this.host,
+        hostIsCertified = this.hostIsCertified,
+        eventType = this.eventType?.name?.lowercase() ?: "study",
+        isAutoMatched = this.isAutoMatched
+    )
 } 

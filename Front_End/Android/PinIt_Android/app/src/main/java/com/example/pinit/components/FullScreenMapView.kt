@@ -34,6 +34,7 @@ import com.example.pinit.components.map.MapClusteringUtils
 import com.example.pinit.models.CoordinateConverter
 import com.example.pinit.models.EventType
 import com.example.pinit.models.StudyEventMap
+import com.example.pinit.models.toStudyEvent
 import com.example.pinit.models.UserAccountManager
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
@@ -1539,15 +1540,16 @@ fun FullScreenMapView(
                     // Pass the exact event ID to ensure correct event is loaded
                     event.id?.let { eventId ->
                         EventDetailView(
-                            eventId = eventId,
-                            initialEvent = event,
-                            accountManager = accountManager,
-                            onClose = { 
+                            event = event.toStudyEvent(),
+                            onDismiss = { 
                                 showEventDetails = false
                                 selectedEventId = null
                                 Log.d("FullScreenMapView", "Closed EventDetailView for event: ${event.id}")
                             },
-                            onRsvpComplete = viewModel.onRsvpComplete
+                            onRSVP = { eventId -> 
+                                viewModel.onRsvpComplete()
+                            },
+                            accountManager = accountManager
                         )
                     } ?: Log.e("FullScreenMapView", "Cannot show event details: Event ID is null")
                 } else {
@@ -1819,11 +1821,12 @@ private fun EventDetailDialog(
                 .clickable(enabled = false) { /* Consume clicks inside dialog */ }
         ) {
             EventDetailView(
-                eventId = eventId,
-                initialEvent = initialEvent,
-                accountManager = accountManager,
-                onClose = onDismiss,
-                onRsvpComplete = viewModel.onRsvpComplete
+                event = initialEvent.toStudyEvent(),
+                onDismiss = onDismiss,
+                onRSVP = { eventId -> 
+                    viewModel.onRsvpComplete()
+                },
+                accountManager = accountManager
             )
         }
     }

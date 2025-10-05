@@ -1534,3 +1534,89 @@ class ChatManager {
             ?.messages ?: emptyList()
     }
 }
+
+// MARK: - Additional API Response Models for Enhanced Features
+
+/**
+ * Response model for user reputation data
+ */
+data class UserReputationResponse(
+    val username: String,
+    val total_ratings: Int,
+    val average_rating: Double,
+    val events_hosted: Int,
+    val events_attended: Int,
+    val trust_level: TrustLevel
+)
+
+data class TrustLevel(
+    val level: Int,
+    val title: String
+)
+
+/**
+ * Response model for user ratings data
+ */
+data class UserRatingsResponse(
+    val username: String,
+    val ratings_received: List<UserRating>,
+    val ratings_given: List<UserRating>,
+    val total_received: Int,
+    val total_given: Int
+)
+
+data class UserRating(
+    val id: String,
+    val from_username: String,
+    val to_username: String,
+    val rating: Int,
+    val reference: String,
+    val event_id: String?,
+    val event_title: String?,
+    val created_at: String
+)
+
+/**
+ * Response model for friends list
+ */
+data class FriendsResponse(
+    val friends: List<String>
+)
+
+/**
+ * Response model for event feed/interactions
+ */
+data class EventFeedResponse(
+    val event_id: String,
+    val posts: List<EventPost>,
+    val likes: List<EventLike>,
+    val comments: List<EventComment>,
+    val shares: List<EventShare>
+)
+
+data class EventPost(
+    val id: String,
+    val username: String,
+    val text: String,
+    val images: List<String>?,
+    val created_at: String
+)
+
+data class EventLike(
+    val id: String,
+    val username: String,
+    val created_at: String
+)
+
+data class EventComment(
+    val id: String,
+    val username: String,
+    val text: String,
+    val created_at: String
+)
+
+data class EventShare(
+    val id: String,
+    val username: String,
+    val created_at: String
+)

@@ -4,6 +4,10 @@ import com.example.pinit.models.ApiEventsResponse
 import com.example.pinit.models.AuthResponse
 import com.example.pinit.models.EventResponse
 import com.example.pinit.models.UserProfileResponse
+import com.example.pinit.models.UserReputationResponse
+import com.example.pinit.models.UserRatingsResponse
+import com.example.pinit.models.FriendsResponse
+import com.example.pinit.models.EventFeedResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -149,6 +153,51 @@ interface ApiService {
      */
     @POST("advanced_auto_match/")
     suspend fun advancedAutoMatch(@Body requestBody: Map<String, Any>): Response<Map<String, Any>>
+    
+    /**
+     * Get user reputation statistics including trust level and rating average
+     */
+    @GET("get_user_reputation/{username}/")
+    suspend fun getUserReputation(@Path("username") username: String): Response<UserReputationResponse>
+    
+    /**
+     * Get detailed ratings for a user, both given and received
+     */
+    @GET("get_user_ratings/{username}/")
+    suspend fun getUserRatings(@Path("username") username: String): Response<UserRatingsResponse>
+    
+    /**
+     * Get friends list for a user
+     */
+    @GET("get_friends/{username}/")
+    suspend fun getFriends(@Path("username") username: String): Response<FriendsResponse>
+    
+    /**
+     * Get event social feed/interactions
+     */
+    @GET("events/feed/{eventId}/")
+    suspend fun getEventFeed(
+        @Path("eventId") eventId: String,
+        @Query("current_user") currentUser: String
+    ): Response<EventFeedResponse>
+    
+    /**
+     * Submit a user rating
+     */
+    @POST("submit_user_rating/")
+    suspend fun submitUserRating(@Body requestBody: Map<String, Any>): Response<Map<String, Any>>
+    
+    /**
+     * Send friend request
+     */
+    @POST("send_friend_request/")
+    suspend fun sendFriendRequest(@Body requestBody: Map<String, String>): Response<Map<String, Any>>
+    
+    /**
+     * Accept friend request
+     */
+    @POST("accept_friend_request/")
+    suspend fun acceptFriendRequest(@Body requestBody: Map<String, String>): Response<Map<String, Any>>
 
     /**
      * Get user invitations (both direct and auto-matched)
