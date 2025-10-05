@@ -12,13 +12,13 @@
 					<key>EndingColumnNumber</key>
 					<string>0</string>
 					<key>EndingLineNumber</key>
-					<string>1291</string>
+					<string>115</string>
 					<key>StartingColumnNumber</key>
 					<string>0</string>
 					<key>StartingLineNumber</key>
-					<string>1290</string>
+					<string>115</string>
 					<key>Timestamp</key>
-					<string>766502961.9818749</string>
+					<string>781205530.706207</string>
 				</dict>
 				<key>rebasable-url</key>
 				<dict>
@@ -34,16 +34,15 @@
 			<key>text-context</key>
 			<dict>
 				<key>focused</key>
-				<string>        if percentage &lt; 0.3 {
-</string>
+				<string></string>
 				<key>leading</key>
-				<string>    private var profileCompletionColor: Color {
-        let percentage = effectiveProfileCompletionPercentage
+				<string>        .sheet(isPresented: $showEventDetailSheet, onDismiss: {
+            selectedEvent = nil
 </string>
 				<key>trailing</key>
-				<string>            return .red
-        } else if percentage &lt; 0.6 {
-            return .brandWarning
+				<string>        }) {
+            if let event = selectedEvent {
+                EventDetailView(event: event, studyEvents: .constant([event]), onRSVP: { _ in
 </string>
 			</dict>
 			<key>type</key>

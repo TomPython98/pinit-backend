@@ -1,55 +1,82 @@
 import SwiftUI
 
-// MARK: - PinIt Color Theme System
+// MARK: - Professional PinIt Color Theme System
 extension Color {
-    // MARK: - Primary Brand Colors
-    static let pinItPrimary = Color(red: 0.2, green: 0.4, blue: 0.8)        // Deep Blue
-    static let pinItSecondary = Color(red: 0.9, green: 0.3, blue: 0.2)      // Coral Red
-    static let pinItAccent = Color(red: 0.1, green: 0.7, blue: 0.4)         // Emerald Green
-
-    // MARK: - Neutral Colors
-    static let pinItDark = Color(red: 0.1, green: 0.1, blue: 0.1)           // Almost Black
-    static let pinItMedium = Color(red: 0.3, green: 0.3, blue: 0.3)         // Dark Gray
-    static let pinItLight = Color(red: 0.95, green: 0.95, blue: 0.95)       // Light Gray
-    static let pinItWhite = Color.white
-
-    // MARK: - Status Colors
-    static let pinItSuccess = Color(red: 0.1, green: 0.7, blue: 0.4)        // Green
-    static let pinItWarning = Color(red: 1.0, green: 0.6, blue: 0.0)        // Orange
-    static let pinItError = Color(red: 0.9, green: 0.2, blue: 0.2)          // Red
-    static let pinItInfo = Color(red: 0.2, green: 0.5, blue: 0.9)           // Blue
-
-    // MARK: - Background Colors (Enhanced contrast)
-    static let pinItBackground = Color(red: 248/255, green: 250/255, blue: 255/255)  // Light bg surface (slightly bluer tint)
-    static let pinItCardBackground = Color.white
-    static let pinItOverlay = Color.black.opacity(0.3)
-
-    // MARK: - Text Colors (Enhanced contrast for better readability)
-    static let pinItTextPrimary = Color(red: 15/255, green: 23/255, blue: 42/255)    // Near black (darker)
-    static let pinItTextSecondary = Color(red: 71/255, green: 85/255, blue: 105/255)  // Slate 600 (darker)
-    static let pinItTextTertiary = Color(red: 100/255, green: 116/255, blue: 139/255) // Slate 500 (darker)
-    static let pinItTextInverse = Color.white
-
-    // MARK: - Event Type Colors
-    static let pinItStudy = Color(red: 0.2, green: 0.4, blue: 0.8)          // Blue
-    static let pinItParty = Color(red: 0.8, green: 0.2, blue: 0.6)          // Pink
-    static let pinItBusiness = Color(red: 0.1, green: 0.7, blue: 0.4)       // Green
-    static let pinItCultural = Color(red: 1.0, green: 0.6, blue: 0.0)       // Orange
-    static let pinItAcademic = Color(red: 0.4, green: 0.2, blue: 0.8)       // Purple
-    static let pinItNetworking = Color(red: 0.9, green: 0.3, blue: 0.2)     // Coral
-    static let pinItSocial = Color(red: 0.2, green: 0.6, blue: 0.8)         // Light Blue
-    static let pinItLanguage = Color(red: 0.0, green: 0.7, blue: 0.7)       // Teal
-    static let pinItOther = Color(red: 0.6, green: 0.6, blue: 0.6)          // Gray
-
-    // MARK: - Gradient Colors
-    static let pinItGradientStart = Color(red: 0.2, green: 0.4, blue: 0.8)
-    static let pinItGradientEnd = Color(red: 0.1, green: 0.7, blue: 0.4)
+    // MARK: - Primary Brand Colors (Refined Professional Palette)
+    static let pinItPrimary = Color(red: 79/255, green: 70/255, blue: 229/255)       // Indigo primary - professional
+    static let pinItSecondary = Color(red: 59/255, green: 130/255, blue: 246/255)     // Royal blue - trustable
+    static let pinItAccent = Color(red: 16/255, green: 185/255, blue: 129/255)        // Emerald success - modern
     
-    // MARK: - Legacy Support (for backward compatibility)
-    // Note: socialPrimary, socialAccent, socialDark, socialMedium, socialLight are already defined in ContentView.swift
+    // MARK: - Background Colors (Enhanced Professional Design)
+    static let pinItBackground = Color(red: 248/255, green: 250/255, blue: 255/255)  // Light bg surface (clean)
+    static let pinItCardBackground = Color.white                                        // Pure white cards
+    static let pinItSecondaryBackground = Color(red: 242/255, green: 245/255, blue: 250/255)  // Subtle secondary
+    static let pinItAccentBackground = Color(red: 240/255, green: 242/255, blue: 255/255)     // Light accent bg
+    
+    // MARK: - Text Colors (Optimal Contrast for Readability)
+    static let pinItTextPrimary = Color(red: 15/255, green: 23/255, blue: 42/255)     // Near black - excellent readability
+    static let pinItTextSecondary = Color(red: 71/255, green: 85/255, blue: 105/255)    // Slate 600 - readable
+    static let pinItTextTertiary = Color(red: 100/255, green: 116/255, blue: 139/255)  // Slate 500 - supportive
+    static let pinItTextInverse = Color.white                                          // White on dark
+    
+    // MARK: - Status Colors (Professional Vibrancy)
+    static let pinItSuccess = Color(red: 16/255, green: 185/255, blue: 129/255)        // Emerald
+    static let pinItWarning = Color(red: 245/255, green: 158/255, blue: 11/255)        // Amber
+    static let pinItError = Color(red: 239/255, green: 68/255, blue: 68/255)           // Red
+    static let pinItInfo = Color(red: 59/255, green: 130/255, blue: 246/255)           // Blue
+    
+    // MARK: - Special Colors for Dark Mode Support
+    static let pinItDark = Color(red: 15/255, green: 23/255, blue: 42/255)             // Dark mode bg
+    static let pinItDarkSecondary = Color(red: 30/255, green: 41/255, blue: 59/255)   // Dark mode secondary
+    
+    // MARK: - Additional UI Colors
+    static let pinItMedium = Color(red: 30/255, green: 41/255, blue: 59/255)           // Medium bg for dark mode
+    static let pinItLight = Color(red: 248/255, green: 250/255, blue: 255/255)         // Light bg for cards
+
+    // MARK: - Event Type Colors (Professional Category System)
+    static let pinItStudy = Color(red: 59/255, green: 130/255, blue: 246/255)          // Blue - Study
+    static let pinItParty = Color(red: 236/255, green: 72/255, blue: 153/255)          // Pink - Party
+    static let pinItBusiness = Color(red: 16/255, green: 185/255, blue: 129/255)        // Green - Business
+    static let pinItCultural = Color(red: 245/255, green: 158/255, blue: 11/255)        // Orange - Cultural
+    static let pinItAcademic = Color(red: 124/255, green: 58/255, blue: 237/255)       // Purple - Academic
+    static let pinItNetworking = Color(red: 251/255, green: 146/255, blue: 60/255)      // Orange - Networking
+    static let pinItSocial = Color(red: 34/255, green: 197/255, blue: 94/255)           // Green - Social
+    static let pinItLanguage = Color(red: 20/255, green: 184/255, blue: 166/255)       // Teal - Language
+    static let pinItOther = Color(red: 156/255, green: 163/255, blue: 175/255)         // Gray - Other
+
+    // MARK: - UI Element Colors (Polish & Shadows)
+    static let pinItDivider = Color(red: 226/255, green: 232/255, blue: 240/255)       // Subtle dividers
+    static let pinItCardShadow = Color(red: 15/255, green: 23/255, blue: 42/255).opacity(0.08)  // Elegful shadows
+    static let pinItCardStroke = Color(red: 226/255, green: 232/255, blue: 240/255)    // Clean borders
+    static let pinItOverlay = Color.black.opacity(0.3)                                 // Modal overlays
+    
+    // MARK: - Legacy Support (Modernized Alias Colors)
+    static let bgSurface = pinItBackground
+    static let bgCard = pinItCardBackground
+    static let bgSecondary = pinItSecondaryBackground
+    static let bgAccent = pinItAccentBackground
+    static let textPrimary = pinItTextPrimary
+    static let textSecondary = pinItTextSecondary
+    static let textLight = pinItTextInverse
+    static let textMuted = Color(red: 148/255, green: 163/255, blue: 184/255)
+    static let divider = pinItDivider
+    static let cardShadow = pinItCardShadow
+    static let cardStroke = pinItCardStroke
+    static let brandPrimary = pinItPrimary
+    static let brandSecondary = pinItSecondary
+    static let brandAccent = Color(red: 236/255, green: 72/255, blue: 153/255)
+    static let brandSuccess = pinItSuccess
+    static let brandWarning = pinItWarning
+    
+    // Legacy social colors - now consistent
+    static let socialPrimary = pinItSecondary
+    static let socialMedium = Color(red: 59/255, green: 130/255, blue: 246/255)
+    static let socialAccent = Color(red: 129/255, green: 176/255, blue: 250/255)
+    static let socialDark = pinItTextPrimary
+    static let socialLight = pinItAccentBackground
 }
 
-// MARK: - PinIt Theme Manager
+// MARK: - Enhanced PinIt Theme Manager
 class PinItTheme: ObservableObject {
     @Published var isDarkMode: Bool = false
     @Published var selectedAccentColor: PinItAccentColor = .blue
@@ -65,8 +92,17 @@ class PinItTheme: ObservableObject {
             switch self {
             case .blue: return .pinItPrimary
             case .green: return .pinItAccent
-            case .coral: return .pinItSecondary
-            case .purple: return .pinItAcademic
+            case .coral: return .brandAccent
+            case .purple: return Color(red: 124/255, green: 58/255, blue: 237/255)
+            }
+        }
+        
+        var displayName: String {
+            switch self {
+            case .blue: return "Professional Blue"
+            case .green: return "Success Green"
+            case .coral: return "Warm Coral"
+            case .purple: return "Elegant Purple"
             }
         }
     }
@@ -83,6 +119,14 @@ class PinItTheme: ObservableObject {
             case .large: return 1.1
             }
         }
+        
+        var displayName: String {
+            switch self {
+            case .small: return "Compact"
+            case .medium: return "Standard"
+            case .large: return "Large"
+            }
+        }
     }
 
     var primaryColor: Color {
@@ -94,7 +138,7 @@ class PinItTheme: ObservableObject {
     }
 
     var cardBackgroundColor: Color {
-        isDarkMode ? .pinItMedium : .pinItCardBackground
+        isDarkMode ? .pinItDarkSecondary : .pinItCardBackground
     }
 
     var textPrimaryColor: Color {
@@ -103,6 +147,15 @@ class PinItTheme: ObservableObject {
 
     var textSecondaryColor: Color {
         isDarkMode ? .pinItTextTertiary : .pinItTextSecondary
+    }
+    
+    // Additional computed properties for consistency
+    var elevatedBackgroundColor: Color {
+        isDarkMode ? .pinItDarkSecondary : .pinItCardBackground
+    }
+    
+    var dividerColor: Color {
+        isDarkMode ? .pinItTextTertiary : .pinItDivider
     }
 }
 

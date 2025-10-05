@@ -81,7 +81,8 @@ struct AccountView: View {
                                 accountManager.logout { success, _ in
                                     if success {
                                         DispatchQueue.main.async {
-                                            UserDefaults.standard.set(false, forKey: "isLoggedIn")
+                                            // The accountManager.logout already sets isLoggedIn to false
+                                            // No need to set it again here
                                         }
                                     }
                                 }

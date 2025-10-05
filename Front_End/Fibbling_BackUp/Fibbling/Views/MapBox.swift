@@ -1162,7 +1162,7 @@ struct StudyMapView: View {
             }
             .sheet(isPresented: $showEventCreationSheet) {
                 EventCreationView(
-                    coordinate: newEventCoordinate ?? region.center,
+                    coordinate: newEventCoordinate ?? CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816), // Default to Buenos Aires
                     onSave: { newEvent in
                         createStudyEvent(newEvent)
                         // Do NOT add to local calendar here! Only add after backend confirms creation.
@@ -1375,7 +1375,7 @@ struct StudyMapView: View {
     var addEventButton: some View {
         Button(action: {
             withAnimation(.spring()) {
-                newEventCoordinate = region.center
+                newEventCoordinate = CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816) // Default to Buenos Aires
                 showEventCreationSheet = true
             }
         }) {
@@ -1669,18 +1669,8 @@ extension StudyMapView {
                 let eventsResponse = try JSONDecoder().decode(StudyEventsResponse.self, from: data)
                 DispatchQueue.main.async {
                     let validEvents = eventsResponse.events.filter { $0.endTime > Date() }
-                    validEvents.forEach { event in
-                    }
                     self.calendarManager.events.removeAll()
                     self.calendarManager.events = validEvents
-                    let currentCenter = self.region.center
-                    self.region.center = CLLocationCoordinate2D(
-                        latitude: currentCenter.latitude + 0.00001,
-                        longitude: currentCenter.longitude
-                    )
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        self.region.center = currentCenter
-                    }
                     self.filteredEvents.forEach { event in
                     }
                 }

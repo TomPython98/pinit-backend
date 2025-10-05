@@ -41,9 +41,17 @@ struct MatchingPreferencesView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Clean background
-                Color.pinItBackground
+                // Professional background like ContentView
+                Color.bgSurface
                     .ignoresSafeArea()
+                
+                // Elegant background gradient
+                LinearGradient(
+                    colors: [Color.gradientStart.opacity(0.05), Color.gradientEnd.opacity(0.02)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 24) {

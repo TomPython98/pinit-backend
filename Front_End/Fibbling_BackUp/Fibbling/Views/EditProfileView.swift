@@ -30,13 +30,9 @@ struct EditProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background with subtle gradient
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.blue.opacity(0.1), Color.blue.opacity(0.05)]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Professional clean background
+                Color.bgSurface
+                    .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 24) {
@@ -101,12 +97,13 @@ struct EditProfileView: View {
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.bgSecondary)
+                        .fill(Color.bgCard)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.cardStroke, lineWidth: 1)
                 )
+                .foregroundColor(Color.textPrimary)
         }
     }
     
@@ -261,7 +258,16 @@ struct EditProfileView: View {
             }
             
             TextField(title, text: text)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.bgCard)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.cardStroke, lineWidth: 1)
+                )
+                .foregroundColor(Color.textPrimary)
         }
     }
     

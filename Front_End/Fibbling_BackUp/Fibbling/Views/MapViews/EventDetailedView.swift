@@ -92,6 +92,7 @@ struct EventDetailView: View {
     @State private var showUserProfileSheet = false
     @State private var selectedUserProfile: String? = nil
     @State private var showEditSheet = false
+    @State private var showEventReportSheet = false
 
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>, onRSVP: @escaping (UUID) -> Void) {
         self.event = event
@@ -201,6 +202,12 @@ struct EventDetailView: View {
             EventEditView(event: localEvent, studyEvents: $studyEvents)
                 .environmentObject(accountManager)
                 .environmentObject(calendarManager)
+        }
+        .sheet(isPresented: $showEventReportSheet) {
+            ReportContentView(
+                contentType: .event,
+                contentId: localEvent.id.uuidString
+            )
         }
         .sheet(isPresented: $showSocialFeedSheet) {
             SocialFeedShareView(event: localEvent)
@@ -1452,6 +1459,11 @@ extension EventDetailView {
             if isHosting && !isEventCompleted {
                         editEventButton
                     }
+                    
+                    // Report Button (if not hosting)
+                    if !isHosting {
+                        reportEventButton
+                    }
                 }
                 
                 // Rating Button (if event completed)
@@ -1550,6 +1562,28 @@ extension EventDetailView {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.brandPrimary)
                     .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+            )
+        }
+    }
+    
+    private var reportEventButton: some View {
+        Button(action: { showEventReportSheet = true }) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 16))
+                    .foregroundColor(.textLight)
+                
+                Text("Report")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.textLight)
+                
+                Spacer()
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.brandWarning)
+                    .shadow(color: Color.brandWarning.opacity(0.25), radius: 4, x: 0, y: 2)
             )
         }
     }
@@ -3406,6 +3440,7 @@ struct UserProfileView: View {
     @State private var alertMessage = ""
     @State private var showImagePicker = false
     @State private var showSocialFeedSheet = false
+    @State private var showReportSheet = false
     
     // Backend URL
     private let baseURL = APIConfig.primaryBaseURL
@@ -3505,6 +3540,12 @@ struct UserProfileView: View {
                             .environmentObject(accountManager)
                             .environmentObject(ChatManager())
                         }
+                    }
+                    .sheet(isPresented: $showReportSheet) {
+                        ReportContentView(
+                            contentType: .user,
+                            contentId: username
+                        )
                     }
         }
     }
@@ -4244,9 +4285,8 @@ struct UserProfileView: View {
                             Text("Add Friend")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundColor(.brandSecondary)
-                            
-                            Spacer()
                         }
+                        .frame(maxWidth: .infinity)
                         .padding(16)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
@@ -4254,6 +4294,30 @@ struct UserProfileView: View {
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
                                         .stroke(Color.brandSecondary.opacity(0.3), lineWidth: 1)
+                                )
+                        )
+                    }
+                    
+                    Button(action: {
+                        showReportSheet = true
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 16))
+                                .foregroundColor(.brandWarning)
+                            
+                            Text("Report")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.brandWarning)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.brandWarning.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.brandWarning.opacity(0.3), lineWidth: 1)
                                 )
                         )
                     }

@@ -16,84 +16,103 @@ struct LoginView: View {
     
     var body: some View {
         ZStack {
-            // Enhanced background gradient
+            // Clean professional background like ContentView
+            Color.bgSurface
+            .ignoresSafeArea()
+            
+            // Elegant background gradient like ContentView
             LinearGradient(
-                gradient: Gradient(colors: [.socialLight, .socialAccent, .socialPrimary]),
+                colors: [Color.gradientStart.opacity(0.1), Color.gradientEnd.opacity(0.05)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
             
-            // Animated background shapes
-            GeometryReader { geometry in
-                Circle()
-                    .fill(Color.white.opacity(0.1))
-                    .frame(width: 200, height: 200)
-                    .blur(radius: 20)
-                    .offset(x: geometry.size.width * 0.6, y: geometry.size.height * 0.4)
-            }
-            
             ScrollView {
                 VStack(spacing: 30) {
-                    // App Logo & Title
+                    // App Logo & Title with professional styling
                     VStack(spacing: 15) {
-                        Image(systemName: "lightbulb.circle.fill")
+                        Image(systemName: "mappin.circle.fill")
                             .font(.system(size: 80))
-                            .foregroundColor(.white)
-                            .shadow(color: .black.opacity(0.3), radius: 4)
+                            .foregroundColor(.brandPrimary)
+                            .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
                         
-                        Text("Welcome to UniVerse")
+                        Text("PinIt")
                             .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .shadow(color: .black.opacity(0.3), radius: 4)
+                            .foregroundColor(.textPrimary)
+                            .tracking(0.2)
                         
                         Text(isRegistering ? "Create your account" : "Sign in to continue")
                             .font(.headline)
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundColor(.textSecondary)
                     }
                     .padding(.top, 40)
                     
-                    // Login/Register Card
+                    // Login/Register Card with Professional Styling
                     VStack(spacing: 20) {
                         if isRegistering {
-                            TextField("Email", text: $email)
-                                .textFieldStyle(.roundedBorder)
-                                .textContentType(.emailAddress)
-                                .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
+                            customTextField(title: "Email", text: $email, icon: "envelope", keyboardType: .emailAddress)
                         }
                         
-                        TextField("Username", text: $username)
-                            .textFieldStyle(.roundedBorder)
-                            .textContentType(.username)
-                            .autocapitalization(.none)
+                        customTextField(title: "Username", text: $username, icon: "person")
                         
-                        ZStack(alignment: .trailing) {
-                            if showPassword {
-                                TextField("Password", text: $password)
-                                    .textFieldStyle(.roundedBorder)
-                                    .textContentType(.password)
-                            } else {
-                                SecureField("Password", text: $password)
-                                    .textFieldStyle(.roundedBorder)
-                                    .textContentType(.password)
+                        // Inline Password Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "lock")
+                                    .foregroundColor(.brandPrimary)
+                                Text("Password")
+                                    .font(.headline)
+                                    .foregroundColor(.textPrimary)
                             }
                             
-                            Button(action: { showPassword.toggle() }) {
-                                Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                    .foregroundColor(.gray)
+                            ZStack(alignment: .trailing) {
+                                if showPassword {
+                                    TextField("", text: $password)
+                                        .padding(12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.bgCard)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(Color.cardStroke, lineWidth: 1)
+                                        )
+                                        .foregroundColor(Color.textPrimary)
+                                } else {
+                                    SecureField("", text: $password)
+                                        .padding(12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.bgCard)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(Color.cardStroke, lineWidth: 1)
+                                        )
+                                        .foregroundColor(Color.textPrimary)
+                                }
+                                
+                                Button(action: { showPassword.toggle() }) {
+                                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                                        .foregroundColor(.textSecondary)
+                                }
+                                .padding(.trailing, 12)
                             }
-                            .padding(.trailing, 8)
                         }
                         
                         if isRegistering {
-                            SecureField("Confirm Password", text: $confirmPassword)
-                                .textFieldStyle(.roundedBorder)
-                                .textContentType(.password)
+                            customTextField(title: "Confirm Password", text: $confirmPassword, icon: "lock", isSecure: true)
                             
-                            Toggle("I agree to Terms & Privacy Policy", isOn: $agreedToTerms)
-                                .font(.footnote)
-                                .tint(.socialPrimary)
+                            HStack {
+                                Toggle("", isOn: $agreedToTerms)
+                                    .toggleStyle(SwitchToggleStyle(tint: .brandPrimary))
+                                
+                                Text("I agree to Terms & Privacy Policy")
+                                    .font(.footnote)
+                                    .foregroundColor(.textSecondary)
+                                    .multilineTextAlignment(.leading)
+                            }
                         }
                         
                         Button(action: {
@@ -127,19 +146,31 @@ struct LoginView: View {
                                 }
                             }
                         }) {
-                            Text(isRegistering ? "Create Account" : "Sign In")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.socialPrimary)
-                                .cornerRadius(10)
+                            HStack {
+                                Image(systemName: isRegistering ? "person.badge.plus" : "arrow.right.circle.fill")
+                                    .font(.headline)
+                                Text(isRegistering ? "Create Account" : "Sign In")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                LinearGradient(
+                                    colors: [.brandPrimary, .brandSecondary],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
                         }
                         
                         Button(action: { isRegistering.toggle() }) {
                             Text(isRegistering ? "Already have an account? Sign In" : "Don't have an account? Register")
                                 .font(.footnote)
-                                .foregroundColor(.socialDark)
+                                .foregroundColor(.textSecondary)
                         }
                         
                         if !isRegistering {
@@ -147,14 +178,14 @@ struct LoginView: View {
                                 // Handle forgot password
                             }
                             .font(.footnote)
-                            .foregroundColor(.socialDark)
+                            .foregroundColor(.textSecondary)
                         }
                     }
                     .padding(25)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.white.opacity(0.95))
-                            .shadow(color: Color.black.opacity(0.15), radius: 10)
+                            .fill(Color.bgCard)
+                            .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
                     )
                     .padding(.horizontal, 20)
                     
@@ -172,4 +203,46 @@ struct LoginView: View {
 #Preview {
     LoginView()
         .environmentObject(UserAccountManager())
-}
+    }
+    
+    // MARK: - Custom Form Fields
+    private func customTextField(title: String, text: Binding<String>, icon: String, keyboardType: UIKeyboardType = .default, isSecure: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(.brandPrimary)
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.textPrimary)
+            }
+            
+            if isSecure {
+                SecureField("", text: text)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.bgCard)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.cardStroke, lineWidth: 1)
+                    )
+                    .foregroundColor(Color.textPrimary)
+            } else {
+                TextField("", text: text)
+                    .keyboardType(keyboardType)
+                    .autocapitalization(.none)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.bgCard)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.cardStroke, lineWidth: 1)
+                    )
+                    .foregroundColor(Color.textPrimary)
+            }
+        }
+    }
+    

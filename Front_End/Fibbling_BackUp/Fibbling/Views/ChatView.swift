@@ -20,8 +20,8 @@ struct ChatView: View {
 
     var body: some View {
         ZStack {
-            // Background color
-            Color.gray.opacity(0.1)
+            // Professional background like ContentView
+            Color.bgSurface
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -59,11 +59,15 @@ struct ChatView: View {
         HStack(spacing: 16) {
             // Back button
             Button(action: { dismiss() }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(8)
-                    .background(Circle().fill(Color.gray.opacity(0.8))) // Use gray instead of black
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.textPrimary)
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(Color.bgCard)
+                                    .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+                            )
             }
             
             // Friend avatar
@@ -96,11 +100,12 @@ struct ChatView: View {
                     .foregroundColor(.gray) // Use gray instead of black
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
         .background(
-            Color.white // Use standard SwiftUI colors instead of system colors
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+            Rectangle()
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
         )
     }
     
@@ -173,7 +178,11 @@ struct ChatView: View {
                         .padding(.vertical, 8)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(Color.white) // Use SwiftUI native color
+                                .fill(Color.bgCard)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.cardStroke, lineWidth: 1)
+                        )
                         )
                         .focused($isInputFocused)
                 }
@@ -189,7 +198,7 @@ struct ChatView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.white) // Use SwiftUI native color
+            .background(Color.bgCard)
         }
     }
 
@@ -233,9 +242,9 @@ struct ChatView: View {
                         .padding(.vertical, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(isFromCurrentUser ? .blue : Color.white) // Use SwiftUI native color
+                                .fill(isFromCurrentUser ? Color.brandPrimary : Color.bgCard)
                         )
-                        .foregroundColor(isFromCurrentUser ? .white : .primary)
+                        .foregroundColor(isFromCurrentUser ? .white : Color.textPrimary)
                     
                     Text(formattedTime)
                         .font(.system(size: 11))

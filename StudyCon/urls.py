@@ -23,6 +23,7 @@ urlpatterns = [
     # StudyEvent endpoints
     path("api/create_study_event/", views.create_study_event, name="create_study_event"),
     path("api/get_study_events/<str:username>/", views.get_study_events, name="get_study_events"),
+    path("api/get_user_recent_activity/<str:username>/", views.get_user_recent_activity, name="get_user_recent_activity"),
     path("api/rsvp_study_event/", views.rsvp_study_event, name="rsvp_study_event"),
     path("api/delete_study_event/", views.delete_study_event, name="delete_study_event"),
     

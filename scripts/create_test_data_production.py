@@ -208,8 +208,8 @@ def create_friend_connections(users):
         for friend in selected_friends:
             # Send friend request
             request_data = {
-                "sender_username": user['username'],
-                "receiver_username": friend['username']
+                "from_user": user['username'],
+                "to_user": friend['username']
             }
             
             result = make_api_call("send_friend_request/", 'POST', request_data)
@@ -218,8 +218,8 @@ def create_friend_connections(users):
                 # Randomly accept some requests
                 if random.choice([True, False]):
                     accept_data = {
-                        "sender_username": friend['username'],
-                        "receiver_username": user['username']
+                        "from_user": friend['username'],
+                        "to_user": user['username']
                     }
                     
                     accept_result = make_api_call("accept_friend_request/", 'POST', accept_data)

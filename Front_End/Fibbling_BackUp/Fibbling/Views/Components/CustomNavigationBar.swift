@@ -16,9 +16,9 @@ struct CustomNavigationBar: View {
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(Color.textPrimary)
                         .padding(8)
-                        .background(Color.white)
+                        .background(Color.bgCard)
                         .cornerRadius(8)
-                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                        .shadow(color: Color.cardShadow, radius: 2, x: 0, y: 1)
                 }
             }
             
@@ -37,8 +37,8 @@ struct CustomNavigationBar: View {
         .padding(.vertical, 12)
         .background(
             Rectangle()
-                .fill(Color.white.opacity(0.9))
-                .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 1)
+                .fill(Color.bgCard.opacity(0.95))
+                .shadow(color: Color.cardShadow, radius: 3, x: 0, y: 1)
                 .edgesIgnoringSafeArea(.top)
         )
     }

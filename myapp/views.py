@@ -831,6 +831,77 @@ def get_study_events(request, username):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@csrf_exempt
+def get_user_recent_activity(request, username):
+    """
+    Returns events that the user has actually participated in (hosted, attended, or was invited to)
+    This is specifically for user profile "Recent Activity" section
+    """
+    try:
+        # Get the user
+        user = User.objects.get(username=username)
+        
+        # Get current time to exclude past events
+        now = timezone.now()
+        
+        # Get events where the user has actually participated:
+        # 1. Events hosted by user
+        # 2. Events where user is an attendee
+        # 3. Events where user was invited (regardless of attendance)
+        
+        from django.db.models import Q
+        
+        events = StudyEvent.objects.select_related('host', 'host__userprofile').prefetch_related(
+            'invited_friends', 'attendees', 'invitation_records'
+        ).filter(
+            # Include events that match at least one of these criteria
+            Q(host=user) |                                         # User's own events
+            Q(attendees=user) |                                    # Events user attended
+            Q(invited_friends=user)                                # Events user was invited to
+        ).distinct()
+        
+        # Format the events for response
+        event_data = []
+        for event in events:
+            # Determine user's role in this event
+            user_role = "host" if event.host == user else "attendee" if user in event.attendees.all() else "invited"
+            
+            # Build the event data
+            event_info = {
+                "id": str(event.id),
+                "title": event.title,
+                "description": event.description or "",
+                "latitude": event.latitude,
+                "longitude": event.longitude,
+                "time": event.time.isoformat(),
+                "end_time": event.end_time.isoformat(),
+                "host": event.host.username,
+                "hostIsCertified": event.host.userprofile.is_certified,
+                "isPublic": event.is_public,
+                "event_type": (event.event_type or "other").lower(),
+                "invitedFriends": list(event.invited_friends.values_list("username", flat=True)),
+                "attendees": list(event.attendees.values_list("username", flat=True)),
+                "max_participants": event.max_participants,
+                "auto_matching_enabled": event.auto_matching_enabled,
+                "user_role": user_role,
+                "interest_tags": event.get_interest_tags() if hasattr(event, 'get_interest_tags') else []
+            }
+            
+            event_data.append(event_info)
+        
+        # Sort events by time (most recent first)
+        event_data.sort(key=lambda x: x['time'], reverse=True)
+        
+        # Limit to last 10 events for recent activity
+        event_data = event_data[:10]
+        
+        return JsonResponse({"events": event_data}, safe=False)
+        
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 def _should_include_event(event, user, username):
     """Helper function to determine if an event should be included"""
     # Check if this is an auto-matched event for this user

@@ -43,8 +43,10 @@ struct CalendarPopup: View {
     }
 
     func studyPlan(for date: Date) -> String {
-        // Return empty string or remove this feature entirely
-        // Hardcoded study plans are not professional for App Store
-        return ""
+        // Dynamic study plan based on user's events
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        let dateString = formatter.string(from: date)
+        return "Check your events for \(dateString)"
     }
 }

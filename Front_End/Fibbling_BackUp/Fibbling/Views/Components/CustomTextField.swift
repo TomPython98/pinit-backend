@@ -10,7 +10,7 @@ struct CustomTextField: View {
         HStack(spacing: 12) {
             if let icon = icon {
                 Image(systemName: icon)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.brandPrimary)
                     .frame(width: 22)
             }
             
@@ -21,12 +21,16 @@ struct CustomTextField: View {
             }
         }
         .padding(16)
-        .background(Color.white)
-        .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.cardStroke, lineWidth: 1)
+        )
+        .foregroundColor(Color.textPrimary)
     }
 }
 
@@ -46,5 +50,5 @@ struct CustomTextField: View {
         )
     }
     .padding()
-    .background(Color.gray.opacity(0.1))
+    .background(Color.bgSurface)
 } 

@@ -6,6 +6,7 @@ struct GroupChatView: View {
     
     @State private var messageText = ""
     @State private var isSending = false
+    @Environment(\.dismiss) private var dismiss
     
     let eventID: UUID
     let currentUser: String
@@ -23,20 +24,28 @@ struct GroupChatView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
+                // Professional background like ContentView
+                Color.bgSurface
+                    .ignoresSafeArea()
+                
+                // Elegant background gradient
                 LinearGradient(
-                    gradient: Gradient(colors: [.socialLight, .socialAccent]),
-                    startPoint: .top,
-                    endPoint: .bottom
+                    colors: [Color.gradientStart.opacity(0.05), Color.gradientEnd.opacity(0.02)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
                 
-                VStack(spacing: 20) {
-                    headerView
+                VStack(spacing: 0) {
+                    // Professional header with status bar
+                    professionalHeaderView
+                    
+                    // Messages area with proper styling
                     messagesList
+                    
+                    // Professional input area
                     messageInput
                 }
-                .padding(.bottom, 10)
             }
             .navigationBarHidden(true)
             .onAppear {
@@ -48,22 +57,64 @@ struct GroupChatView: View {
         }
     }
     
-    // MARK: - Header
-    private var headerView: some View {
-        // Use the actual event title here
-        Text("Group Chat: \(eventTitle)")
-            .font(.system(size: 26, weight: .bold, design: .rounded))
-            .foregroundColor(.white)
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(Color.socialDark)
-            .cornerRadius(25)
-            .overlay(
-                RoundedRectangle(cornerRadius: 25)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 2)
+    // MARK: - Professional Header
+    private var professionalHeaderView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                // Back button with professional styling
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.textPrimary)
+                        .frame(width: 36, height: 36)
+                        .background(
+                            Circle()
+                                .fill(Color.bgCard)
+                                .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+                        )
+                }
+                
+                Spacer()
+                
+                // Professional title section
+                VStack(spacing: 2) {
+                    Text("Group Chat")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.textPrimary)
+                    
+                    Text(eventTitle)
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                // Chat info button
+                Button(action: {}) {
+                    Image(systemName: "info.circle")
+                        .font(.title3)
+                        .foregroundColor(.textSecondary)
+                        .frame(width: 36, height: 36)
+                        .background(
+                            Circle()
+                                .fill(Color.bgCard)
+                                .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+                        )
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(
+                Rectangle()
+                    .fill(Color.bgCard)
+                    .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
             )
-            .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 5)
-            .padding(.horizontal)
+        }
     }
     
     // MARK: - Messages List
@@ -81,7 +132,7 @@ struct GroupChatView: View {
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
                                 .foregroundColor(.white)
-                                .background(Color.socialPrimary)
+                                .background(Color.brandPrimary)
                                 .cornerRadius(12)
                         }
                     } else {
@@ -92,8 +143,8 @@ struct GroupChatView: View {
                             Text(msg.text)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
-                                .foregroundColor(.black)
-                                .background(Color.white.opacity(0.85))
+                                .foregroundColor(Color.textPrimary)
+                                .background(Color.bgCard)
                                 .cornerRadius(12)
                         }
                         Spacer(minLength: 50)
@@ -107,30 +158,51 @@ struct GroupChatView: View {
         .padding(.horizontal)
     }
     
-    // MARK: - Message Input
+    // MARK: - Professional Message Input
     private var messageInput: some View {
-        HStack {
-            TextField("Type a message...", text: $messageText)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-            
-            Button {
-                sendMessage()
-            } label: {
-                Text("Send")
-                    .padding()
-                    .background(isSending ? Color.gray : Color.socialPrimary)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
+        VStack(spacing: 0) {
+            // Professional input area
+            HStack(spacing: 12) {
+                // Message input field
+                HStack {
+                    TextField("Type a message...", text: $messageText)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.bgCard)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(Color.cardStroke, lineWidth: 1)
+                                )
+                        )
+                        .foregroundColor(Color.textPrimary)
+                }
+                
+                // Send button with professional styling
+                Button(action: sendMessage) {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(isSending ? Color.textSecondary : Color.brandPrimary)
+                                .shadow(color: Color.cardShadow, radius: 6, x: 0, y: 3)
+                        )
+                }
+                .disabled(isSending || messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .scaleEffect(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.9 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: messageText.isEmpty)
             }
-            .disabled(isSending)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(
+                Rectangle()
+                    .fill(Color.bgCard)
+                    .shadow(color: Color.cardShadow, radius: 12, x: 0, y: -6)
+            )
         }
-        .padding()
-        .background(
-            Color.white.opacity(0.85)
-                .cornerRadius(15)
-                .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
-                .padding(.horizontal)
-        )
     }
     
     private func sendMessage() {

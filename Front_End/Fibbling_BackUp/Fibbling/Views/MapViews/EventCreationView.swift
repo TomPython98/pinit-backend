@@ -1,8 +1,9 @@
 import SwiftUI
 import MapKit
 import PhotosUI
+import CoreLocation
 
-// MARK: - EventCreationView
+// MARK: - Redesigned EventCreationView
 struct EventCreationView: View {
     @EnvironmentObject var accountManager: UserAccountManager
     @EnvironmentObject var calendarManager: CalendarManager
@@ -11,24 +12,26 @@ struct EventCreationView: View {
     // MARK: - Event State
     @State private var eventTitle = ""
     @State private var eventDescription = ""
-    @State private var eventDate = Date()
-    @State private var eventEndDate = Date().addingTimeInterval(3600) // 1 hour later by default
-    @State private var selectedEventType: EventType = .study  // Default type
+    @State private var eventDate = Date().addingTimeInterval(3600) // 1 hour in the future
+    @State private var eventEndDate = Date().addingTimeInterval(7200) // 2 hours in the future
+    @State private var selectedEventType: EventType = .study
     @State private var selectedImages: [UIImage] = []
     @State private var showImagePicker = false
     
     let initialCoordinate: CLLocationCoordinate2D
     @State private var selectedCoordinate: CLLocationCoordinate2D
-    @State private var invitedFriends = ""
-    @State private var isPublic = true  // Default: Public
-    @State private var eventSearchQuery = ""
-    @State private var eventSearchResults: [MKMapItem] = []
+    @State private var locationName = ""
+    @State private var isPublic = true
     @State private var maxParticipants = 10
     @State private var tags: [String] = []
     @State private var newTag = ""
-    @State private var enableAutoMatching = false // Add auto-matching toggle
-    @State private var currentTab = 0 // For paged navigation
+    @State private var enableAutoMatching = false
     @State private var isLoading = false
+    @State private var showFriendPicker = false
+    @State private var selectedFriends: [String] = []
+    @State private var locationSuggestions: [String] = []
+    @State private var showLocationSuggestions = false
+    @State private var locationMapItems: [MKMapItem] = []
     
     var onSave: (StudyEvent) -> Void
     
@@ -40,776 +43,535 @@ struct EventCreationView: View {
     }
     
     var body: some View {
-        ZStack {
-            // Background
-            Color.bgSurface
-            .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header
-                headerView
+        NavigationStack {
+            ZStack {
+                // Professional background
+                Color.bgSurface
+                    .ignoresSafeArea()
                 
-                // Content
-                TabView(selection: $currentTab) {
-                    // Basic Info
-                    basicInfoView
-                        .tag(0)
-                    
-                    // Location & Time
-                    locationTimeView
-                        .tag(1)
-                    
-                    // Social & Tags
-                    socialTagsView
-                        .tag(2)
-                    
-                    // Review & Create
-                    reviewView
-                        .tag(3)
+                // Subtle gradient
+                LinearGradient(
+                    colors: [Color.gradientStart.opacity(0.03), Color.gradientEnd.opacity(0.01)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Header with progress
+                        headerSection
+                        
+                        // Main content in cards
+                        VStack(spacing: 20) {
+                            // Essential Info Card
+                            essentialInfoCard
+                            
+                            // Date & Time Card
+                            dateTimeCard
+                            
+                            // Location Card
+                            locationCard
+                            
+                            // Event Settings Card
+                            settingsCard
+                            
+                            // Optional Features Card
+                            optionalFeaturesCard
+                        }
+                        .padding(.horizontal, 20)
+                        
+                        // Create Button
+                        createButton
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 30)
+                    }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                
-                // Navigation buttons
-                navigationControls
             }
-            
-            // Loading overlay
+            .navigationTitle("Create Event")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.bgCard, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(.textPrimary)
+                }
+            }
+            .sheet(isPresented: $showImagePicker) {
+                EventImagePicker(selectedImages: $selectedImages)
+            }
+            .sheet(isPresented: $showFriendPicker) {
+                FriendPickerView(selectedFriends: $selectedFriends)
+                    .environmentObject(accountManager)
+            }
+        }
+        .overlay {
             if isLoading {
                 loadingOverlay
             }
         }
-        .sheet(isPresented: $showImagePicker) {
-            //ImagePicker(selectedImages: $selectedImages)
-        }
     }
     
-    // MARK: - Header View
-    var headerView: some View {
-        HStack {
-            Button("Cancel") {
-                dismiss()
+    // MARK: - Header Section
+    private var headerSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Create Your Event")
+                        .font(.title2.bold())
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("Fill in the details below to create your event")
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                Spacer()
+                
+                // Quick stats
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(maxParticipants)")
+                        .font(.title3.bold())
+                        .foregroundColor(.brandPrimary)
+                    Text("max people")
+                        .font(.caption2)
+                        .foregroundColor(.textSecondary)
+                }
             }
-            .font(.headline)
-            .foregroundColor(Color.textPrimary)
             
-            Spacer()
-            
-            Text("Create Event")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(Color.textPrimary)
-            
-            Spacer()
-            
-            // Make the header Save button inactive
-            Text("Save")
-                .font(.headline)
-                .foregroundColor(Color.textMuted) // Indicate inactive state
+            // Progress indicator
+            HStack(spacing: 8) {
+                ForEach(0..<4) { index in
+                    Circle()
+                        .fill(completionProgress >= Double(index) ? Color.brandPrimary : Color.bgSecondary)
+                        .frame(width: 8, height: 8)
+                        .animation(.easeInOut(duration: 0.3), value: completionProgress)
+                }
+                
+                Spacer()
+                
+                Text("\(Int(completionProgress * 25))% Complete")
+                    .font(.caption)
+                    .foregroundColor(.textSecondary)
+            }
         }
-        .padding()
-        .background(Color.bgCard)
-        .cornerRadius(15)
-        .shadow(color: Color.cardShadow, radius: 5, x: 0, y: 2)
-        .padding()
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
     }
     
-    // MARK: - Basic Info View
-    var basicInfoView: some View {
-                ScrollView {
+    // MARK: - Essential Info Card
+    private var essentialInfoCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            cardHeader("Essential Info", icon: "info.circle.fill", color: .blue)
+            
             VStack(spacing: 16) {
-                // Title Card
-                cardView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: "pencil")
-                                .foregroundColor(.brandPrimary)
-                            Text("Event Title")
-                                .font(.headline)
-                                .foregroundColor(Color.textPrimary)
-                        }
-                        
-                        TextField("Enter title", text: $eventTitle)
-                            .padding()
-                            .background(Color.bgSecondary)
-                            .foregroundColor(Color.textPrimary)
-                            .cornerRadius(8)
-                    }
+                // Event Title
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Event Title")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.textPrimary)
+                    
+                    TextField("What's your event about?", text: $eventTitle)
+                        .textFieldStyle(ModernTextFieldStyle())
                 }
                 
                 // Event Type
-                cardView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "tag")
-                                .foregroundColor(.brandPrimary)
-                            Text("Event Type")
-                                .font(.headline)
-                                .foregroundColor(Color.textPrimary)
-                        }
-                        
-                        Picker("Event Type", selection: $selectedEventType) {
-                            ForEach(EventType.allCases) { type in
-                                HStack {
-                                    Circle()
-                                        .fill(eventTypeColor(type))
-                                        .frame(width: 12, height: 12)
-                                    
-                                    Text(type.displayName)
-                                        .foregroundColor(Color.textPrimary)
-                                }
-                                .tag(type)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Event Type")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.textPrimary)
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(EventType.allCases, id: \.self) { type in
+                                eventTypeButton(type)
                             }
                         }
-                        .pickerStyle(.menu)
+                        .padding(.horizontal, 4)
                     }
                 }
                 
-                // Description Card
-                cardView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "text.alignleft")
-                                .foregroundColor(.brandPrimary)
-                            Text("Description")
-                                .font(.headline)
-                                .foregroundColor(Color.textPrimary)
-                        }
-                                
-                                TextEditor(text: $eventDescription)
-                            .frame(minHeight: 100)
-                            .padding(4)
-                            .background(Color.bgSecondary)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.divider, lineWidth: 1)
-                            )
-                            .overlay(
-                                Group {
-                                    if eventDescription.isEmpty {
-                                        Text("Describe your event...")
-                                            .foregroundColor(Color.textMuted)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 10)
-                                    }
-                                },
-                                alignment: .topLeading
-                            )
-                            .colorScheme(.light)
-                    }
-                }
-                
-                // Image upload card
-                cardView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "photo")
-                                .foregroundColor(.brandPrimary)
-                            Text("Event Photos")
-                                .font(.headline)
-                        }
-                        
-                                Button(action: { showImagePicker = true }) {
-                                    HStack {
-                                Image(systemName: "plus")
-                                Text("Add Photos")
-                                    }
-                                    .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.brandPrimary)
-                            .cornerRadius(8)
-                                }
-                                
-                                if !selectedImages.isEmpty {
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 10) {
-                                            ForEach(selectedImages, id: \.self) { image in
-                                                Image(uiImage: image)
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 80, height: 80)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                            }
-                                        }
-                                    }
-                                }
-                    }
+                // Description
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Description")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.textPrimary)
+                    
+                    TextField("Tell people what to expect...", text: $eventDescription, axis: .vertical)
+                        .textFieldStyle(ModernTextFieldStyle())
+                        .lineLimit(3...6)
                 }
             }
-            .padding()
         }
+        .cardStyle()
     }
     
-    // MARK: - Location & Time View
-    var locationTimeView: some View {
-        ScrollView {
+    // MARK: - Date & Time Card
+    private var dateTimeCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            cardHeader("When", icon: "calendar.badge.clock", color: .green)
+            
             VStack(spacing: 16) {
-                // Date Card
-                cardView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Image(systemName: "calendar")
-                                .foregroundColor(.brandPrimary)
-                            Text("Event Date & Time")
-                                .font(.headline)
-                        }
+                // Date
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Date")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.textPrimary)
+                    
+                    DatePicker("", selection: $eventDate, displayedComponents: [.date])
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                }
+                
+                // Time Range
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Start Time")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.textPrimary)
                         
-                        VStack(alignment: .leading, spacing: 20) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Start")
-                                    .font(.subheadline)
-                                    .foregroundColor(.textSecondary)
-                                
-                                DatePicker("", selection: $eventDate)
-                                        .datePickerStyle(.compact)
-                                    .labelsHidden()
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("End")
-                                    .font(.subheadline)
-                                    .foregroundColor(.textSecondary)
-                                
-                                DatePicker("", selection: $eventEndDate)
-                                        .datePickerStyle(.compact)
-                                    .labelsHidden()
-                                        .onChange(of: eventDate) { oldValue, newStart in
-                                            if eventEndDate < newStart {
-                                                eventEndDate = newStart.addingTimeInterval(3600)
-                                            }
-                                    }
-                            }
-                        }
-                        .padding(.leading, 8)
+                        DatePicker("", selection: $eventDate, displayedComponents: [.hourAndMinute])
+                            .datePickerStyle(.compact)
+                            .labelsHidden()
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("End Time")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.textPrimary)
+                        
+                        DatePicker("", selection: $eventEndDate, displayedComponents: [.hourAndMinute])
+                            .datePickerStyle(.compact)
+                            .labelsHidden()
                     }
                 }
                 
-                // Location Search
-                cardView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Image(systemName: "location")
-                                .foregroundColor(.brandPrimary)
-                            Text("Event Location")
-                                .font(.headline)
-                        }
-                        
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(.textMuted)
-                            TextField("Search for a location...", text: $eventSearchQuery)
-                                .padding(8)
-                                .background(Color.bgSecondary)
-                                .cornerRadius(8)
-                                .onChange(of: eventSearchQuery) { oldValue, newValue in
-                                    searchEventLocations()
-                                }
-                        }
-                        
-                        if !eventSearchResults.isEmpty {
-                            ScrollView {
-                                VStack(spacing: 8) {
-                                    ForEach(eventSearchResults, id: \.self) { place in
-                                        Button {
-                                            eventSearchQuery = place.placemark.name ?? "Unknown Place"
-                                            selectedCoordinate = place.placemark.coordinate
-                                        } label: {
-                                HStack {
-                                                VStack(alignment: .leading) {
-                                                    Text(place.placemark.name ?? "Unknown")
-                                                        .font(.subheadline.bold())
-                                                        .foregroundColor(.textPrimary)
-                                                    Text(place.placemark.title ?? "")
-                                                        .font(.caption)
-                                                        .foregroundColor(.textSecondary)
-                                                }
-                                                Spacer()
-                                                Image(systemName: "mappin.circle.fill")
-                                                    .foregroundColor(.brandPrimary)
-                                            }
-                                            .padding(10)
-                                            .background(Color.bgSecondary)
-                                            .cornerRadius(8)
-                                        }
-                                    }
-                                }
-                            }
-                            .frame(maxHeight: 200)
-                        }
-                        
-                        // Selected location display
-                        HStack {
-                            Image(systemName: "mappin")
-                                .foregroundColor(.brandWarning)
-                            Text(eventSearchQuery.isEmpty ? "Default Location" : eventSearchQuery)
-                                .foregroundColor(.textSecondary)
-                        }
-                        .padding(.vertical, 8)
-                        
-                        Text("Coordinates: \(String(format: "%.4f", selectedCoordinate.latitude)), \(String(format: "%.4f", selectedCoordinate.longitude))")
-                            .font(.caption)
-                            .foregroundColor(.textMuted)
-                    }
+                // Duration display
+                HStack {
+                    Image(systemName: "clock")
+                        .foregroundColor(.textSecondary)
+                    Text("Duration: \(formatDuration(from: eventDate, to: eventEndDate))")
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                    Spacer()
                 }
+                .padding(.top, 8)
             }
-            .padding()
         }
+        .cardStyle()
     }
     
-    // MARK: - Social & Tags View
-    var socialTagsView: some View {
-        ScrollView {
+    // MARK: - Location Card
+    private var locationCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            cardHeader("Where", icon: "location.fill", color: .orange)
+            
             VStack(spacing: 16) {
-                // Privacy Card
-                cardView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "lock.shield")
-                                .foregroundColor(.brandPrimary)
-                            Text("Event Privacy")
-                                .font(.headline)
-                        }
-                        
-                        Toggle(isOn: $isPublic) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(isPublic ? "Public Event" : "Private Event")
-                                    .font(.subheadline)
-                                
-                                Text(isPublic ? 
-                                     "Anyone can see and join this event" : 
-                                        "Only invited users can see this event")
-                                    .font(.caption)
-                                    .foregroundColor(.textSecondary)
-                            }
-                        }
-                        .toggleStyle(SwitchToggleStyle(tint: .brandPrimary))
-                        
-                        if !isPublic {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Invited Friends")
-                                    .font(.subheadline)
-                                
-                                TextField("Usernames (comma-separated)", text: $invitedFriends)
-                                    .padding()
-                                    .background(Color.bgSecondary)
-                                    .cornerRadius(8)
-                            }
-                        }
-                    }
-                }
-                
-                // Auto-matching Card
-                cardView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Image(systemName: "person.2.fill")
-                                .foregroundColor(.brandPrimary)
-                            Text("Auto-Matching")
-                                .font(.headline)
-                        }
-                        
-                        Toggle(isOn: $enableAutoMatching) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Enable Auto-Matching")
-                                    .font(.subheadline)
-                                
-                                Text("Automatically invite users with similar interests")
-                                    .font(.caption)
-                                    .foregroundColor(.textSecondary)
-                            }
-                        }
-                        .toggleStyle(SwitchToggleStyle(tint: .brandPrimary))
-                        
-                        if enableAutoMatching {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Divider()
-                                
-                                // Participants limit
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Max Participants")
-                                        .font(.subheadline)
-                                    
-                                    HStack {
-                                        Text("\(maxParticipants)")
-                                            .fontWeight(.semibold)
-                                            .frame(width: 40, alignment: .center)
-                                        
-                                        Slider(value: .init(
-                                            get: { Double(maxParticipants) },
-                                            set: { maxParticipants = Int($0) }
-                                        ), in: 2...50, step: 1)
-                                        .accentColor(.brandPrimary)
-                                    }
+                // Location Name with Suggestions
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Location")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.textPrimary)
+                    
+                    VStack(spacing: 0) {
+                        TextField("e.g., Central Library, Coffee Shop", text: $locationName)
+                            .textFieldStyle(ModernTextFieldStyle())
+                            .onChange(of: locationName) { newValue in
+                                if newValue.count > 2 {
+                                    searchLocationSuggestions(query: newValue)
+                                } else {
+                                    locationSuggestions = []
+                                    showLocationSuggestions = false
                                 }
-                                
-                                Divider()
-                                
-                                // Interest Tags Section
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("Interest Tags")
-                                        .font(.subheadline)
-                                    
-                                    // Tag input
-                                    HStack {
-                                        TextField("Add tag...", text: $newTag)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 8)
-                                            .background(Color.bgSecondary)
-                                            .cornerRadius(8)
+                            }
+                        
+                        // Location Suggestions
+                        if showLocationSuggestions && !locationSuggestions.isEmpty {
+                            VStack(spacing: 0) {
+                                ForEach(locationSuggestions.prefix(5), id: \.self) { suggestion in
+                                    Button(action: {
+                                        locationName = suggestion
+                                        showLocationSuggestions = false
+                                        locationSuggestions = []
                                         
-                                        Button(action: {
-                                            if !newTag.isEmpty && !tags.contains(newTag) {
-                                                withAnimation {
-                                                    tags.append(newTag)
-                                                    newTag = ""
-                                                }
+                                        // Update coordinates based on selected location
+                                        if let mapItem = locationMapItems.first(where: { item in
+                                            var name = item.name ?? ""
+                                            if let locality = item.placemark.locality {
+                                                name += ", \(locality)"
                                             }
+                                            return name == suggestion
                                         }) {
-                                            Text("Add")
-                                                .fontWeight(.medium)
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 8)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .fill(newTag.isEmpty ? Color.gray : Color.brandPrimary)
-                                                )
+                                            selectedCoordinate = mapItem.placemark.coordinate
                                         }
-                                        .disabled(newTag.isEmpty)
-                                    }
-                                    
-                                    // Tag display
-                                    if !tags.isEmpty {
-                                        FlowLayout(spacing: 8) {
-                                            ForEach(tags, id: \.self) { tag in
-                                                TagView(tag: tag) {
-                                                    withAnimation {
-                                                        tags.removeAll { $0 == tag }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        .padding(.vertical, 8)
-                                    } else {
-                                        Text("Add tags to improve matching")
-                                            .font(.caption)
-                                            .foregroundColor(.textMuted)
-                                            .padding(.vertical, 8)
-                                    }
-                                    
-                                    // Suggestions
-                                    if tags.count < 5 {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            Text("Suggested Tags:")
-                                                .font(.caption)
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "location")
                                                 .foregroundColor(.textSecondary)
+                                                .font(.caption)
                                             
-                                            let suggestions = ["Programming", "Swift", "iOS", "Machine Learning", "Data Science", "Study", "Group Project", "Networking"]
-                                                .filter { !tags.contains($0) }
+                                            Text(suggestion)
+                                                .font(.subheadline)
+                                                .foregroundColor(.textPrimary)
                                             
-                                            FlowLayout(spacing: 8) {
-                                                ForEach(suggestions.prefix(6), id: \.self) { suggestion in
-                                                    Button(action: {
-                                                        withAnimation {
-                                                            tags.append(suggestion)
-                                                        }
-                                                    }) {
-                                                        Text(suggestion)
-                                                            .font(.caption)
-                                                            .foregroundColor(.brandPrimary)
-                                                            .padding(.horizontal, 12)
-                                                            .padding(.vertical, 6)
-                                                            .background(
-                                                                Capsule()
-                                                                    .fill(Color.brandPrimary.opacity(0.1))
-                                                            )
-                                                            .overlay(
-                                                                Capsule()
-                                                                    .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1)
-                                                            )
-                                                    }
-                                                }
-                                            }
+                                            Spacer()
                                         }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+                                        .background(Color.bgCard)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    if suggestion != locationSuggestions.prefix(5).last {
+                                        Divider()
+                                            .padding(.horizontal, 16)
                                     }
                                 }
                             }
+                            .background(Color.bgCard)
+                            .cornerRadius(12)
+                            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+                            .padding(.top, 4)
                         }
                     }
                 }
             }
-            .padding()
         }
+        .cardStyle()
     }
     
-    // MARK: - Review View
-    var reviewView: some View {
-        ScrollView {
+    // MARK: - Settings Card
+    private var settingsCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            cardHeader("Settings", icon: "gearshape.fill", color: .purple)
+            
             VStack(spacing: 16) {
-                // Event Summary Card
-                cardView {
-                    VStack(alignment: .leading, spacing: 16) {
+                // Privacy Setting
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Event Visibility")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.textPrimary)
+                        
+                        Text(isPublic ? "Anyone can see and join" : "Only invited people can see")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Toggle("", isOn: $isPublic)
+                        .toggleStyle(SwitchToggleStyle(tint: .brandPrimary))
+                }
+                
+                // Friend Invitations (only show if private)
+                if !isPublic {
+                    VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Image(systemName: "checkmark.circle")
+                            Text("Invite Friends")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.textPrimary)
+                            
+                            Spacer()
+                            
+                            Button(action: { showFriendPicker = true }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "person.badge.plus")
+                                        .font(.caption)
+                                    Text("Add Friends")
+                                        .font(.caption.weight(.medium))
+                                }
                                 .foregroundColor(.brandPrimary)
-                            Text("Event Summary")
-                                .font(.headline)
-                                .foregroundColor(Color.textPrimary)
+                            }
                         }
                         
-                        VStack(alignment: .leading, spacing: 16) {
-                            // Title and Type
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Title")
-                                    .font(.caption)
-                                    .foregroundColor(Color.textSecondary)
-                                
-                                HStack {
-                                    Text(eventTitle.isEmpty ? "Untitled Event" : eventTitle)
-                                        .font(.subheadline.bold())
-                                        .foregroundColor(Color.textPrimary)
-                                    
-                                    Spacer()
-                                    
-                                    Text(selectedEventType.displayName)
-                                        .font(.caption)
-                                        .foregroundColor(.white)
+                        if !selectedFriends.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(selectedFriends, id: \.self) { friend in
+                                        HStack(spacing: 4) {
+                                            Text(friend)
+                                                .font(.caption.weight(.medium))
+                                                .foregroundColor(.brandPrimary)
+                                            
+                                            Button(action: { removeFriend(friend) }) {
+                                                Image(systemName: "xmark")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.textSecondary)
+                                            }
+                                        }
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
-                                        .background(eventTypeColor(selectedEventType))
+                                        .background(Color.brandPrimary.opacity(0.1))
                                         .cornerRadius(8)
-                                }
-                            }
-                            
-                            Divider()
-                            
-                            // Date and Time
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Schedule")
-                                    .font(.caption)
-                                    .foregroundColor(.textSecondary)
-                                
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
-                                        Image(systemName: "calendar")
-                                            .foregroundColor(.textSecondary)
-                                            .frame(width: 20)
-                                        Text(formatDate(eventDate))
-                                            .font(.subheadline)
-                                    }
-                                    
-                                    HStack {
-                                        Image(systemName: "clock")
-                                            .foregroundColor(.textSecondary)
-                                            .frame(width: 20)
-                                        Text("\(formatTime(eventDate)) - \(formatTime(eventEndDate))")
-                                            .font(.subheadline)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1)
+                                        )
                                     }
                                 }
+                                .padding(.horizontal, 4)
                             }
-                            
-                            Divider()
-                            
-                            // Location
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Location")
-                                    .font(.caption)
-                                    .foregroundColor(.textSecondary)
-                                
-                                Text(eventSearchQuery.isEmpty ? "Default Location" : eventSearchQuery)
-                                    .font(.subheadline)
-                            }
-                            
-                            Divider()
-                            
-                            // Privacy and Auto-matching
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Settings")
-                                    .font(.caption)
-                                    .foregroundColor(.textSecondary)
-                                
-                                HStack {
-                                    Image(systemName: isPublic ? "globe" : "lock")
-                                        .foregroundColor(.textSecondary)
-                                        .frame(width: 20)
-                                    Text(isPublic ? "Public event" : "Private event")
-                                        .font(.subheadline)
-                                }
-                                
-                                HStack {
-                                    Image(systemName: "person.2")
-                                        .foregroundColor(.textSecondary)
-                                        .frame(width: 20)
-                                    Text(enableAutoMatching ? "Auto-matching enabled" : "Auto-matching disabled")
-                                        .font(.subheadline)
-                                }
-                                
-                                if enableAutoMatching {
-                                    HStack {
-                                        Image(systemName: "number")
-                                            .foregroundColor(.textSecondary)
-                                            .frame(width: 20)
-                                        Text("Maximum \(maxParticipants) participants")
-                                            .font(.subheadline)
-                                    }
-                                }
-                            }
-                            
-                            // Show tags if auto-matching is enabled
-                            if enableAutoMatching && !tags.isEmpty {
-                                Divider()
-                                
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Interest Tags")
-                                        .font(.caption)
-                                        .foregroundColor(.textSecondary)
-                                    
-                                    FlowLayout(spacing: 6) {
-                                        ForEach(tags, id: \.self) { tag in
-                                            Text(tag)
-                                                .font(.caption)
-                                                .foregroundColor(.brandPrimary)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(
-                                                    Capsule()
-                                                        .fill(Color.brandPrimary.opacity(0.1))
-                                                )
-                                                .overlay(
-                                                    Capsule()
-                                                        .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1)
-                                                )
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            if !eventDescription.isEmpty {
-                                Divider()
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Description")
-                                        .font(.caption)
-                                        .foregroundColor(.textSecondary)
-                                    
-                                    Text(eventDescription)
-                                        .font(.subheadline)
-                                        .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            Text("No friends invited yet")
+                                .font(.caption)
+                                .foregroundColor(.textSecondary)
+                                .padding(.vertical, 8)
+                        }
+                    }
+                }
+                
+                // Max Participants
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Maximum Participants")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.textPrimary)
+                    
+                    HStack {
+                        Text("\(maxParticipants) people")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.brandPrimary)
+                        
+                        Spacer()
+                        
+                        Stepper("", value: $maxParticipants, in: 2...50)
+                            .labelsHidden()
+                    }
+                }
+            }
+        }
+        .cardStyle()
+    }
+    
+    // MARK: - Optional Features Card
+    private var optionalFeaturesCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            cardHeader("Optional Features", icon: "star.fill", color: .yellow)
+            
+            VStack(spacing: 16) {
+                // Auto-matching Toggle
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Smart Matching")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.textPrimary)
+                        
+                        Text("Automatically invite people with similar interests")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Toggle("", isOn: $enableAutoMatching)
+                        .toggleStyle(SwitchToggleStyle(tint: .brandPrimary))
+                }
+                
+                // Interest Tags (only show if auto-matching is enabled)
+                if enableAutoMatching {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Interest Tags")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.textPrimary)
+                        
+                        // Tags display
+                        if !tags.isEmpty {
+                            FlowLayout(spacing: 8) {
+                                ForEach(tags, id: \.self) { tag in
+                                    tagView(tag)
                                 }
                             }
                         }
-                        .padding(.top, 8)
+                        
+                        // Add tag input
+                        HStack {
+                            TextField("Add interest tag", text: $newTag)
+                                .textFieldStyle(ModernTextFieldStyle())
+                            
+                            Button("Add") {
+                                addTag()
+                            }
+                            .disabled(newTag.isEmpty)
+                            .foregroundColor(.brandPrimary)
+                            .fontWeight(.medium)
+                        }
+                        
+                        // Quick suggestions
+                        if tags.isEmpty {
+                            Text("Popular tags:")
+                                .font(.caption)
+                                .foregroundColor(.textSecondary)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(popularTags.prefix(6), id: \.self) { tag in
+                                        Button(tag) {
+                                            addTag(tag)
+                                        }
+                                        .font(.caption)
+                                        .foregroundColor(.brandPrimary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.brandPrimary.opacity(0.1))
+                                        .cornerRadius(8)
+                                    }
+                                }
+                                .padding(.horizontal, 4)
+                            }
+                        }
                     }
                 }
-                
-                // Validation alerts
-                if eventTitle.isEmpty {
-                    validationAlert(message: "Event title is required")
-                }
-                
-                if enableAutoMatching && tags.isEmpty {
-                    validationAlert(message: "Interest tags are required for auto-matching")
-                }
-                
-                if eventDate >= eventEndDate {
-                    validationAlert(message: "End time must be after start time")
-                }
-                
-                // Create button
-                Button(action: createEvent) {
-                    Text("Create Event")
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.brandPrimary, Color.brandSecondary]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(12)
-                        .shadow(color: Color.coloredShadow, radius: 5, x: 0, y: 2)
-                }
-                .disabled(
-                    eventTitle.isEmpty || 
-                    eventDate >= eventEndDate ||
-                    (enableAutoMatching && tags.isEmpty)
-                )
-                .padding(.horizontal)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
             }
-            .padding()
         }
+        .cardStyle()
     }
     
-    // MARK: - Navigation Controls
-    var navigationControls: some View {
-        HStack {
-            if currentTab > 0 {
-                Button(action: {
-                    withAnimation {
-                        currentTab -= 1
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "chevron.left")
-                        Text("Back")
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.bgSecondary)
-                    .cornerRadius(8)
-                }
+    // MARK: - Create Button
+    private var createButton: some View {
+        Button(action: createEvent) {
+            HStack {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
+                
+                Text("Create Event")
+                    .font(.headline.weight(.semibold))
             }
-            
-            Spacer()
-            
-            if currentTab < 3 {
-                Button(action: {
-                    withAnimation {
-                        currentTab += 1
-                    }
-                }) {
-                    HStack {
-                        Text("Next")
-                        Image(systemName: "chevron.right")
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.brandPrimary)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                }
-                .disabled(
-                    (currentTab == 0 && eventTitle.isEmpty) ||
-                    (currentTab == 1 && eventDate >= eventEndDate) ||
-                    (currentTab == 2 && enableAutoMatching && tags.isEmpty)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.brandPrimary, Color.brandAccent]),
+                    startPoint: .leading,
+                    endPoint: .trailing
                 )
-            }
+            )
+            .cornerRadius(16)
+            .shadow(color: Color.brandPrimary.opacity(0.3), radius: 8, x: 0, y: 4)
         }
-        .padding()
-        .background(Color.bgCard)
-        .shadow(color: Color.cardShadow, radius: 3, y: -2)
+        .disabled(!isFormValid)
+        .opacity(isFormValid ? 1.0 : 0.6)
     }
     
     // MARK: - Loading Overlay
-    var loadingOverlay: some View {
+    private var loadingOverlay: some View {
         ZStack {
-            Color.black.opacity(0.5)
+            Color.black.opacity(0.3)
                 .ignoresSafeArea()
             
-            VStack(spacing: 20) {
+            VStack(spacing: 16) {
                 ProgressView()
-                    .scaleEffect(1.5)
+                    .scaleEffect(1.2)
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 
-                Text("Creating your event...")
+                Text("Creating Event...")
                     .font(.headline)
-                .foregroundColor(.white)
+                    .foregroundColor(.white)
             }
-            .padding(30)
+            .padding(24)
             .background(Color.bgCard.opacity(0.9))
             .cornerRadius(16)
             .shadow(radius: 10)
@@ -817,107 +579,184 @@ struct EventCreationView: View {
     }
     
     // MARK: - Helper Views
-    func cardView<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content()
-            .padding(16)
-            .background(Color.bgCard)
-            .cornerRadius(16)
-            .shadow(color: Color.cardShadow, radius: 5, x: 0, y: 2)
-    }
-    
-    func validationAlert(message: String) -> some View {
+    private func cardHeader(_ title: String, icon: String, color: Color) -> some View {
         HStack {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.brandWarning)
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .font(.title3)
             
-            Text(message)
-                .font(.caption)
-                .foregroundColor(.brandWarning)
+            Text(title)
+                .font(.headline.weight(.semibold))
+                .foregroundColor(.textPrimary)
             
             Spacer()
         }
-        .padding(12)
-        .background(Color.brandWarning.opacity(0.1))
+    }
+    
+    private func eventTypeButton(_ type: EventType) -> some View {
+        Button(action: { selectedEventType = type }) {
+            VStack(spacing: 4) {
+                Image(systemName: eventTypeIcon(type))
+                    .font(.system(size: 16))
+                    .foregroundColor(selectedEventType == type ? .white : eventTypeColor(type))
+                
+                Text(type.displayName)
+                    .font(.caption2.weight(.medium))
+                    .foregroundColor(selectedEventType == type ? .white : .textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(width: 55, height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(selectedEventType == type ? eventTypeColor(type) : Color.bgSecondary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(selectedEventType == type ? Color.clear : Color.bgSecondary, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private func tagView(_ tag: String) -> some View {
+        HStack(spacing: 6) {
+            Text(tag)
+                .font(.caption.weight(.medium))
+                .foregroundColor(.brandPrimary)
+            
+            Button(action: { removeTag(tag) }) {
+                Image(systemName: "xmark")
+                    .font(.caption2)
+                    .foregroundColor(.textSecondary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.brandPrimary.opacity(0.1))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Computed Properties
+    private var completionProgress: Double {
+        var progress = 0.0
+        if !eventTitle.isEmpty { progress += 0.25 }
+        if !eventDescription.isEmpty { progress += 0.25 }
+        if !locationName.isEmpty { progress += 0.25 }
+        if eventDate < eventEndDate { progress += 0.25 }
+        return progress
+    }
+    
+    private var isFormValid: Bool {
+        !eventTitle.isEmpty &&
+        !eventDescription.isEmpty &&
+        !locationName.isEmpty &&
+        eventDate < eventEndDate &&
+        (!enableAutoMatching || !tags.isEmpty)
+    }
+    
+    private var popularTags: [String] {
+        ["Study", "Programming", "Networking", "Social", "Academic", "Business", "Creative", "Fitness"]
     }
     
     // MARK: - Helper Functions
-    private func eventTypeColor(_ type: EventType) -> Color {
-        switch type {
-        case .study:
-            return Color.brandPrimary
-        case .party:
-            return Color.brandAccent
-        case .business:
-            return Color.brandSecondary
-        case .cultural:
-            return Color.orange
-        case .academic:
-            return Color.green
-        case .networking:
-            return Color.pink
-        case .social:
-            return Color.red
-        case .language_exchange:
-            return Color.teal
-        case .other:
-            return Color.textSecondary
+    private func addTag(_ tag: String? = nil) {
+        let tagToAdd = tag ?? newTag.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !tagToAdd.isEmpty && !tags.contains(tagToAdd) else { return }
+        
+        tags.append(tagToAdd)
+        newTag = ""
+    }
+    
+    private func removeTag(_ tag: String) {
+        tags.removeAll { $0 == tag }
+    }
+    
+    private func removeFriend(_ friend: String) {
+        selectedFriends.removeAll { $0 == friend }
+    }
+    
+    private func searchLocationSuggestions(query: String) {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.region = MKCoordinateRegion(
+            center: selectedCoordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+        )
+        
+        let search = MKLocalSearch(request: request)
+        search.start { response, error in
+            DispatchQueue.main.async {
+                if let response = response {
+                    self.locationMapItems = response.mapItems
+                    self.locationSuggestions = response.mapItems.compactMap { item in
+                        var name = item.name ?? ""
+                        if let locality = item.placemark.locality {
+                            name += ", \(locality)"
+                        }
+                        return name.isEmpty ? nil : name
+                    }
+                    self.showLocationSuggestions = true
+                } else {
+                    self.locationMapItems = []
+                    self.locationSuggestions = []
+                    self.showLocationSuggestions = false
+                }
+            }
         }
     }
     
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+    private func formatDuration(from startDate: Date, to endDate: Date) -> String {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: startDate, to: endDate)
+        let hours = components.hour ?? 0
+        let minutes = components.minute ?? 0
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
     }
     
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+    private func eventTypeIcon(_ type: EventType) -> String {
+        switch type {
+        case .study: return "book.fill"
+        case .party: return "party.popper.fill"
+        case .business: return "briefcase.fill"
+        case .cultural: return "theatermasks.fill"
+        case .academic: return "graduationcap.fill"
+        case .networking: return "person.2.fill"
+        case .social: return "heart.fill"
+        case .language_exchange: return "globe"
+        case .other: return "calendar"
+        }
+    }
+    
+    private func eventTypeColor(_ type: EventType) -> Color {
+        switch type {
+        case .study: return .blue
+        case .party: return .purple
+        case .business: return .orange
+        case .cultural: return .yellow
+        case .academic: return .green
+        case .networking: return .pink
+        case .social: return .red
+        case .language_exchange: return .teal
+        case .other: return .gray
+        }
     }
     
     // MARK: - Event Creation
     private func createEvent() {
-        // Set loading state
         isLoading = true
-
-        // Create the basic event
-                let username = accountManager.currentUser ?? "Guest"
         
-        // Save tags for debugging and local preservation
-        let selectedTags = tags.isEmpty ? ["general", eventTitle.lowercased()] : tags
-        
-        // Store tags with title as temporary key - we'll update with event ID later
-        let tempKey = "event_tags_title_\(eventTitle.lowercased())"
-        UserDefaults.standard.set(selectedTags, forKey: tempKey)
-        
-                let newEvent = StudyEvent(
-                    title: eventTitle.isEmpty ? "New Event" : eventTitle,
-                    coordinate: selectedCoordinate,
-                    time: eventDate,
-                    endTime: eventEndDate,
-            description: eventDescription,
-            invitedFriends: invitedFriends.isEmpty ? [] : invitedFriends.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) },
-            attendees: [username], // Add the current user as an attendee
-                    isPublic: isPublic,
-                    host: username,
-            hostIsCertified: false, // Set hostIsCertified
-            eventType: selectedEventType,
-            isAutoMatched: enableAutoMatching,
-            interestTags: selectedTags
-        )
-
-        // Send to backend with tags for auto-matching
-        sendEventToBackend(newEvent)
-    }
-    
-    private func sendEventToBackend(_ event: StudyEvent) {
+        // Prepare the API request
         guard let url = URL(string: APIConfig.fullURL(for: "createEvent")) else {
             isLoading = false
-            dismiss()
             return
         }
         
@@ -925,619 +764,196 @@ struct EventCreationView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // Format dates for backend
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let formattedStartDate = isoFormatter.string(from: event.time)
-        let formattedEndDate = isoFormatter.string(from: event.endTime)
+        let formattedStartDate = isoFormatter.string(from: eventDate)
+        let formattedEndDate = isoFormatter.string(from: eventEndDate)
         
         // Prepare the request body
         var jsonBody: [String: Any] = [
-            "host": event.host,
-            "title": event.title,
-            "latitude": event.coordinate.latitude,
-            "longitude": event.coordinate.longitude,
-            "description": event.description ?? "",
+            "host": accountManager.currentUser ?? "Unknown",
+            "title": eventTitle,
+            "latitude": selectedCoordinate.latitude,
+            "longitude": selectedCoordinate.longitude,
+            "description": eventDescription,
             "time": formattedStartDate,
             "end_time": formattedEndDate,
-            "is_public": event.isPublic,
-            "invited_friends": event.invitedFriends,
-            "attendees": event.attendees, // Add the attendees list
-            "event_type": event.eventType.rawValue,
+            "is_public": isPublic,
+            "invited_friends": selectedFriends,
+            "event_type": selectedEventType.rawValue,
             "max_participants": maxParticipants
         ]
         
         // Add auto-matching data if enabled
         if enableAutoMatching {
-            // Explicitly mark auto-matching as enabled - use true instead of Bool because some backends might expect different formats
             jsonBody["auto_matching_enabled"] = true
-            
-            // Make sure to send the tags - this is critical for matching
-            // Normalize tags: trim whitespace, lowercase, and ensure they're not empty
-            let normalizedTags = tags.map { $0.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) }
-                                   .filter { !$0.isEmpty }
-            
-            // If no tags provided, use default ones based on event type and title
-            let tagsToSend: [String]
-            if normalizedTags.isEmpty {
-                // Generate meaningful default tags
-                var defaultTags = [eventTitle.lowercased(), "event"]
-                
-                // Add tags based on event type
-                switch selectedEventType {
-                case .study:
-                    defaultTags.append(contentsOf: ["study", "education", "learning"])
-                case .party:
-                    defaultTags.append(contentsOf: ["party", "social", "fun"])
-                case .business:
-                    defaultTags.append(contentsOf: ["business", "meeting", "networking"])
-                case .cultural:
-                    defaultTags.append(contentsOf: ["cultural", "arts", "heritage"])
-                case .academic:
-                    defaultTags.append(contentsOf: ["academic", "research", "scholarship"])
-                case .networking:
-                    defaultTags.append(contentsOf: ["networking", "professional", "connections"])
-                case .social:
-                    defaultTags.append(contentsOf: ["social", "friends", "community"])
-                case .language_exchange:
-                    defaultTags.append(contentsOf: ["language", "exchange", "learning"])
-                case .other:
-                    defaultTags.append(contentsOf: ["meetup", "gathering"])
-                }
-                
-                // Remove duplicates and empty strings
-                tagsToSend = Array(Set(defaultTags.filter { !$0.isEmpty }))
-            } else {
-                tagsToSend = normalizedTags
-            }
-            
-            // IMPORTANT: Make sure this matches exactly what the backend expects
-            jsonBody["interest_tags"] = tagsToSend
-            
-            // Store in UserDefaults for persistence
-            let eventTagsKey = "event_tags_\(event.id.uuidString)"
-            UserDefaults.standard.set(tagsToSend, forKey: eventTagsKey)
-            
-            // Emphasize max participants for matching
-            jsonBody["max_participants"] = maxParticipants
-            
-            // Try to specify a lower match threshold for better results
-            jsonBody["match_threshold"] = 1  // Require only 1 matching interest for better results
-            
-            
-            // Print critical info about the exact keys being used
-        } else {
-            // Even for non-auto-matched events, still send tags if available for display
-            if !tags.isEmpty {
-                jsonBody["interest_tags"] = tags
-            }
+            jsonBody["interest_tags"] = tags
         }
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: jsonBody)
-            
-            // Print request curl command for debugging
-            #if DEBUG
-            // Access curlString directly since it's not an optional
-            let curlString = request.curlString
-            
-            // Also print basic request details
-            #endif
         } catch {
             isLoading = false
-            dismiss()
             return
         }
         
+        // Make the API call
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 self.isLoading = false
                 
                 if let error = error {
-                    self.dismiss()
+                    print("❌ Event creation error: \(error.localizedDescription)")
                     return
                 }
                 
-                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-                
-                // Log response data
-                if let data = data, let responseStr = String(data: data, encoding: .utf8) {
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("📊 Event creation status code: \(httpResponse.statusCode)")
                     
-                    // Parse auto-matching results if available
-                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                        // Only add event to calendar after backend confirms creation
-                        if statusCode >= 200 && statusCode < 300 {
-                            if let eventId = json["event_id"] as? String {
-                                let backendEvent = StudyEvent(
-                                    id: UUID(uuidString: eventId) ?? UUID(),
-                                    title: event.title,
-                                    coordinate: event.coordinate,
-                                    time: event.time,
-                                    endTime: event.endTime,
-                                    description: event.description,
-                                    invitedFriends: event.invitedFriends,
-                                    attendees: event.attendees,
-                                    isPublic: event.isPublic,
-                                    host: event.host,
-                                    hostIsCertified: event.hostIsCertified,
-                                    eventType: event.eventType,
-                                    isAutoMatched: event.isAutoMatched,
-                                    interestTags: event.interestTags
+                    if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
+                        // Success - parse response
+                        if let data = data {
+                            do {
+                                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                                print("✅ Event created successfully: \(json ?? [:])")
+                                
+                                // Create local event for UI
+                                let newEvent = StudyEvent(
+                                    id: UUID(),
+                                    title: self.eventTitle,
+                                    coordinate: self.selectedCoordinate,
+                                    time: self.eventDate,
+                                    endTime: self.eventEndDate,
+                                    description: self.eventDescription,
+                                    invitedFriends: self.selectedFriends,
+                                    attendees: [self.accountManager.currentUser ?? "Unknown"],
+                                    isPublic: self.isPublic,
+                                    host: self.accountManager.currentUser ?? "Unknown",
+                                    hostIsCertified: false,
+                                    eventType: self.selectedEventType,
+                                    isAutoMatched: self.enableAutoMatching,
+                                    interestTags: self.tags,
+                                    matchedUsers: []
                                 )
-                                self.calendarManager.addEvent(backendEvent)
+                                
+                                self.onSave(newEvent)
+                                self.dismiss()
+                            } catch {
+                                print("❌ JSON parsing error: \(error.localizedDescription)")
                             }
                         }
-                        
-                        // Process enhanced auto-matching results
-                        if let autoMatchResults = json["auto_matching_results"] as? [String: Any] {
-                            
-                            // Print complete raw results for debugging
-                            for (key, value) in autoMatchResults {
-                            }
-                            
-                            let invitesSent = autoMatchResults["invites_sent"] as? Int ?? 0
-                            let successfulMatches = autoMatchResults["successful_matches"] as? Int ?? 0
-                            
-                            
-                            if invitesSent == 0 {
-                                
-                                // Check if there were any potential matches at all
-                                if let potentialCount = autoMatchResults["potential_match_count"] as? Int {
-                                    if potentialCount == 0 {
-                                    } else {
-                                    }
-                                }
-                                
-                                // Show match threshold if available
-                                if let threshold = autoMatchResults["match_threshold"] as? Int {
-                                }
-                            }
-                            
-                            // Detailed matched user information with enhanced scoring
-                            if let matchedUsers = autoMatchResults["matched_users"] as? [[String: Any]] {
-                                for user in matchedUsers {
-                                    if let username = user["username"] as? String,
-                                       let matchingInterests = user["matching_interests"] as? [String],
-                                       let score = user["score"] as? Double {
-                                        
-                                        // Show score breakdown if available
-                                        if let scoreBreakdown = user["score_breakdown"] as? [String: Any] {
-                                            for (factor, factorScore) in scoreBreakdown {
-                                                if let score = factorScore as? Double, score > 0 {
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // Show enhanced matching explanation
-                            
-                        } else {
-                            if enableAutoMatching {
-                                for (key, value) in json {
-                                }
-                            }
-                        }
+                    } else {
+                        print("❌ Server error: HTTP \(httpResponse.statusCode)")
                     }
                 }
-                
-                self.dismiss()
             }
         }.resume()
     }
-    
-    // MARK: - Search Event Locations
-    func searchEventLocations() {
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = eventSearchQuery
-        request.region = MKCoordinateRegion(
-            center: selectedCoordinate,
-            span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-        )
-        let search = MKLocalSearch(request: request)
-        search.start { response, _ in
-            if let response = response {
-                self.eventSearchResults = response.mapItems
-            }
-        }
-    }
 }
 
-// MARK: - Tag View
-struct TagView: View {
-    let tag: String
-    let onRemove: () -> Void
-    
-    var body: some View {
-        HStack(spacing: 6) {
-            Text(tag)
-                .font(.system(.footnote, design: .rounded))
-                .fontWeight(.medium)
-                .padding(.leading, 10)
-                .padding(.trailing, 4)
-                .padding(.vertical, 6)
-            
-            Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.caption)
-                    .foregroundColor(.brandPrimary.opacity(0.8))
-            }
-            .padding(.trailing, 8)
-        }
-        .background(
-            Capsule()
-                .fill(Color.brandPrimary.opacity(0.12))
-        )
-        .overlay(
-            Capsule()
-                .stroke(Color.brandPrimary.opacity(0.25), lineWidth: 1)
-        )
-        .foregroundColor(.brandPrimary)
-    }
-}
-
-// MARK: - Flow Layout
-// FlowLayout is already defined elsewhere in the project
-// Using the existing implementation instead of redefining it here
-/* 
-struct FlowLayout: View {
-    let spacing: CGFloat
-    let content: () -> [TagView]
-    
-    init(spacing: CGFloat, @ViewBuilder content: @escaping () -> [TagView]) {
-        self.spacing = spacing
-        self.content = content
-    }
-    
-    init(spacing: CGFloat, @ViewBuilder content: @escaping () -> [Text]) {
-        self.spacing = spacing
-        self.content = {
-            content().map { text in
-                TagView(tag: "", onRemove: {})
-                    .overlay(text)
-            }
-        }
-    }
-    
-    var body: some View {
-        GeometryReader { geometry in
-            self.generateContent(in: geometry)
-        }
-    }
-    
-    private func generateContent(in geometry: GeometryProxy) -> some View {
-        var width = CGFloat.zero
-        var height = CGFloat.zero
-        
-        return ZStack(alignment: .topLeading) {
-            ForEach(0..<content().count, id: \.self) { i in
-                content()[i]
-                    .padding(.horizontal, 2)
-                    .padding(.vertical, 2)
-                    .alignmentGuide(.leading) { dimension in
-                        if (abs(width - dimension.width) > geometry.size.width) {
-                            width = 0
-                            height -= dimension.height + spacing
-                        }
-                        let result = width
-                        if i == content().count - 1 {
-                            width = 0
-                        } else {
-                            width -= dimension.width + spacing
-                        }
-                        return result
-                    }
-                    .alignmentGuide(.top) { _ in
-                        let result = height
-                        if i == content().count - 1 {
-                            height = 0
-                        }
-                        return result
-                    }
-            }
-        }
-        .background(viewHeightReader($height))
-    }
-    
-    private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
-        return GeometryReader { geometry -> Color in
-            let rect = geometry.frame(in: .local)
-            DispatchQueue.main.async {
-                binding.wrappedValue = rect.size.height
-            }
-            return .clear
-        }
-    }
-}
-*/
-
-// MARK: - Enhanced Auto-Matching Results View
-struct EnhancedAutoMatchingResultsView: View {
-    @ObservedObject var autoMatchingManager: AutoMatchingManager
-    let eventId: UUID
-    @Environment(\.presentationMode) var presentationMode
-    @State private var selectedMatch: AutoMatchingManager.PotentialMatch?
-    @State private var showingMatchDetail = false
-    
-    var body: some View {
-        NavigationView {
-            VStack {
-                if autoMatchingManager.isLoading {
-                    VStack {
-                        ProgressView("Finding perfect matches...")
-                            .progressViewStyle(CircularProgressViewStyle())
-                        Text("Analyzing interests, skills, location, and more...")
-                            .font(.caption)
-                            .foregroundColor(Color.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding()
-                    }
-                } else if autoMatchingManager.potentialMatches.isEmpty {
-                    VStack(spacing: 20) {
-                        Image(systemName: "person.2.slash")
-                            .font(.system(size: 60))
-                            .foregroundColor(.gray)
-                        
-                        Text("No Matches Found")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        Text("Try adjusting your event tags or check back later when more users join.")
-                            .font(.body)
-                            .foregroundColor(Color.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                } else {
-                    List {
-                        Section(header: Text("Potential Matches (\(autoMatchingManager.potentialMatches.count))")) {
-                            ForEach(autoMatchingManager.potentialMatches) { match in
-                                MatchRowView(match: match, autoMatchingManager: autoMatchingManager)
-                                    .onTapGesture {
-                                        selectedMatch = match
-                                        showingMatchDetail = true
-                                    }
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Auto-Matching Results")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(
-                leading: Button("Close") {
-                    presentationMode.wrappedValue.dismiss()
-                },
-                trailing: Button("Refresh") {
-                    autoMatchingManager.fetchPotentialMatches(forEventId: eventId) { _ in }
-                }
+// MARK: - Supporting Views
+struct ModernTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .padding()
+            .background(Color.bgSecondary)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.bgSecondary, lineWidth: 1)
             )
-            .sheet(isPresented: $showingMatchDetail) {
-                if let match = selectedMatch {
-                    MatchDetailView(match: match, autoMatchingManager: autoMatchingManager)
-                }
-            }
-        }
-        .onAppear {
-            autoMatchingManager.fetchPotentialMatches(forEventId: eventId) { _ in }
-        }
     }
 }
 
-// MARK: - Match Row View
-struct MatchRowView: View {
-    let match: AutoMatchingManager.PotentialMatch
-    let autoMatchingManager: AutoMatchingManager
+
+extension View {
+    func cardStyle() -> some View {
+        self
+            .padding(20)
+            .background(Color.bgCard)
+            .cornerRadius(16)
+            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+    }
+}
+
+
+// MARK: - Friend Picker View
+struct FriendPickerView: View {
+    @Binding var selectedFriends: [String]
+    @EnvironmentObject var accountManager: UserAccountManager
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchQuery = ""
+    
+    private var filteredFriends: [String] {
+        if searchQuery.isEmpty {
+            return accountManager.friends
+        } else {
+            return accountManager.friends.filter { $0.localizedCaseInsensitiveContains(searchQuery) }
+        }
+    }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(match.username)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    if let detail = autoMatchingManager.matchDetails[match.username] {
-                        Text(detail.matchQuality)
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(8)
-                    }
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("\(Int(match.matchScore))")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.green)
-                    
-                    Text("points")
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
-                }
-            }
-            
-            if !match.matchingInterests.isEmpty {
-                Text("🎯 \(match.matchingInterests.joined(separator: ", "))")
-                    .font(.subheadline)
-                    .foregroundColor(Color.textPrimary)
-            }
-            
-            if let detail = autoMatchingManager.matchDetails[match.username],
-               !detail.topFactors.isEmpty {
-                Text("⭐ \(detail.topFactors.joined(separator: ", "))")
-                    .font(.caption)
-                    .foregroundColor(Color.textSecondary)
-            }
-            
-            if let ratio = match.interestRatio, ratio > 0 {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Search bar
                 HStack {
-                    Text("Interest Match:")
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.textSecondary)
                     
-                    Text("\(Int(ratio * 100))%")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.blue)
-                    
-                    Spacer()
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Match Detail View
-struct MatchDetailView: View {
-    let match: AutoMatchingManager.PotentialMatch
-    let autoMatchingManager: AutoMatchingManager
-    @Environment(\.presentationMode) var presentationMode
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Header
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(match.username)
-                            .font(.title)
-                            .fontWeight(.bold)
-                        
-                        if let detail = autoMatchingManager.matchDetails[match.username] {
-                            Text(detail.matchQuality)
-                                .font(.headline)
-                                .foregroundColor(.blue)
-                        }
-                        
-                        Text("Total Score: \(Int(match.matchScore))")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.green)
-                    }
-                    .padding()
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(12)
-                    
-                    // Matching Interests
-                    if !match.matchingInterests.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("🎯 Common Interests")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
-                                ForEach(match.matchingInterests, id: \.self) { interest in
-                                    Text(interest)
-                                        .font(.subheadline)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.blue.opacity(0.1))
-                                        .foregroundColor(.blue)
-                                        .cornerRadius(8)
-                                }
-                            }
-                        }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-                    }
-                    
-                    // Score Breakdown
-                    if let breakdown = match.scoreBreakdown {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("📊 Score Breakdown")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            
-                            VStack(spacing: 8) {
-                                ScoreRow(title: "Interest Match", score: breakdown.interestMatch, color: .blue)
-                                ScoreRow(title: "Academic Similarity", score: breakdown.academicSimilarity, color: .purple)
-                                ScoreRow(title: "Skill Relevance", score: breakdown.skillRelevance, color: .orange)
-                                ScoreRow(title: "Social Connection", score: breakdown.social, color: .green)
-                                ScoreRow(title: "Location", score: breakdown.location, color: .red)
-                                ScoreRow(title: "Reputation", score: breakdown.reputationBoost, color: .yellow)
-                                ScoreRow(title: "Bio Similarity", score: breakdown.bioSimilarity, color: .pink)
-                                ScoreRow(title: "Content Similarity", score: breakdown.contentSimilarity, color: .indigo)
-                                ScoreRow(title: "Event Type Preference", score: breakdown.eventTypePreference, color: .teal)
-                                ScoreRow(title: "Time Compatibility", score: breakdown.timeCompatibility, color: .brown)
-                                ScoreRow(title: "Activity Level", score: breakdown.activityLevel, color: .mint)
-                            }
-                        }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-                    }
-                    
-                    // Interest Ratio
-                    if let ratio = match.interestRatio, ratio > 0 {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("📈 Interest Match Ratio")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            
-                            HStack {
-                                Text("\(Int(ratio * 100))%")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.blue)
-                                
-                                Spacer()
-                                
-                                ProgressView(value: ratio)
-                                    .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                                    .frame(width: 100)
-                            }
-                        }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(color: .gray.opacity(0.2), radius: 2, x: 0, y: 1)
-                    }
+                    TextField("Search friends", text: $searchQuery)
+                        .textFieldStyle(PlainTextFieldStyle())
                 }
                 .padding()
+                .background(Color.bgSecondary)
+                .cornerRadius(12)
+                .padding()
+                
+                // Friends list
+                List(filteredFriends, id: \.self) { friend in
+                    HStack {
+                        Image(systemName: "person.circle.fill")
+                            .foregroundColor(.brandPrimary)
+                            .font(.title2)
+                        
+                        Text(friend)
+                            .font(.subheadline)
+                            .foregroundColor(.textPrimary)
+                        
+                        Spacer()
+                        
+                        if selectedFriends.contains(friend) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.brandPrimary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        toggleFriend(friend)
+                    }
+                }
+                .listStyle(PlainListStyle())
             }
-            .navigationTitle("Match Details")
+            .navigationTitle("Invite Friends")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("Done") {
-                presentationMode.wrappedValue.dismiss()
-            })
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+    
+    private func toggleFriend(_ friend: String) {
+        if selectedFriends.contains(friend) {
+            selectedFriends.removeAll { $0 == friend }
+        } else {
+            selectedFriends.append(friend)
         }
     }
 }
 
-// MARK: - Score Row View
-struct ScoreRow: View {
-    let title: String
-    let score: Double?
-    let color: Color
-    
-    var body: some View {
-        if let score = score, score > 0 {
-            HStack {
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundColor(Color.textPrimary)
-                
-                Spacer()
-                
-                Text("\(Int(score))")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(color)
-                
-                ProgressView(value: min(score / 25.0, 1.0))  // Normalize to max weight
-                    .progressViewStyle(LinearProgressViewStyle(tint: color))
-                    .frame(width: 60)
-            }
-        }
-    }
-}

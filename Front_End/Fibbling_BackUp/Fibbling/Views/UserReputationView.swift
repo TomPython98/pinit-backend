@@ -27,6 +27,9 @@ struct UserReputationView: View {
             }
         }
         .padding()
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 2)
         .onAppear {
             // Always use real API calls to connect with the backend
             reputationManager.fetchUserReputation(username: username) { success in
@@ -220,12 +223,12 @@ struct UserReputationView: View {
     
     private var trustLevelColor: Color {
         switch reputationManager.userStats.trustLevel.level {
-        case 1: return .secondary
-        case 2: return .blue
-        case 3: return .green
-        case 4: return .purple
-        case 5: return .orange
-        default: return .secondary
+        case 1: return Color.textSecondary
+        case 2: return Color.brandSecondary
+        case 3: return Color.brandSuccess
+        case 4: return Color(red: 124/255, green: 58/255, blue: 237/255)  // Purple
+        case 5: return Color.brandWarning
+        default: return Color.textSecondary
         }
     }
     
@@ -256,7 +259,7 @@ struct UserRatingsListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background
+                // Clean professional background
                 Color.bgSurface
                     .ignoresSafeArea()
                 
@@ -264,10 +267,12 @@ struct UserRatingsListView: View {
                     ForEach(ratings) { rating in
                         RatingRowView(rating: rating)
                             .listRowBackground(Color.bgCard)
+                            .listRowSeparator(.hidden)
                     }
                 }
                 .listStyle(PlainListStyle())
                 .background(Color.bgSurface)
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("All Reviews")
             .navigationBarTitleDisplayMode(.inline)

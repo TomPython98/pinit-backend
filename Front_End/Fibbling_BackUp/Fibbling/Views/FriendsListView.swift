@@ -6,6 +6,7 @@ struct FriendsListView: View {
     @EnvironmentObject var chatManager: ChatManager
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var localizationManager = LocalizationManager.shared
     
     @State private var searchQuery = ""
     @State private var allUsers: [String] = []
@@ -15,8 +16,14 @@ struct FriendsListView: View {
     @State private var alertMessage = ""
     @State private var selectedTab = 0
     @State private var isLoading = false
+    @State private var showChatView = false
+    @State private var selectedChatUser = ""
+    @State private var showUserProfileSheet = false
+    @State private var selectedUserProfile: String? = nil
     
-    private let tabs = ["Friends", "Requests", "Discover"]
+    private var tabs: [String] {
+        ["friends".localized, "friend_requests".localized, "discover_friends".localized]
+    }
     private let baseURL = APIConfig.primaryBaseURL
 
     // MARK: - Filtering Logic
@@ -49,103 +56,117 @@ struct FriendsListView: View {
 
     // MARK: - Body
     var body: some View {
-        NavigationStack {
             ZStack {
-                // Clean background
+            // Professional background like ContentView
                 Color.bgSurface
+                .ignoresSafeArea()
+            
+            // Elegant background gradient
+            LinearGradient(
+                colors: [Color.gradientStart.opacity(0.05), Color.gradientEnd.opacity(0.02)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Modern search bar
-                    searchSection
+                // Professional header
+                headerView
                     
-                    // Tab selector with modern design
+                // Tab selector
                     tabSelector
-                    
-                    // Content area
-                    TabView(selection: $selectedTab) {
-                        friendsTab
-                            .tag(0)
-                        
-                        requestsTab
-                            .tag(1)
-                        
-                        discoverTab
-                            .tag(2)
-                    }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle("Social")
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.textPrimary)
-                    }
-                }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { refreshData() }) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.textPrimary)
-                            .rotationEffect(.degrees(isLoading ? 360 : 0))
-                            .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: isLoading)
-                    }
-                    .disabled(isLoading)
-                }
-            }
-            .alert("Friend Request", isPresented: $showAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(alertMessage)
+                // Content based on selected tab
+                contentView
             }
         }
+        .navigationBarHidden(true)
         .onAppear {
-            loadData()
+            fetchAllUsers()
+            fetchFriendRequests()
+            fetchCurrentUserFriends()
+        }
+        .alert("Social", isPresented: $showAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(alertMessage)
+        }
+        .sheet(isPresented: $showChatView) {
+            NavigationStack {
+                ChatView(
+                    sender: accountManager.currentUser ?? "Guest",
+                    receiver: selectedChatUser
+                )
+                .environmentObject(accountManager)
+                .environmentObject(chatManager)
+            }
+        }
+        .sheet(isPresented: $showUserProfileSheet) {
+            if let username = selectedUserProfile {
+                NavigationStack {
+                    UserProfileView(username: username)
+                        .environmentObject(accountManager)
+                        .environmentObject(chatManager)
+                }
+            }
         }
     }
     
-    // MARK: - Search Section
-    private var searchSection: some View {
-        VStack(spacing: 16) {
+    // MARK: - Header View
+    private var headerView: some View {
             HStack {
-                HStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color.textSecondary)
-                    
-                    TextField("Search people...", text: $searchQuery)
-                        .font(.system(size: 17))
-                        .onChange(of: searchQuery) { _, newValue in
-                            if !newValue.isEmpty {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    selectedTab = 2
-                                }
-                            }
-                        }
-                    
-                    if !searchQuery.isEmpty {
-                        Button(action: { searchQuery = "" }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 16))
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color.textPrimary)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color.bgCard)
+                            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+                    )
+            }
+            
+            Spacer()
+            
+            VStack(spacing: 2) {
+                Text("friends_social".localized)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.textPrimary)
+                
+                Text("connect_with_students".localized)
+                    .font(.caption)
                                 .foregroundColor(Color.textSecondary)
                         }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.bgCard)
-                .cornerRadius(12)
-                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+            
+            Spacer()
+            
+            Button(action: {
+                fetchAllUsers()
+                fetchFriendRequests()
+            }) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.title3)
+                    .foregroundColor(Color.textSecondary)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color.bgCard)
+                            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+                    )
+                    .rotationEffect(.degrees(isLoading ? 360 : 0))
+                    .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: isLoading)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            Rectangle()
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+        )
     }
     
     // MARK: - Tab Selector
@@ -153,674 +174,599 @@ struct FriendsListView: View {
         HStack(spacing: 0) {
             ForEach(0..<tabs.count, id: \.self) { index in
                 Button(action: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         selectedTab = index
                     }
                 }) {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 4) {
                         Text(tabs[index])
-                            .font(.system(size: 16, weight: selectedTab == index ? .semibold : .medium))
-                            .foregroundColor(selectedTab == index ? Color.textPrimary : Color.textSecondary)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(selectedTab == index ? Color.brandPrimary : Color.textSecondary)
                         
-                        // Active indicator
                         Rectangle()
-                            .fill(selectedTab == index ? Color.accentColor : Color.clear)
-                            .frame(height: 3)
-                            .cornerRadius(1.5)
+                            .fill(Color.brandPrimary)
+                            .frame(height: 2)
+                            .opacity(selectedTab == index ? 1 : 0)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
                 }
+                .frame(maxWidth: .infinity)
             }
         }
-        .background(Color.bgCard)
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         .padding(.horizontal, 20)
-        .padding(.bottom, 16)
+        .padding(.vertical, 12)
+        .background(Color.bgCard)
     }
     
-    // MARK: - Friends Tab
-    private var friendsTab: some View {
+    // MARK: - Content View
+    private var contentView: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                // General chat card
-                generalChatCard
-                
-                if filteredFriends.isEmpty {
-                    emptyFriendsView
+                if isLoading {
+                    loadingView
                 } else {
-                    friendsList
+                    switch selectedTab {
+                    case 0: // Friends
+                        friendsSection
+                    case 1: // Requests
+                        requestsSection
+                    case 2: // Discover
+                        discoverSection
+                    default:
+                        EmptyView()
+                    }
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 32)
+            .padding(.bottom, 40)
         }
     }
     
-    private var generalChatCard: some View {
-        NavigationLink(destination: ChatView(sender: accountManager.currentUser ?? "Guest", receiver: "general")) {
-            HStack(spacing: 16) {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(Color.accentColor.gradient)
-                        .frame(width: 56, height: 56)
-                    
-                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("General Chat")
-                        .font(.system(size: 18, weight: .semibold))
+    // MARK: - Loading View
+    private var loadingView: some View {
+        VStack(spacing: 20) {
+            ProgressView()
+                .scaleEffect(1.5)
+                .tint(Color.brandPrimary)
+            
+            Text("Loading social data...")
+                .font(.subheadline)
+                .foregroundColor(Color.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+    
+    // MARK: - Friends Section
+    private var friendsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("friends".localized)
+                    .font(.headline)
+                    .fontWeight(.bold)
                         .foregroundColor(Color.textPrimary)
-                    
-                    Text("Connect with everyone")
-                        .font(.system(size: 15))
-                        .foregroundColor(Color.textSecondary)
-                }
                 
                 Spacer()
                 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color.textSecondary)
-            }
-            .padding(20)
-            .background(Color.bgCard)
-            .cornerRadius(16)
-            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-        }
-    }
-    
-    private var emptyFriendsView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "person.3.fill")
-                .font(.system(size: 60))
-                .foregroundColor(.secondary.opacity(0.6))
-            
-            VStack(spacing: 8) {
-                Text("No Friends Yet")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(Color.textPrimary)
-                
-                Text("Start connecting with people by sending friend requests")
-                    .font(.system(size: 16))
-                    .foregroundColor(Color.textSecondary)
-                    .multilineTextAlignment(.center)
+                Text("\(accountManager.friends.count)")
+                    .font(.subheadline)
+                    .foregroundColor(Color.brandPrimary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.brandPrimary.opacity(0.1))
+                    .cornerRadius(8)
             }
             
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    selectedTab = 2
-                }
-            }) {
-                Text("Discover People")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color.accentColor)
-                    .cornerRadius(12)
-            }
-        }
-        .padding(40)
-        .frame(maxWidth: .infinity)
-        .background(Color.bgCard)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-    }
-    
-    private var friendsList: some View {
-        LazyVStack(spacing: 12) {
+            if accountManager.friends.isEmpty {
+                emptyFriendsState
+            } else {
             ForEach(filteredFriends, id: \.self) { friend in
-                NavigationLink(destination: ChatView(sender: accountManager.currentUser ?? "Guest", receiver: friend)) {
-                    HStack(spacing: 16) {
-                        // Avatar
-                        Circle()
-                            .fill(friendColor(for: friend).gradient)
-                            .frame(width: 50, height: 50)
-                            .overlay(
-                                Text(friend.prefix(1).uppercased())
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(.white)
-                            )
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(friend)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(Color.textPrimary)
-                            
-                            Text("Tap to chat")
-                                .font(.system(size: 14))
-                                .foregroundColor(Color.textSecondary)
-                        }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "message.fill")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.accentColor)
-                    }
-                    .padding(16)
-                    .background(Color.bgCard)
-                    .cornerRadius(12)
-                    .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 1)
+                    friendCard(username: friend)
                 }
             }
         }
     }
     
-    // MARK: - Requests Tab
-    private var requestsTab: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                if pendingRequests.isEmpty && sentRequests.isEmpty {
-                    emptyRequestsView
-                } else {
-                    if !pendingRequests.isEmpty {
-                        pendingRequestsSection
-                    }
-                    
-                    if !sentRequests.isEmpty {
-                        sentRequestsSection
-                    }
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 32)
-        }
-    }
-    
-    private var emptyRequestsView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "person.badge.plus")
-                .font(.system(size: 60))
-                .foregroundColor(Color.textMuted)
-            
-            VStack(spacing: 8) {
-                Text("No Requests")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(Color.textPrimary)
-                
-                Text("When you send or receive friend requests, they'll appear here")
-                    .font(.system(size: 16))
-                    .foregroundColor(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .padding(40)
-        .frame(maxWidth: .infinity)
-        .background(Color.bgCard)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-    }
-    
-    private var pendingRequestsSection: some View {
+    // MARK: - Requests Section
+    private var requestsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Image(systemName: "person.crop.circle.badge.exclamationmark")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.orange)
-                
-                Text("Pending Requests")
-                    .font(.system(size: 20, weight: .bold))
+                Text("friend_requests".localized)
+                    .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 
                 Text("\(pendingRequests.count)")
-                    .font(.system(size: 16, weight: .semibold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.orange)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+                    .font(.subheadline)
+                    .foregroundColor(Color.brandWarning)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.brandWarning.opacity(0.1))
+                    .cornerRadius(8)
             }
             
-            LazyVStack(spacing: 12) {
-                ForEach(pendingRequests, id: \.self) { user in
-                    HStack(spacing: 16) {
-                        Circle()
-                            .fill(friendColor(for: user).gradient)
-                            .frame(width: 50, height: 50)
-                            .overlay(
-                                Text(user.prefix(1).uppercased())
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(.white)
-                            )
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(user)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(Color.textPrimary)
-                            
-                            Text("Wants to connect")
-                                .font(.system(size: 14))
-                                .foregroundColor(Color.textSecondary)
-                        }
-                        
-                        Spacer()
-                        
-                        HStack(spacing: 8) {
-                            Button(action: { declineFriendRequest(from: user) }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 32, height: 32)
-                                    .background(Color.red)
-                                    .cornerRadius(16)
-                            }
-                            
-                            Button(action: { acceptFriendRequest(from: user) }) {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 32, height: 32)
-                                    .background(Color.green)
-                                    .cornerRadius(16)
-                            }
-                        }
-                    }
-                    .padding(16)
-                    .background(Color.bgCard)
-                    .cornerRadius(12)
-                    .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 1)
+            if pendingRequests.isEmpty {
+                emptyRequestsState
+            } else {
+                ForEach(pendingRequests, id: \.self) { request in
+                    friendRequestCard(username: request)
                 }
             }
         }
     }
     
-    private var sentRequestsSection: some View {
+    // MARK: - Discover Section
+    private var discoverSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Image(systemName: "paperplane.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.blue)
-                
-                Text("Sent Requests")
-                    .font(.system(size: 20, weight: .bold))
+                Text("discover_friends".localized)
+                    .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 
-                Text("\(sentRequests.count)")
-                    .font(.system(size: 16, weight: .semibold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+                Text("\(filteredUsers.count)")
+                    .font(.subheadline)
+                    .foregroundColor(Color.brandSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.brandSecondary.opacity(0.1))
+                    .cornerRadius(8)
             }
             
-            LazyVStack(spacing: 12) {
-                ForEach(sentRequests, id: \.self) { user in
-                    HStack(spacing: 16) {
-                        Circle()
-                            .fill(friendColor(for: user).gradient)
-                            .frame(width: 50, height: 50)
-                            .overlay(
-                                Text(user.prefix(1).uppercased())
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(.white)
-                            )
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(user)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(Color.textPrimary)
-                            
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(Color.textSecondary)
-                                
-                                Text("Pending approval")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(Color.textSecondary)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        Text("Sent")
-                            .font(.system(size: 14, weight: .medium))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.gray.opacity(0.2))
-                            .foregroundColor(Color.textSecondary)
-                            .cornerRadius(8)
+            // Search bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(Color.textMuted)
+                    .font(.title3)
+                
+                TextField("Search users...", text: $searchQuery)
+                    .padding(12)
+                    .background(Color.bgSecondary)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.cardStroke, lineWidth: 1)
+                    )
+            }
+            
+            if filteredUsers.isEmpty {
+                emptyDiscoverState
+            } else {
+                ForEach(filteredUsers, id: \.self) { user in
+                    discoverUserCard(username: user)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Friend Card
+    private func friendCard(username: String) -> some View {
+        Button(action: {
+            selectedUserProfile = username
+            showUserProfileSheet = true
+        }) {
+            HStack(spacing: 16) {
+                // Avatar
+                Image(systemName: "person.circle.fill")
+                    .font(.system(size: 50))
+                    .foregroundColor(Color.brandPrimary)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(username)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.textPrimary)
+                    
+                    Text("Friend")
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    selectedChatUser = username
+                    showChatView = true
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "message.fill")
+                            .font(.caption)
+                            Text("chat".localized)
+                                .font(.caption)
+                                .fontWeight(.medium)
                     }
-                    .padding(16)
-                    .background(Color.bgCard)
-                    .cornerRadius(12)
-                    .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 1)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.brandPrimary)
+                    .cornerRadius(10)
                 }
+                .buttonStyle(PlainButtonStyle()) // Prevent the outer button from interfering
             }
+            .padding(16)
+            .background(Color.bgCard)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.cardStroke, lineWidth: 1)
+            )
+            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
         }
+        .buttonStyle(PlainButtonStyle()) // Remove default button styling
     }
     
-    // MARK: - Discover Tab
-    private var discoverTab: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                if filteredUsers.isEmpty {
-                    emptyDiscoverView
-                } else {
-                    discoverUsersList
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 32)
-        }
-    }
-    
-    private var emptyDiscoverView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "person.2.fill")
-                .font(.system(size: 60))
-                .foregroundColor(.secondary.opacity(0.6))
+    // MARK: - Friend Request Card
+    private func friendRequestCard(username: String) -> some View {
+        HStack(spacing: 16) {
+            // Avatar
+            Image(systemName: "person.circle.fill")
+                .font(.system(size: 50))
+                .foregroundColor(Color.brandWarning)
             
-            VStack(spacing: 8) {
-                Text("No Users Found")
-                    .font(.system(size: 24, weight: .bold))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(username)
+                    .font(.headline)
+                    .fontWeight(.semibold)
                     .foregroundColor(Color.textPrimary)
                 
-                Text("Try adjusting your search or check back later")
-                    .font(.system(size: 16))
+                Text("Wants to be friends")
+                    .font(.caption)
                     .foregroundColor(Color.textSecondary)
-                    .multilineTextAlignment(.center)
+            }
+            
+            Spacer()
+            
+            HStack(spacing: 8) {
+                Button(action: {
+                    acceptFriendRequest(username)
+                }) {
+                    Image(systemName: "checkmark")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Color.brandSuccess)
+                        .cornerRadius(8)
+                }
+                
+                Button(action: {
+                    declineFriendRequest(username)
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Color.brandWarning)
+                        .cornerRadius(8)
+                }
             }
         }
-        .padding(40)
-        .frame(maxWidth: .infinity)
+        .padding(16)
         .background(Color.bgCard)
         .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.cardStroke, lineWidth: 1)
+        )
+        .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
     }
     
-    private var discoverUsersList: some View {
-        LazyVStack(spacing: 12) {
-            ForEach(filteredUsers, id: \.self) { user in
-                HStack(spacing: 16) {
-                    Circle()
-                        .fill(friendColor(for: user).gradient)
-                        .frame(width: 50, height: 50)
-                        .overlay(
-                            Text(user.prefix(1).uppercased())
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.white)
-                        )
+    // MARK: - Discover User Card
+    private func discoverUserCard(username: String) -> some View {
+        Button(action: {
+            selectedUserProfile = username
+            showUserProfileSheet = true
+        }) {
+            HStack(spacing: 16) {
+                // Avatar
+                Image(systemName: "person.circle.fill")
+                    .font(.system(size: 50))
+                    .foregroundColor(Color.brandSecondary)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(username)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.textPrimary)
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(user)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(Color.textPrimary)
-                        
-                        Text("Fibbling User")
-                            .font(.system(size: 14))
-                            .foregroundColor(Color.textSecondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Button(action: { sendFriendRequest(to: user) }) {
-                        Text("Connect")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.accentColor)
-                            .cornerRadius(8)
-                    }
+                    Text("New user")
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
                 }
-                .padding(16)
-                .background(Color.bgCard)
-                .cornerRadius(12)
-                .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 1)
+                
+                Spacer()
+                
+                Button(action: {
+                    sendFriendRequest(username)
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "person.badge.plus")
+                            .font(.caption)
+                        Text("Add")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.brandSecondary)
+                    .cornerRadius(10)
+                }
+                .buttonStyle(PlainButtonStyle()) // Prevent the outer button from interfering
             }
+            .padding(16)
+            .background(Color.bgCard)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.cardStroke, lineWidth: 1)
+            )
+            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
         }
+        .buttonStyle(PlainButtonStyle()) // Remove default button styling
     }
     
-    // MARK: - Helper Methods
-    private func friendColor(for username: String) -> Color {
-        let colors: [Color] = [.blue, .green, .purple, .orange, .pink, .teal, .indigo, .mint]
-        var total = 0
-        for char in username.utf8 {
-            total += Int(char)
+    // MARK: - Empty States
+    private var emptyFriendsState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "person.2.slash")
+                .font(.system(size: 60))
+                .foregroundColor(Color.textMuted)
+            
+            Text("No Friends Yet")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(Color.textPrimary)
+            
+            Text("Start connecting with people by exploring the Discover tab")
+                .font(.subheadline)
+                .foregroundColor(Color.textSecondary)
+                .multilineTextAlignment(.center)
         }
-        return colors[total % colors.count]
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.cardStroke, lineWidth: 1)
+        )
+        .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
     }
     
-    private func loadData() {
-        isLoading = true
-        fetchAllUsers()
-        fetchPendingRequests()
-        fetchSentRequests()
-        fetchFriends()
+    private var emptyRequestsState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "envelope.open")
+                .font(.system(size: 60))
+                .foregroundColor(Color.textMuted)
+            
+            Text("No Pending Requests")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(Color.textPrimary)
+            
+            Text("When someone sends you a friend request, it will appear here")
+                .font(.subheadline)
+                .foregroundColor(Color.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.cardStroke, lineWidth: 1)
+        )
+        .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+    }
+    
+    private var emptyDiscoverState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "person.3")
+                .font(.system(size: 60))
+                .foregroundColor(Color.textMuted)
+            
+            Text("No Users Found")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(Color.textPrimary)
+            
+            Text("Try adjusting your search or check back later")
+                .font(.subheadline)
+                .foregroundColor(Color.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.cardStroke, lineWidth: 1)
+        )
+        .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+    }
+    
+    // MARK: - Actions
+    private func acceptFriendRequest(_ username: String) {
+        guard let currentUser = accountManager.currentUser,
+              let url = URL(string: "\(baseURL)/friend-requests/accept/") else { return }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            isLoading = false
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["from": username, "to": currentUser]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        showAlert(message: "Error accepting request: \(error.localizedDescription)")
+                return
+            }
+            
+                    // Remove from pending requests and add to friends
+                    pendingRequests.removeAll { $0 == username }
+                    if !accountManager.friends.contains(username) {
+                        accountManager.friends.append(username)
+                    }
+                    
+                    showAlert(message: "Friend request accepted!")
+                }
+            }.resume()
+            } catch {
+            showAlert(message: "Error processing request")
         }
     }
     
-    private func refreshData() {
-        loadData()
+    private func declineFriendRequest(_ username: String) {
+        guard let currentUser = accountManager.currentUser,
+              let url = URL(string: "\(baseURL)/friend-requests/decline/") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["from": username, "to": currentUser]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        showAlert(message: "Error declining request: \(error.localizedDescription)")
+                return
+            }
+            
+                    // Remove from pending requests
+                    pendingRequests.removeAll { $0 == username }
+                    
+                    showAlert(message: "Friend request declined")
+                }
+            }.resume()
+        } catch {
+            showAlert(message: "Error processing request")
+        }
     }
     
-    // MARK: - Networking Methods (keeping existing implementation)
+    private func sendFriendRequest(_ username: String) {
+        guard let currentUser = accountManager.currentUser,
+              let url = URL(string: "\(baseURL)/friend-requests/send/") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["from": currentUser, "to": username]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                    DispatchQueue.main.async {
+                    if let error = error {
+                        showAlert(message: "Error sending request: \(error.localizedDescription)")
+                        return
+                    }
+                    
+                    // Add to sent requests
+                    if !sentRequests.contains(username) {
+                        sentRequests.append(username)
+                    }
+                    
+                    showAlert(message: "Friend request sent!")
+                }
+            }.resume()
+            } catch {
+            showAlert(message: "Error processing request")
+        }
+    }
+    
+    private func showAlert(message: String) {
+        alertMessage = message
+        showAlert = true
+    }
+    
+    // MARK: - Network Functions
     private func fetchAllUsers() {
+        isLoading = true
+        
         guard let url = URL(string: "\(baseURL)/get_all_users/") else {
+            isLoading = false
             return
         }
         
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                if let data = data {
+                    do {
+                        let response = try JSONDecoder().decode([String].self, from: data)
+                        // Filter out the current user from the list
+                        let currentUser = self.accountManager.currentUser ?? ""
+                        self.allUsers = response.filter { $0 != currentUser }
+                    } catch {
+                        print("Error fetching users: \(error)")
+                        self.showAlert(message: "Failed to load users")
+                    }
+                } else {
+                    self.showAlert(message: "Failed to load users")
+                }
+            }
+        }.resume()
+    }
+    
+    private func fetchFriendRequests() {
+        guard let currentUser = accountManager.currentUser,
+              let url = URL(string: "\(baseURL)/get_pending_requests/\(currentUser)/") else { return }
         
         URLSession.shared.dataTask(with: url) { data, response, error in
-            if let error = error {
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                return
-            }
-            
-            guard let data = data else {
-                return
-            }
-            
-            do {
-                let users = try JSONSerialization.jsonObject(with: data, options: []) as? [String] ?? []
-                DispatchQueue.main.async {
-                    self.allUsers = users
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error fetching friend requests: \(error.localizedDescription)")
+                    return
                 }
-            } catch {
-                DispatchQueue.main.async {
-                    self.allUsers = []
-                }
-            }
-        }.resume()
-    }
-
-    private func fetchPendingRequests() {
-        guard let username = accountManager.currentUser,
-              let url = URL(string: "\(baseURL)/get_pending_requests/\(username)/") else {
-            return
-        }
-
-
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let error = error {
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                return
-            }
-            
-            guard let data = data else {
-                return
-            }
-
-            do {
                 
-                let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-                if let pendingRequestsList = json?["pending_requests"] as? [String] {
-                    DispatchQueue.main.async {
-                        self.pendingRequests = pendingRequestsList
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        self.pendingRequests = []
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.pendingRequests = []
-                }
-            }
-        }.resume()
-    }
-
-    private func fetchSentRequests() {
-        guard let username = accountManager.currentUser,
-              let url = URL(string: "\(baseURL)/get_sent_requests/\(username)/") else {
-            return
-        }
-
-
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let error = error {
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                return
-            }
-            
-            guard let data = data else {
-                return
-            }
-
-            do {
+                guard let data = data else { return }
                 
-                let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-                if let sentRequestsList = json?["sent_requests"] as? [String] {
-                    DispatchQueue.main.async {
-                        self.sentRequests = sentRequestsList
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        self.sentRequests = []
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.sentRequests = []
+                do {
+                    let response = try JSONDecoder().decode([String].self, from: data)
+                    self.pendingRequests = response
+                } catch {
+                    print("Error parsing friend requests: \(error.localizedDescription)")
                 }
             }
         }.resume()
     }
-
-    private func fetchFriends() {
-        guard let username = accountManager.currentUser,
-              let url = URL(string: "\(baseURL)/get_friends/\(username)/") else {
-            return
-        }
-
-
+    
+    private func fetchCurrentUserFriends() {
+        guard let currentUser = accountManager.currentUser,
+              let url = URL(string: "\(baseURL)/get_friends/\(currentUser)/") else { return }
+        
         URLSession.shared.dataTask(with: url) { data, response, error in
-            if let error = error {
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return
-            }
-            
-            guard httpResponse.statusCode == 200 else {
-                return
-            }
-            
-            guard let data = data else {
-                return
-            }
-            
-
-            do {
-                let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-                if let friendsList = json?["friends"] as? [String] {
-                    DispatchQueue.main.async {
-                        self.accountManager.friends = friendsList
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        self.accountManager.friends = []
-                    }
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error fetching friends: \(error.localizedDescription)")
+                    return
                 }
-            } catch {
-                DispatchQueue.main.async {
-                    self.accountManager.friends = []
+                
+                guard let data = data else { return }
+                
+                do {
+                    let response = try JSONDecoder().decode(FriendsData.self, from: data)
+                    self.accountManager.friends = response.friends
+                } catch {
+                    print("Error parsing friends: \(error.localizedDescription)")
                 }
             }
         }.resume()
-    }
-
-    private func acceptFriendRequest(from username: String) {
-        accountManager.acceptFriendRequest(from: username)
-        DispatchQueue.main.async {
-            self.pendingRequests.removeAll { $0 == username }
-            if !self.accountManager.friends.contains(username) {
-                self.accountManager.friends.append(username)
-            }
-            self.fetchFriends()
-            self.fetchPendingRequests()
-            
-            self.alertMessage = "You are now friends with \(username)!"
-            self.showAlert = true
-        }
-    }
-
-    private func declineFriendRequest(from username: String) {
-        DispatchQueue.main.async {
-            self.pendingRequests.removeAll { $0 == username }
-            self.alertMessage = "Declined request from \(username)."
-            self.showAlert = true
-        }
-    }
-
-    private func sendFriendRequest(to username: String) {
-        guard !sentRequests.contains(username) else {
-            alertMessage = "You've already sent a request to \(username)"
-            showAlert = true
-            return
-        }
-        accountManager.sendFriendRequest(to: username)
-        DispatchQueue.main.async {
-            self.sentRequests.append(username)
-            self.alertMessage = "Friend request sent to \(username)!"
-            self.showAlert = true
-        }
     }
 }
-
-// MARK: - Preview
-#Preview {
-    FriendsListView()
-        .environmentObject(UserAccountManager())
-        .environmentObject(ChatManager())
-}
-

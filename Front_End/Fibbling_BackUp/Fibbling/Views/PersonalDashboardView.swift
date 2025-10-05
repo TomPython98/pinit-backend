@@ -221,18 +221,82 @@ struct PersonalDashboardView: View {
             return
         }
         
-        // TODO: Replace with actual API call to get user statistics
-        // For now, use realistic defaults based on user activity
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            // Simulate loading real data
-            self.userStats = UserStats(
-                eventsHosted: 0, // Will be updated from backend
-                eventsAttended: 0, // Will be updated from backend  
-                friendsCount: self.accountManager.friends.count,
-                averageRating: 0.0 // Will be updated from backend
-            )
-            self.isLoading = false
+        // Load real user statistics from backend
+        loadUserStatistics()
+    }
+    
+    private func loadUserStatistics() {
+        guard let username = accountManager.currentUser else {
+            isLoading = false
+            return
         }
+        
+        // Load reputation data
+        loadReputationData(username: username)
+        
+        // Load friends count
+        loadFriendsCount(username: username)
+        
+        // Load events attended
+        loadEventsAttended(username: username)
+    }
+    
+    private func loadReputationData(username: String) {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_user_reputation/\(username)/") else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        let reputationData = try JSONDecoder().decode(ReputationData.self, from: data)
+                        self.userStats.averageRating = reputationData.averageRating
+                        self.userStats.eventsHosted = reputationData.eventsHosted
+                        self.userStats.eventsAttended = reputationData.eventsAttended
+                    } catch {
+                        print("Error parsing reputation data: \(error)")
+                    }
+                }
+                self.isLoading = false
+            }
+        }.resume()
+    }
+    
+    private func loadFriendsCount(username: String) {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_friends/\(username)/") else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        let friendsData = try JSONDecoder().decode(FriendsData.self, from: data)
+                        self.userStats.friendsCount = friendsData.friends.count
+                    } catch {
+                        print("Error parsing friends data: \(error)")
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+    private func loadEventsAttended(username: String) {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_study_events/\(username)/") else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        let eventsResponse = try JSONDecoder().decode(EventsResponse.self, from: data)
+                        // Count events where user is an attendee
+                        let attendedCount = eventsResponse.events.filter { event in
+                            event.attendees.contains(username)
+                        }.count
+                        self.userStats.eventsAttended = attendedCount
+                    } catch {
+                        print("Error parsing events data: \(error)")
+                    }
+                }
+            }
+        }.resume()
     }
 }
 
