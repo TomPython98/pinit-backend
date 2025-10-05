@@ -52,7 +52,8 @@ struct CustomCalendarView: View {
             .background(Color.bgSurface)
             .sheet(isPresented: $showDayEventsSheet) {
                 DayEventsView(events: selectedDayEvents, date: selectedDate)
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showEventCreation) {
                 EventCreationView(
@@ -581,25 +582,51 @@ struct CustomCalendarView: View {
 struct DayEventsView: View {
     let events: [StudyEvent]
     let date: Date
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedEvent: StudyEvent?
     
     var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 0) {
+            // Custom header with close button
+            HStack {
                 Text("Events on \(date, formatter: dateFormatter)")
                     .font(.title2.bold())
-                    .padding()
-                List(events) { event in
-                    NavigationLink(destination: EventDetailView(event: event, studyEvents: .constant([]), onRSVP: { _ in })) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(event.title).font(.headline)
-                            Text("Starts: \(event.time, formatter: dateFormatter)").font(.caption)
-                            Text("Ends: \(event.endTime, formatter: dateFormatter)").font(.caption)
-                        }
-                        .padding(.vertical, 4)
-                    }
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+                
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.textSecondary)
                 }
             }
-            .navigationTitle("Day Events")
+            .padding()
+            .background(Color.bgCard)
+            
+            // Events list
+            List(events) { event in
+                Button(action: { selectedEvent = event }) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(event.title)
+                            .font(.headline)
+                            .foregroundColor(.textPrimary)
+                        Text("Starts: \(event.time, formatter: dateFormatter)")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                        Text("Ends: \(event.endTime, formatter: dateFormatter)")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .sheet(item: $selectedEvent) { event in
+            NavigationStack {
+                EventDetailView(event: event, studyEvents: .constant([]), onRSVP: { _ in })
+            }
         }
     }
 }
