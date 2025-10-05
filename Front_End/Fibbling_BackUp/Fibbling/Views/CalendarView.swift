@@ -700,8 +700,15 @@ struct WeekDayRow: View {
                 }
             }
             Spacer()
-            ForEach(events.prefix(2)) { _ in
-                Circle().fill(Color.accentColor).frame(width: 8, height: 8)
+            ForEach(events.prefix(2)) { event in
+                Circle()
+                    .fill(eventColor(for: event))
+                    .frame(width: 8, height: 8)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                    )
+                    .shadow(color: eventColor(for: event).opacity(0.3), radius: 1, x: 0, y: 1)
             }
         }
         .padding()
