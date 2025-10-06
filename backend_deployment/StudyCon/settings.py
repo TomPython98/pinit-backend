@@ -113,6 +113,16 @@ else:
         'CacheControl': 'max-age=86400',
     }
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    
+    # Force R2 storage for all file fields
+    from storages.backends.s3boto3 import S3Boto3Storage
+    
+    class R2Storage(S3Boto3Storage):
+        bucket_name = AWS_STORAGE_BUCKET_NAME
+        custom_domain = None
+        file_overwrite = False
+    
+    DEFAULT_FILE_STORAGE = 'StudyCon.settings.R2Storage'
     MEDIA_URL = 'https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com/pinit-images/'
     print(f"✅ R2 configured with S3-compatible credentials")
     print(f"✅ Endpoint: {AWS_S3_ENDPOINT_URL}")
