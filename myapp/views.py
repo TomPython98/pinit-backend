@@ -3856,7 +3856,15 @@ def upload_user_image(request):
         
         # Always update public_url field if it exists, regardless of DEBUG mode
         if hasattr(user_image, 'public_url') and user_image.image:
-            user_image.public_url = user_image.image.url
+            # Generate the correct public URL using custom domain
+            from django.conf import settings
+            custom_domain = getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', None)
+            if custom_domain:
+                # Use custom domain instead of R2 endpoint
+                public_url = f"https://{custom_domain}/{user_image.image.name}"
+            else:
+                public_url = user_image.image.url
+            user_image.public_url = public_url
             user_image.save(update_fields=['public_url'])
         
         return JsonResponse({

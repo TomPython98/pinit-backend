@@ -113,6 +113,8 @@ else:
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
+    AWS_S3_CUSTOM_DOMAIN = 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev'
+    AWS_QUERYSTRING_AUTH = False  # public URLs
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     
     # Force R2 storage for all file fields

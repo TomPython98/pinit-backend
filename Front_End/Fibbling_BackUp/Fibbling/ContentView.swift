@@ -799,6 +799,8 @@ struct ProfileView: View {
     @State private var uploadError: String?
     @State private var showUploadAlert = false
     @State private var showImageGallery = false
+    @State private var showFullScreenImage = false
+    @State private var isImageLoading = false
     @StateObject private var imageManager = ImageManager.shared
     
     // Local storage for profile image
@@ -813,39 +815,59 @@ struct ProfileView: View {
         
         print("🔄 Loading profile picture for user: \(username)")
         
+        // Clear local cache to force fresh data
+        storedProfileImageData = Data()
+        profileImage = nil
+        profileImageData = nil
+        
         Task {
             await imageManager.loadUserImages(username: username)
             print("📊 Loaded \(imageManager.userImages.count) images from backend")
             
+            // Preload all images for better performance
+            await imageManager.preloadImages()
+            print("✅ Preloaded all images to cache")
+            
             // Update UI with primary image
             if let primaryImage = imageManager.getPrimaryImage() {
-                await MainActor.run {
-                    // Load image from URL using full URL
-                    let fullURL = imageManager.getFullImageURL(primaryImage)
-                    print("🖼️ Attempting to load image from: \(fullURL)")
-                    if let url = URL(string: fullURL) {
-                        URLSession.shared.dataTask(with: url) { data, response, error in
-                            if let httpResponse = response as? HTTPURLResponse {
-                                print("📡 HTTP Response: \(httpResponse.statusCode)")
-                            }
-                            if let data = data, let uiImage = UIImage(data: data) {
-                                DispatchQueue.main.async {
-                                    self.profileImage = Image(uiImage: uiImage)
-                                    self.profileImageData = data
-                                    print("✅ Profile image loaded from backend: \(fullURL)")
-                                }
-                            } else {
-                                print("❌ Failed to load image from URL: \(fullURL)")
-                                if let error = error {
-                                    print("❌ Error: \(error.localizedDescription)")
-                                }
-                            }
-                        }.resume()
-                    } else {
-                        print("❌ Invalid URL: \(fullURL)")
+                let fullURL = imageManager.getFullImageURL(primaryImage)
+                print("🖼️ Attempting to load image from: \(fullURL)")
+                
+                // Check if image is already cached before showing loading indicator
+                let isCached = imageManager.getCachedImage(for: fullURL) != nil
+                
+                if !isCached {
+                    await MainActor.run {
+                        self.isImageLoading = true
                     }
                 }
+                
+                // Use cached image loading for better performance
+                let result = await imageManager.loadCachedImage(from: fullURL)
+                if let uiImage = result.image {
+                    await MainActor.run {
+                        self.profileImage = Image(uiImage: uiImage)
+                        if let imageData = uiImage.jpegData(compressionQuality: 0.8) {
+                            self.profileImageData = imageData
+                            self.storedProfileImageData = imageData // Store for backup
+                        }
+                        self.isImageLoading = false
+                        if result.fromCache {
+                            print("✅ Profile image loaded from cache: \(fullURL)")
+                        } else {
+                            print("✅ Profile image loaded from network: \(fullURL)")
+                        }
+                    }
+                } else {
+                    await MainActor.run {
+                        self.isImageLoading = false
+                    }
+                    print("❌ Failed to load image from URL: \(fullURL)")
+                }
             } else {
+                await MainActor.run {
+                    self.isImageLoading = false
+                }
                 print("ℹ️ No primary image found for user: \(username)")
             }
         }
@@ -1169,15 +1191,8 @@ struct ProfileView: View {
                     // Load real user stats
                     loadUserStats()
                     
-                    // Load profile picture - try stored data first, then backend
-                    if !storedProfileImageData.isEmpty, let uiImage = UIImage(data: storedProfileImageData) {
-                        profileImage = Image(uiImage: uiImage)
-                        profileImageData = storedProfileImageData
-                        print("✅ Loaded profile image from local storage")
-                    } else {
-                        // Load profile picture from backend
-                        loadProfilePictureFromBackend()
-                    }
+                    // Load profile picture from backend (don't use local cache for R2 images)
+                    loadProfilePictureFromBackend()
                 }
             }
             .onReceive(imageManager.$userImages) { _ in
@@ -1185,33 +1200,40 @@ struct ProfileView: View {
                 if let primaryImage = imageManager.getPrimaryImage() {
                     let fullURL = imageManager.getFullImageURL(primaryImage)
                     print("🔄 Loading profile image from: \(fullURL)")
-                    if let url = URL(string: fullURL) {
-                        URLSession.shared.dataTask(with: url) { data, response, error in
-                            if let httpResponse = response as? HTTPURLResponse {
-                                print("📡 Image load response: \(httpResponse.statusCode)")
-                            }
-                            if let data = data, let uiImage = UIImage(data: data) {
-                                DispatchQueue.main.async {
-                                    self.profileImage = Image(uiImage: uiImage)
-                                    self.profileImageData = data
-                                    self.storedProfileImageData = data // Store locally as backup
-                                    print("✅ Profile image loaded successfully")
+                    
+                    Task {
+                        // Only show loading indicator if we need to fetch from network
+                        let result = await imageManager.loadCachedImage(from: fullURL)
+                        
+                        if let uiImage = result.image {
+                            await MainActor.run {
+                                self.profileImage = Image(uiImage: uiImage)
+                                if let imageData = uiImage.jpegData(compressionQuality: 0.8) {
+                                    self.profileImageData = imageData
+                                    self.storedProfileImageData = imageData // Store for backup
                                 }
-                            } else {
-                                print("❌ Failed to load profile image: \(error?.localizedDescription ?? "Unknown error")")
-                                // If backend fails, try to use stored data as fallback
-                                if !self.storedProfileImageData.isEmpty, let uiImage = UIImage(data: self.storedProfileImageData) {
-                                    DispatchQueue.main.async {
-                                        self.profileImage = Image(uiImage: uiImage)
-                                        self.profileImageData = self.storedProfileImageData
-                                        print("🔄 Using stored profile image as fallback")
-                                    }
+                                self.isImageLoading = false
+                                if result.fromCache {
+                                    print("✅ Profile image loaded from cache")
+                                } else {
+                                    print("✅ Profile image loaded from network")
                                 }
                             }
-                        }.resume()
+                        } else {
+                            await MainActor.run {
+                                self.isImageLoading = false
+                            }
+                            print("❌ Failed to load profile image")
+                        }
                     }
                 } else {
                     print("ℹ️ No primary image found")
+                    // Clear profile image if no primary image exists
+                    DispatchQueue.main.async {
+                        self.profileImage = nil
+                        self.profileImageData = nil
+                        self.isImageLoading = false
+                    }
                 }
             }
             .alert(isPresented: $showAlert) {
@@ -1234,6 +1256,35 @@ struct ProfileView: View {
                                     }
                                 }
                             }
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $showFullScreenImage) {
+                if let profileImage = profileImage {
+                    ZStack {
+                        Color.black.ignoresSafeArea()
+                        
+                        VStack {
+                            // Header with close button
+                            HStack {
+                                Spacer()
+                                Button("Done") {
+                                    showFullScreenImage = false
+                                }
+                                .foregroundColor(.white)
+                                .padding()
+                            }
+                            
+                            Spacer()
+                            
+                            // Full screen image
+                            profileImage
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .clipped()
+                            
+                            Spacer()
+                        }
                     }
                 }
             }
@@ -1829,6 +1880,9 @@ struct ProfileView: View {
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 112, height: 112)
                             .clipShape(Circle())
+                            .onTapGesture {
+                                showFullScreenImage = true
+                            }
                     } else {
                         Image(systemName: "person.crop.circle.fill")
                             .resizable()
@@ -1837,7 +1891,7 @@ struct ProfileView: View {
                             .foregroundColor(Color.brandPrimary)
                     }
                     
-                    // Loading overlay
+                    // Loading overlay for upload
                     if isUploadingImage {
                         Circle()
                             .fill(Color.black.opacity(0.6))
@@ -1846,6 +1900,23 @@ struct ProfileView: View {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                     .scaleEffect(1.2)
+                            )
+                    }
+                    
+                    // Loading overlay for image loading
+                    if isImageLoading {
+                        Circle()
+                            .fill(Color.black.opacity(0.4))
+                            .frame(width: 112, height: 112)
+                            .overlay(
+                                VStack(spacing: 8) {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(1.0)
+                                    Text("Loading...")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                }
                             )
                     }
                 }

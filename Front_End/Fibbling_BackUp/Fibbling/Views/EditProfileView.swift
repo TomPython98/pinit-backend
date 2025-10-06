@@ -109,7 +109,7 @@ struct EditProfileView: View {
                         .frame(width: 80, height: 80)
                     
                     if let primaryImage = imageManager.getPrimaryImage() {
-                        AsyncImage(url: URL(string: primaryImage.url)) { phase in
+                        AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(primaryImage))) { phase in
                             switch phase {
                             case .success(let image):
                                 image

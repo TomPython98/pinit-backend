@@ -13,6 +13,10 @@ class ImageManager: ObservableObject {
     
     private let baseURL = "https://pinit-backend-production.up.railway.app"
     
+    // Image cache for faster loading
+    private var imageCache: [String: UIImage] = [:]
+    private let cacheQueue = DispatchQueue(label: "imageCache", attributes: .concurrent)
+    
     private init() {}
     
     // MARK: - Load User Images
@@ -48,6 +52,9 @@ class ImageManager: ObservableObject {
     func uploadImage(_ request: ImageUploadRequest) async -> Bool {
         isLoading = true
         errorMessage = nil
+        
+        // Clear any cached images before upload
+        await clearImageCache()
         
         guard let url = URL(string: "\(baseURL)/api/upload_user_image/") else {
             errorMessage = "Invalid URL"
@@ -211,6 +218,21 @@ class ImageManager: ObservableObject {
     func getFullImageURL(_ image: UserImage) -> String {
         // Use R2 URL directly - the backend now returns R2 URLs
         if image.url.hasPrefix("http") {
+            // If it's an R2 endpoint URL, convert to public URL
+            if image.url.contains("r2.cloudflarestorage.com") {
+                // Convert R2 endpoint URL to public URL
+                let publicDomain = "pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev"
+                
+                // Extract the path from the R2 URL (everything after /pinit-images/)
+                if let urlComponents = URLComponents(string: image.url) {
+                    let fullPath = urlComponents.path
+                    // Remove /pinit-images/ prefix and use the rest
+                    if fullPath.hasPrefix("/pinit-images/") {
+                        let relativePath = String(fullPath.dropFirst("/pinit-images/".count))
+                        return "https://\(publicDomain)/\(relativePath)"
+                    }
+                }
+            }
             return image.url
         }
         // Fallback to API endpoint if needed
@@ -219,5 +241,63 @@ class ImageManager: ObservableObject {
     
     func clearError() {
         errorMessage = nil
+    }
+    
+    // MARK: - Cache Management
+    private func clearImageCache() async {
+        // Clear URLSession cache
+        URLCache.shared.removeAllCachedResponses()
+        
+        // Clear user images array to force refresh
+        userImages.removeAll()
+        
+        // Clear image cache
+        cacheQueue.async(flags: .barrier) {
+            self.imageCache.removeAll()
+        }
+    }
+    
+    // MARK: - Cached Image Loading
+    func loadCachedImage(from url: String) async -> (image: UIImage?, fromCache: Bool) {
+        // Check cache first
+        if let cachedImage = getCachedImage(for: url) {
+            return (cachedImage, true) // Loaded from cache
+        }
+        
+        // Load from URL if not in cache
+        guard let imageURL = URL(string: url) else { return (nil, false) }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: imageURL)
+            if let image = UIImage(data: data) {
+                // Cache the image
+                setCachedImage(image, for: url)
+                return (image, false) // Loaded from network
+            }
+        } catch {
+            print("❌ Failed to load image from \(url): \(error)")
+        }
+        
+        return (nil, false)
+    }
+    
+    func getCachedImage(for url: String) -> UIImage? {
+        return cacheQueue.sync {
+            return imageCache[url]
+        }
+    }
+    
+    private func setCachedImage(_ image: UIImage, for url: String) {
+        cacheQueue.async(flags: .barrier) {
+            self.imageCache[url] = image
+        }
+    }
+    
+    // MARK: - Preload Images
+    func preloadImages() async {
+        for image in userImages {
+            let fullURL = getFullImageURL(image)
+            _ = await loadCachedImage(from: fullURL)
+        }
     }
 }
