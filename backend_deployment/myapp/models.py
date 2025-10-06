@@ -24,7 +24,7 @@ def user_image_upload_path(instance, filename):
     return f'users/{instance.user.username}/images/{filename}'
 
 class UserImage(models.Model):
-    """Professional model for storing user profile images"""
+    """Professional model for storing user profile images with object storage support"""
     IMAGE_TYPES = [
         ('profile', 'Profile Picture'),
         ('gallery', 'Gallery Image'),
@@ -40,9 +40,28 @@ class UserImage(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Object storage metadata
+    storage_key = models.CharField(max_length=500, blank=True, null=True)  # S3/R2 key
+    public_url = models.URLField(blank=True, null=True)  # CDN URL
+    mime_type = models.CharField(max_length=100, blank=True, null=True)
+    width = models.PositiveIntegerField(blank=True, null=True)
+    height = models.PositiveIntegerField(blank=True, null=True)
+    size_bytes = models.PositiveIntegerField(blank=True, null=True)
+    
     class Meta:
         ordering = ['-is_primary', '-uploaded_at']
         # Removed broken unique_together constraint - now handled by migration constraint
+    
+    @property
+    def url(self):
+        """Return the public URL for the image"""
+        if self.public_url:
+            return self.public_url
+        if self.image:
+            # In production with R2, this will be the R2 URL
+            # In development, this will be the local media URL
+            return self.image.url
+        return None
     
     def save(self, *args, **kwargs):
         # Ensure only one primary image per user

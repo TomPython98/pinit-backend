@@ -3815,8 +3815,37 @@ def upload_user_image(request):
             caption=caption
         )
         
+        # Get image metadata before saving
+        try:
+            from PIL import Image as PILImage
+            import os
+            
+            # Open image to get metadata
+            with PILImage.open(image_file) as img:
+                user_image.width = img.width
+                user_image.height = img.height
+                user_image.mime_type = f"image/{img.format.lower()}" if img.format else "image/jpeg"
+            
+            # Get file size
+            image_file.seek(0, os.SEEK_END)
+            user_image.size_bytes = image_file.tell()
+            image_file.seek(0)  # Reset file pointer
+            
+        except Exception as e:
+            print(f"Warning: Could not extract image metadata: {e}")
+        
         # Save will trigger optimization
         user_image.save()
+        
+        # After saving, update with object storage info if in production
+        if not settings.DEBUG and user_image.image:
+            try:
+                # Get the storage key and public URL
+                user_image.storage_key = user_image.image.name
+                user_image.public_url = user_image.image.url
+                user_image.save(update_fields=['storage_key', 'public_url'])
+            except Exception as e:
+                print(f"Warning: Could not set object storage metadata: {e}")
         
         return JsonResponse({
             "success": True,
@@ -3854,11 +3883,15 @@ def get_user_images(request, username):
         for img in images:
             images_data.append({
                 "id": str(img.id),
-                "url": img.get_image_url(),
+                "url": img.url,  # Use the property that handles object storage
                 "image_type": img.image_type,
                 "is_primary": img.is_primary,
                 "caption": img.caption,
-                "uploaded_at": img.uploaded_at.isoformat()
+                "uploaded_at": img.uploaded_at.isoformat(),
+                "width": img.width,
+                "height": img.height,
+                "size_bytes": img.size_bytes,
+                "mime_type": img.mime_type
             })
         
         return JsonResponse({
@@ -3918,3 +3951,44 @@ def set_primary_image(request, image_id):
         
     except Exception as e:
         return JsonResponse({"error": f"Failed to set primary image: {str(e)}"}, status=500)
+
+@csrf_exempt
+def serve_image(request, image_id):
+    """Serve image file directly through API endpoint"""
+    try:
+        # Find image
+        try:
+            user_image = UserImage.objects.get(id=image_id)
+        except UserImage.DoesNotExist:
+            return JsonResponse({"error": "Image not found"}, status=404)
+        
+        # Check if image file exists
+        if not user_image.image:
+            return JsonResponse({"error": "Image file not found"}, status=404)
+        
+        # Serve the image file
+        from django.http import HttpResponse, FileResponse
+        import os
+        from django.conf import settings
+        
+        try:
+            # Get the full path to the image file
+            if hasattr(settings, 'MEDIA_ROOT') and user_image.image:
+                image_path = os.path.join(settings.MEDIA_ROOT, user_image.image.name)
+                if os.path.exists(image_path):
+                    return FileResponse(open(image_path, 'rb'), content_type='image/jpeg')
+            
+            # Fallback: try to read from storage
+            with user_image.image.open('rb') as f:
+                image_data = f.read()
+            
+            response = HttpResponse(image_data, content_type='image/jpeg')
+            response['Content-Disposition'] = f'inline; filename="{user_image.image.name}"'
+            response['Cache-Control'] = 'max-age=86400'  # Cache for 24 hours
+            return response
+            
+        except Exception as e:
+            return JsonResponse({"error": f"Failed to serve image: {str(e)}"}, status=500)
+        
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to serve image: {str(e)}"}, status=500)
