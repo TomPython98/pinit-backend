@@ -3815,8 +3815,48 @@ def upload_user_image(request):
             caption=caption
         )
         
+        # Get image metadata before saving
+        try:
+            from PIL import Image as PILImage
+            import os
+            
+            # Open image to get metadata
+            with PILImage.open(image_file) as img:
+                user_image.width = img.width
+                user_image.height = img.height
+                user_image.mime_type = f"image/{img.format.lower()}" if img.format else "image/jpeg"
+            
+            # Get file size
+            image_file.seek(0, os.SEEK_END)
+            user_image.size_bytes = image_file.tell()
+            image_file.seek(0)  # Reset file pointer
+            
+        except Exception as e:
+            print(f"Warning: Could not extract image metadata: {e}")
+        
         # Save will trigger optimization
         user_image.save()
+        
+        # After saving, update with object storage info if in production
+        if not settings.DEBUG and user_image.image:
+            try:
+                # Get the storage key and public URL
+                # Only try to set these fields if they exist (migration applied)
+                if hasattr(user_image, 'storage_key'):
+                    user_image.storage_key = user_image.image.name
+                if hasattr(user_image, 'public_url'):
+                    user_image.public_url = user_image.image.url
+                    user_image.save(update_fields=['storage_key', 'public_url'])
+                else:
+                    # Migration not applied, but R2 should still work
+                    print(f"R2 storage working - image stored at: {user_image.image.url}")
+            except Exception as e:
+                print(f"Warning: Could not set object storage metadata: {e}")
+        
+        # Always update public_url field if it exists, regardless of DEBUG mode
+        if hasattr(user_image, 'public_url') and user_image.image:
+            user_image.public_url = user_image.image.url
+            user_image.save(update_fields=['public_url'])
         
         return JsonResponse({
             "success": True,
@@ -3852,14 +3892,26 @@ def get_user_images(request, username):
         
         images_data = []
         for img in images:
-            images_data.append({
+            image_data = {
                 "id": str(img.id),
-                "url": img.get_image_url(),
+                "url": img.url,  # Use the property that handles object storage
                 "image_type": img.image_type,
                 "is_primary": img.is_primary,
                 "caption": img.caption,
                 "uploaded_at": img.uploaded_at.isoformat()
-            })
+            }
+            
+            # Add object storage fields if they exist (migration applied)
+            if hasattr(img, 'width') and img.width is not None:
+                image_data["width"] = img.width
+            if hasattr(img, 'height') and img.height is not None:
+                image_data["height"] = img.height
+            if hasattr(img, 'size_bytes') and img.size_bytes is not None:
+                image_data["size_bytes"] = img.size_bytes
+            if hasattr(img, 'mime_type') and img.mime_type:
+                image_data["mime_type"] = img.mime_type
+                
+            images_data.append(image_data)
         
         return JsonResponse({
             "success": True,
@@ -3918,3 +3970,186 @@ def set_primary_image(request, image_id):
         
     except Exception as e:
         return JsonResponse({"error": f"Failed to set primary image: {str(e)}"}, status=500)
+
+@csrf_exempt
+def run_migration(request):
+    """Run migration to add object storage fields"""
+    try:
+        from django.core.management import execute_from_command_line
+        import sys
+        
+        # Run the migration
+        execute_from_command_line(['manage.py', 'migrate', 'myapp', '0034'])
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Migration 0034 applied successfully"
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        })
+
+@csrf_exempt
+def test_r2_storage(request):
+    """Test R2 storage directly"""
+    try:
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        from django.conf import settings
+        import tempfile
+        import os
+        
+        # Test R2 storage
+        test_content = b"Hello from PinIt R2 test!"
+        import time
+        test_filename = f"test/r2-test-{int(time.time())}.txt"
+        
+        # Try to save to R2
+        try:
+            default_storage.save(test_filename, ContentFile(test_content))
+            file_url = default_storage.url(test_filename)
+            
+            return JsonResponse({
+                "success": True,
+                "message": "R2 storage test successful",
+                "storage_class": str(type(default_storage)),
+                "file_url": file_url,
+                "is_r2_url": file_url.startswith('https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com'),
+                "settings_debug": settings.DEBUG,
+                "default_storage": getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set')
+            })
+        except Exception as e:
+            return JsonResponse({
+                "success": False,
+                "error": f"R2 storage test failed: {str(e)}",
+                "storage_class": str(type(default_storage)),
+                "settings_debug": settings.DEBUG,
+                "default_storage": getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set')
+            })
+            
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        })
+
+@csrf_exempt
+def debug_r2_status(request):
+    """Debug endpoint to check R2 configuration and database schema"""
+    try:
+        from django.conf import settings
+        from myapp.models import UserImage
+        
+        # Check Django settings
+        debug_info = {
+            "DEBUG": settings.DEBUG,
+            "DEFAULT_FILE_STORAGE": getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set'),
+            "AWS_ACCESS_KEY_ID": getattr(settings, 'AWS_ACCESS_KEY_ID', 'Not set'),
+            "AWS_STORAGE_BUCKET_NAME": getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'Not set'),
+            "AWS_S3_ENDPOINT_URL": getattr(settings, 'AWS_S3_ENDPOINT_URL', 'Not set'),
+            "MEDIA_URL": getattr(settings, 'MEDIA_URL', 'Not set'),
+        }
+        
+        # Check UserImage model fields
+        fields = [field.name for field in UserImage._meta.fields]
+        debug_info["UserImage_fields"] = fields
+        debug_info["has_storage_key"] = 'storage_key' in fields
+        debug_info["has_public_url"] = 'public_url' in fields
+        
+        # Check if R2 storage is being used
+        try:
+            from storages.backends.s3boto3 import S3Boto3Storage
+            storage = S3Boto3Storage()
+            debug_info["storage_class"] = str(type(storage))
+            debug_info["storage_working"] = True
+        except Exception as e:
+            debug_info["storage_class"] = "Error"
+            debug_info["storage_working"] = False
+            debug_info["storage_error"] = str(e)
+        
+        return JsonResponse({
+            "success": True,
+            "debug_info": debug_info
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        })
+
+@csrf_exempt
+def serve_image(request, image_id):
+    """Serve image file directly through API endpoint"""
+    try:
+        # Find image
+        try:
+            user_image = UserImage.objects.get(id=image_id)
+        except UserImage.DoesNotExist:
+            return JsonResponse({"error": "Image not found"}, status=404)
+        
+        # Check if image file exists
+        if not user_image.image:
+            return JsonResponse({"error": "Image file not found"}, status=404)
+        
+        # Serve the image file
+        from django.http import HttpResponse, FileResponse
+        import os
+        from django.conf import settings
+        
+        try:
+            # Get the full path to the image file
+            if hasattr(settings, 'MEDIA_ROOT') and user_image.image:
+                image_path = os.path.join(settings.MEDIA_ROOT, user_image.image.name)
+                if os.path.exists(image_path):
+                    return FileResponse(open(image_path, 'rb'), content_type='image/jpeg')
+            
+            # Fallback: try to read from storage
+            with user_image.image.open('rb') as f:
+                image_data = f.read()
+            
+            response = HttpResponse(image_data, content_type='image/jpeg')
+            response['Content-Disposition'] = f'inline; filename="{user_image.image.name}"'
+            response['Cache-Control'] = 'max-age=86400'  # Cache for 24 hours
+            return response
+            
+        except Exception as e:
+            return JsonResponse({"error": f"Failed to serve image: {str(e)}"}, status=500)
+        
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to serve image: {str(e)}"}, status=500)
+
+@csrf_exempt
+def update_existing_images(request):
+    """Update existing images to use R2 URLs"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST method allowed"}, status=405)
+    
+    try:
+        # Get all images
+        images = UserImage.objects.all()
+        updated_count = 0
+        
+        for img in images:
+            if img.image and not img.public_url:
+                # Update the public_url field
+                img.public_url = img.image.url
+                img.storage_key = img.image.name
+                img.save(update_fields=['public_url', 'storage_key'])
+                updated_count += 1
+        
+        return JsonResponse({
+            "success": True,
+            "message": f"Updated {updated_count} images to use R2 URLs",
+            "total_images": images.count(),
+            "updated_count": updated_count
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)

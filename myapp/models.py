@@ -8,6 +8,7 @@ from django.dispatch import receiver
 import json
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.files.storage import default_storage
+from django.conf import settings
 from PIL import Image
 from io import BytesIO
 
@@ -24,7 +25,7 @@ def user_image_upload_path(instance, filename):
     return f'users/{instance.user.username}/images/{filename}'
 
 class UserImage(models.Model):
-    """Professional model for storing user profile images"""
+    """Professional model for storing user profile images with object storage support"""
     IMAGE_TYPES = [
         ('profile', 'Profile Picture'),
         ('gallery', 'Gallery Image'),
@@ -40,9 +41,27 @@ class UserImage(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Object storage metadata
+    storage_key = models.CharField(max_length=500, blank=True, null=True)  # S3/R2 key
+    public_url = models.URLField(blank=True, null=True)  # CDN URL
+    mime_type = models.CharField(max_length=100, blank=True, null=True)
+    width = models.PositiveIntegerField(blank=True, null=True)
+    height = models.PositiveIntegerField(blank=True, null=True)
+    size_bytes = models.PositiveIntegerField(blank=True, null=True)
+    
     class Meta:
         ordering = ['-is_primary', '-uploaded_at']
-        unique_together = ('user', 'is_primary')  # Only one primary per user
+        # Removed broken unique_together constraint - now handled by migration constraint
+    
+    @property
+    def url(self):
+        """Return the public URL for the image"""
+        if self.public_url:
+            return self.public_url
+        if self.image:
+            # Always use the storage's URL method which handles R2 correctly
+            return self.image.url
+        return None
     
     def save(self, *args, **kwargs):
         # Ensure only one primary image per user
@@ -88,9 +107,7 @@ class UserImage(models.Model):
     
     def get_image_url(self):
         """Get the full URL for the image"""
-        if self.image:
-            return self.image.url
-        return None
+        return self.url
     
     def __str__(self):
         return f"{self.user.username} - {self.get_image_type_display()}"
