@@ -123,7 +123,7 @@ else:
         file_overwrite = False
     
     DEFAULT_FILE_STORAGE = 'StudyCon.settings.R2Storage'
-    MEDIA_URL = 'https://pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev/pinit-images/'
+    MEDIA_URL = 'https://pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev/'
     print(f"✅ R2 configured with S3-compatible credentials")
     print(f"✅ Endpoint: {AWS_S3_ENDPOINT_URL}")
     print(f"✅ Bucket: {AWS_STORAGE_BUCKET_NAME}")
