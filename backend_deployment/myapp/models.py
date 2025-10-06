@@ -42,7 +42,7 @@ class UserImage(models.Model):
     
     class Meta:
         ordering = ['-is_primary', '-uploaded_at']
-        unique_together = ('user', 'is_primary')  # Only one primary per user
+        # Removed broken unique_together constraint - now handled by migration constraint
     
     def save(self, *args, **kwargs):
         # Ensure only one primary image per user

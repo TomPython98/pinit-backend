@@ -4,7 +4,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 import json
-from .models import FriendRequest, UserProfile, StudyEvent, EventInvitation, DeclinedInvitation, Device, UserRating, UserReputationStats, UserTrustLevel
+from .models import FriendRequest, UserProfile, StudyEvent, EventInvitation, DeclinedInvitation, Device, UserRating, UserReputationStats, UserTrustLevel, UserImage
 from django.utils import timezone
 from myapp.utils import broadcast_event_created, broadcast_event_updated, broadcast_event_deleted
 from rest_framework.decorators import api_view, authentication_classes, permission_classes

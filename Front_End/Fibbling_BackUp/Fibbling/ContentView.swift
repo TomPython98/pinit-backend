@@ -843,6 +843,18 @@ struct ProfileView: View {
         return await ImageManager.shared.uploadImage(request)
     }
     
+    private func loadImage(from item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let uiImage = UIImage(data: data) else {
+            return
+        }
+        
+        DispatchQueue.main.async {
+            self.profileImage = Image(uiImage: uiImage)
+            self.profileImageData = data
+        }
+    }
+    
     private func compressImage(_ image: UIImage, maxSize: CGFloat) -> Data {
         let size = image.size
         let aspectRatio = size.width / size.height
@@ -1040,6 +1052,25 @@ struct ProfileView: View {
                     .fontWeight(.medium)
                 }
             }
+            .photosPicker(isPresented: $showImagePicker, selection: $selectedImage, matching: .images)
+            .onChange(of: selectedImage) { _, newValue in
+                Task {
+                    if let newValue = newValue {
+                        await loadImage(from: newValue)
+                        // Upload to backend
+                        let uploadSuccess = await uploadProfilePicture()
+                        if uploadSuccess {
+                            print("Profile picture uploaded successfully")
+                            // Reload images from backend
+                            if let username = accountManager.currentUser {
+                                await ImageManager.shared.loadUserImages(username: username)
+                            }
+                        } else {
+                            print("Failed to upload profile picture")
+                        }
+                    }
+                }
+            }
             .onAppear {
                 // Initialize fields with user data
                 if let user = accountManager.currentUser {
@@ -1063,24 +1094,8 @@ struct ProfileView: View {
                     profileManager.fetchProfileCompletion(username: user) { _ in }
                 }
             }) {
-                EditProfileView()
+                ProfileView()
                     .environmentObject(accountManager)
-                    .environmentObject(profileManager)
-            }
-            .photosPicker(isPresented: $showImagePicker, selection: $selectedImage, matching: .images)
-            .onChange(of: selectedImage) { _, newValue in
-                Task {
-                    if let newValue = newValue {
-                        await loadImage(from: newValue)
-                        // Upload to backend
-                        let uploadSuccess = await uploadProfilePicture()
-                        if uploadSuccess {
-                            print("Profile picture uploaded successfully")
-                        } else {
-                            print("Failed to upload profile picture")
-                        }
-                    }
-                }
             }
         }
     }
@@ -2252,17 +2267,6 @@ struct ProfileView: View {
     }
     
     // MARK: - Profile Picture Functions
-    private func loadImage(from item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let uiImage = UIImage(data: data) else {
-            return
-        }
-        
-        DispatchQueue.main.async {
-            self.profileImage = Image(uiImage: uiImage)
-            self.profileImageData = data
-        }
-    }
 }
 
 // MARK: - Support Views for Profile with refined styling
