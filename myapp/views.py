@@ -1150,6 +1150,69 @@ def get_user_profile(request, username):
         return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
+def update_user_profile(request):
+    """
+    Update a user's basic profile information
+    
+    Expected JSON payload:
+    {
+        "username": "username",
+        "full_name": "Full Name",
+        "university": "University Name",
+        "degree": "Degree Program",
+        "year": "Academic Year",
+        "bio": "User bio description"
+    }
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            username = data.get("username")
+            
+            if not username:
+                return JsonResponse({"error": "Username required"}, status=400)
+            
+            # Basic profile information
+            full_name = data.get("full_name", "")
+            university = data.get("university", "")
+            degree = data.get("degree", "")
+            year = data.get("year", "")
+            bio = data.get("bio", "")
+            
+            # Find the user
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                return JsonResponse({"error": "User not found"}, status=404)
+            
+            # Get or create the user profile
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            
+            # Update basic profile information
+            profile.full_name = full_name
+            profile.university = university
+            profile.degree = degree
+            profile.year = year
+            profile.bio = bio
+            
+            # Save the profile
+            profile.save()
+            
+            return JsonResponse({
+                "success": True,
+                "message": "User profile updated successfully"
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
 def search_events(request):
     if request.method == "GET":
         query = request.GET.get("query", "")

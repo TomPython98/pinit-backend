@@ -5,6 +5,13 @@ from . import views
 urlpatterns = [
     path("admin/", admin.site.urls),
     path('api/register-device/', views.register_device, name='register_device'),
+    
+    # Basic Profile Endpoints (what frontend expects)
+    path('api/get_user_profile/<str:username>/', views.get_user_profile, name='get_user_profile'),
+    path('api/update_user_profile/', views.update_user_profile, name='update_user_profile'),
+    path('api/update_user_interests/', views.update_user_interests, name='update_user_interests'),
+    
+    # Profile Completion
     path('api/profile_completion/<str:username>/', views.get_profile_completion, name='profile_completion'),
     
     # PinIt User Preferences and Settings API Endpoints
