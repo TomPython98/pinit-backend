@@ -8,6 +8,7 @@ from django.dispatch import receiver
 import json
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.files.storage import default_storage
+from django.conf import settings
 from PIL import Image
 from io import BytesIO
 
@@ -60,7 +61,12 @@ class UserImage(models.Model):
         if self.image:
             # In production with R2, this will be the R2 URL
             # In development, this will be the local media URL
-            return self.image.url
+            image_url = self.image.url
+            # If it's a local URL in production, convert to R2 URL
+            if image_url.startswith('/media/') and not settings.DEBUG:
+                # Convert local path to R2 URL
+                return f"https://pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev{image_url[6:]}"  # Remove /media
+            return image_url
         return None
     
     def save(self, *args, **kwargs):
