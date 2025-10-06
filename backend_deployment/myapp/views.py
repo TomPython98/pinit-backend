@@ -3841,9 +3841,15 @@ def upload_user_image(request):
         if not settings.DEBUG and user_image.image:
             try:
                 # Get the storage key and public URL
-                user_image.storage_key = user_image.image.name
-                user_image.public_url = user_image.image.url
-                user_image.save(update_fields=['storage_key', 'public_url'])
+                # Only try to set these fields if they exist (migration applied)
+                if hasattr(user_image, 'storage_key'):
+                    user_image.storage_key = user_image.image.name
+                if hasattr(user_image, 'public_url'):
+                    user_image.public_url = user_image.image.url
+                    user_image.save(update_fields=['storage_key', 'public_url'])
+                else:
+                    # Migration not applied, but R2 should still work
+                    print(f"R2 storage working - image stored at: {user_image.image.url}")
             except Exception as e:
                 print(f"Warning: Could not set object storage metadata: {e}")
         
@@ -3881,18 +3887,26 @@ def get_user_images(request, username):
         
         images_data = []
         for img in images:
-            images_data.append({
+            image_data = {
                 "id": str(img.id),
                 "url": img.url,  # Use the property that handles object storage
                 "image_type": img.image_type,
                 "is_primary": img.is_primary,
                 "caption": img.caption,
-                "uploaded_at": img.uploaded_at.isoformat(),
-                "width": img.width,
-                "height": img.height,
-                "size_bytes": img.size_bytes,
-                "mime_type": img.mime_type
-            })
+                "uploaded_at": img.uploaded_at.isoformat()
+            }
+            
+            # Add object storage fields if they exist (migration applied)
+            if hasattr(img, 'width') and img.width is not None:
+                image_data["width"] = img.width
+            if hasattr(img, 'height') and img.height is not None:
+                image_data["height"] = img.height
+            if hasattr(img, 'size_bytes') and img.size_bytes is not None:
+                image_data["size_bytes"] = img.size_bytes
+            if hasattr(img, 'mime_type') and img.mime_type:
+                image_data["mime_type"] = img.mime_type
+                
+            images_data.append(image_data)
         
         return JsonResponse({
             "success": True,
