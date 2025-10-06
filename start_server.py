@@ -1,57 +1,61 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-Startup script that handles database migrations gracefully
+Startup script that runs migrations before starting the Django server
 """
+
 import os
 import sys
+import subprocess
 import django
 from django.core.management import execute_from_command_line
-from django.db import connection
-from django.core.exceptions import ImproperlyConfigured
 
-def test_database_connection():
-    """Test if database connection works"""
+def setup_database():
+    """Set up the database with all required tables"""
+    print("🚀 Setting up database...")
+    
+    # Set up Django environment
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'StudyCon.settings')
+    django.setup()
+    
     try:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
+        # Run migrations
+        print("📊 Running database migrations...")
+        execute_from_command_line(['manage.py', 'migrate'])
+        print("✅ Migrations completed!")
+        
+        # Create UserImage table if it doesn't exist
+        from myapp.models import UserImage
+        print("✅ UserImage model loaded successfully!")
+        
+        # Create admin user if it doesn't exist
+        from django.contrib.auth.models import User
+        if not User.objects.filter(username='admin').exists():
+            User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+            print("✅ Created admin superuser")
+        
         return True
+        
     except Exception as e:
-        print(f"Database connection test failed: {e}")
+        print(f"❌ Database setup failed: {e}")
         return False
 
-def run_migrations():
-    """Run migrations if database is available"""
-    print("🔄 Testing database connection...")
-    
-    if test_database_connection():
-        print("✅ Database connection successful!")
-        print("🔄 Running migrations...")
-        try:
-            execute_from_command_line(['manage.py', 'migrate', '--noinput'])
-            print("✅ Migrations completed successfully!")
-        except Exception as e:
-            print(f"❌ Migration failed: {e}")
-            print("⚠️  Continuing without migrations...")
-    else:
-        print("⚠️  Database not available, skipping migrations...")
-        print("ℹ️  App will start with existing database state...")
+def start_server():
+    """Start the Django development server"""
+    print("🌐 Starting Django server...")
+    try:
+        execute_from_command_line(['manage.py', 'runserver', '0.0.0.0:8000'])
+    except Exception as e:
+        print(f"❌ Server start failed: {e}")
 
 if __name__ == "__main__":
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'StudyCon.settings')
+    print("🎯 PinIt Backend Startup Script")
+    print("=" * 40)
     
-    try:
-        django.setup()
-        run_migrations()
-        
-        print("🚀 Starting Gunicorn server...")
-        # Start the server
-        os.execvp('gunicorn', [
-            'gunicorn', 
-            'StudyCon.wsgi', 
-            '--log-file', '-', 
-            '--bind', f'0.0.0.0:{os.environ.get("PORT", "8000")}'
-        ])
-    except Exception as e:
-        print(f"❌ Startup failed: {e}")
+    # Setup database first
+    if setup_database():
+        print("✅ Database setup complete!")
+        print("🌐 Starting server...")
+        start_server()
+    else:
+        print("❌ Failed to setup database. Exiting.")
         sys.exit(1)
-
