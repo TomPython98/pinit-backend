@@ -3,6 +3,7 @@ import SwiftUI
 import MapKit
 import Combine
 import CoreLocation
+import PhotosUI
 
 // Import the UserProfileManager from ViewModels
 // (Note: Swift automatically finds files in the project, no path needed)
@@ -790,6 +791,79 @@ struct ProfileView: View {
     @State private var showAlert: Bool = false
     @State private var alertMessage: String = ""
     
+    // Profile picture state
+    @State private var profileImage: Image?
+    @State private var selectedImage: PhotosPickerItem?
+    @State private var showImagePicker = false
+    @State private var profileImageData: Data?
+    
+    // Load profile picture from backend using new ImageManager
+    private func loadProfilePictureFromBackend() {
+        guard let username = accountManager.currentUser else { return }
+        
+        Task {
+            await ImageManager.shared.loadUserImages(username: username)
+            
+            // Update UI with primary image
+            if let primaryImage = ImageManager.shared.getPrimaryImage() {
+                DispatchQueue.main.async {
+                    // Load image from URL
+                    if let url = URL(string: primaryImage.url) {
+                        URLSession.shared.dataTask(with: url) { data, response, error in
+                            if let data = data, let uiImage = UIImage(data: data) {
+                                DispatchQueue.main.async {
+                                    self.profileImage = Image(uiImage: uiImage)
+                                    self.profileImageData = data
+                                }
+                            }
+                        }.resume()
+                    }
+                }
+            }
+        }
+    }
+    
+    // Upload profile picture to backend using new ImageManager
+    private func uploadProfilePicture() async -> Bool {
+        guard let imageData = profileImageData,
+              let username = accountManager.currentUser else { return true }
+        
+        // Compress image if needed
+        let compressedData = compressImage(UIImage(data: imageData) ?? UIImage(), maxSize: 1920)
+        
+        let request = ImageUploadRequest(
+            username: username,
+            imageData: compressedData,
+            imageType: .profile,
+            isPrimary: ImageManager.shared.getPrimaryImage() == nil, // Set as primary if no primary exists
+            caption: "",
+            filename: "profile_\(Date().timeIntervalSince1970).jpg"
+        )
+        
+        return await ImageManager.shared.uploadImage(request)
+    }
+    
+    private func compressImage(_ image: UIImage, maxSize: CGFloat) -> Data {
+        let size = image.size
+        let aspectRatio = size.width / size.height
+        
+        var newSize = size
+        if max(size.width, size.height) > maxSize {
+            if aspectRatio > 1 {
+                newSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
+            } else {
+                newSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
+            }
+        }
+        
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let compressedImage = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+        
+        return compressedImage.jpegData(compressionQuality: 0.8) ?? Data()
+    }
+    
     // Stats counters - now using real data
     @State private var eventsHosted: Int = 0
     @State private var eventsAttended: Int = 0
@@ -942,6 +1016,9 @@ struct ProfileView: View {
             }
             .navigationTitle("Your Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                loadProfilePictureFromBackend()
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close") {
@@ -989,6 +1066,21 @@ struct ProfileView: View {
                 EditProfileView()
                     .environmentObject(accountManager)
                     .environmentObject(profileManager)
+            }
+            .photosPicker(isPresented: $showImagePicker, selection: $selectedImage, matching: .images)
+            .onChange(of: selectedImage) { _, newValue in
+                Task {
+                    if let newValue = newValue {
+                        await loadImage(from: newValue)
+                        // Upload to backend
+                        let uploadSuccess = await uploadProfilePicture()
+                        if uploadSuccess {
+                            print("Profile picture uploaded successfully")
+                        } else {
+                            print("Failed to upload profile picture")
+                        }
+                    }
+                }
             }
         }
     }
@@ -1573,12 +1665,25 @@ struct ProfileView: View {
                     .fill(Color.bgCard)
                     .frame(width: 126, height: 126)
                 
-                // Profile image with more refined colors
-                Image(systemName: "person.crop.circle.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 112, height: 112)
-                    .foregroundColor(Color.brandPrimary)
+                // Profile image with more refined colors - now clickable
+                Button(action: {
+                    showImagePicker = true
+                }) {
+                    if let profileImage = profileImage {
+                        profileImage
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 112, height: 112)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 112, height: 112)
+                            .foregroundColor(Color.brandPrimary)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
                 
                 // Edit camera button with refined gradient
                 if editMode {
@@ -2144,6 +2249,19 @@ struct ProfileView: View {
                 }
             }
         }.resume()
+    }
+    
+    // MARK: - Profile Picture Functions
+    private func loadImage(from item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let uiImage = UIImage(data: data) else {
+            return
+        }
+        
+        DispatchQueue.main.async {
+            self.profileImage = Image(uiImage: uiImage)
+            self.profileImageData = data
+        }
     }
 }
 

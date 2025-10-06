@@ -1112,6 +1112,7 @@ def get_user_profile(request, username):
         degree = getattr(userprofile, 'degree', '')
         year = getattr(userprofile, 'year', '')
         bio = getattr(userprofile, 'bio', '')
+        profile_picture = getattr(userprofile, 'profile_picture', '')
         
         # Get interests if available or provide empty list
         interests = []
@@ -1136,6 +1137,7 @@ def get_user_profile(request, username):
             "degree": degree,
             "year": year,
             "bio": bio,
+            "profile_picture": profile_picture,
             "is_certified": userprofile.is_certified,
             "interests": interests,
             "skills": skills,
@@ -3019,6 +3021,7 @@ def update_user_interests(request):
             degree = data.get("degree", "")
             year = data.get("year", "")
             bio = data.get("bio", "")
+            profile_picture = data.get("profile_picture", "")
             
             # Smart matching preferences
             interests = data.get("interests", [])
@@ -3042,6 +3045,7 @@ def update_user_interests(request):
             profile.degree = degree
             profile.year = year
             profile.bio = bio
+            profile.profile_picture = profile_picture
             
             # Update smart matching preferences
             if hasattr(profile, 'set_interests'):
@@ -3748,3 +3752,169 @@ def update_matching_preferences(request, username):
         return JsonResponse({"error": str(e)}, status=500)
 
 # Auto-matching fix deployed Wed Oct  1 12:27:33 -03 2025
+
+# =============================================================================
+# PROFESSIONAL IMAGE UPLOAD ENDPOINTS
+# =============================================================================
+
+@csrf_exempt
+def upload_user_image(request):
+    """Upload a new user image with proper validation and optimization"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST method allowed"}, status=405)
+    
+    try:
+        # Get username from request
+        username = request.POST.get('username')
+        if not username:
+            return JsonResponse({"error": "Username required"}, status=400)
+        
+        # Find user
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
+        
+        # Check if user has reached image limit
+        current_count = UserImage.objects.filter(user=user).count()
+        if current_count >= 20:  # MAX_IMAGES_PER_USER from settings
+            return JsonResponse({"error": "Maximum number of images reached (20)"}, status=400)
+        
+        # Get uploaded file
+        if 'image' not in request.FILES:
+            return JsonResponse({"error": "No image file provided"}, status=400)
+        
+        image_file = request.FILES['image']
+        
+        # Validate file size
+        if image_file.size > 10 * 1024 * 1024:  # 10MB
+            return JsonResponse({"error": "Image too large (max 10MB)"}, status=400)
+        
+        # Validate file extension
+        import os
+        file_ext = os.path.splitext(image_file.name)[1].lower()
+        if file_ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+            return JsonResponse({"error": "Invalid file type. Allowed: JPG, PNG, GIF, WEBP"}, status=400)
+        
+        # Get additional parameters
+        image_type = request.POST.get('image_type', 'gallery')
+        is_primary = request.POST.get('is_primary', 'false').lower() == 'true'
+        caption = request.POST.get('caption', '')
+        
+        # Validate image type
+        valid_types = ['profile', 'gallery', 'cover']
+        if image_type not in valid_types:
+            return JsonResponse({"error": f"Invalid image type. Allowed: {', '.join(valid_types)}"}, status=400)
+        
+        # Create UserImage instance
+        user_image = UserImage(
+            user=user,
+            image=image_file,
+            image_type=image_type,
+            is_primary=is_primary,
+            caption=caption
+        )
+        
+        # Save will trigger optimization
+        user_image.save()
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Image uploaded successfully",
+            "image": {
+                "id": str(user_image.id),
+                "url": user_image.get_image_url(),
+                "image_type": user_image.image_type,
+                "is_primary": user_image.is_primary,
+                "caption": user_image.caption,
+                "uploaded_at": user_image.uploaded_at.isoformat()
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({"error": f"Upload failed: {str(e)}"}, status=500)
+
+@csrf_exempt
+def get_user_images(request, username):
+    """Get all images for a user"""
+    if request.method != 'GET':
+        return JsonResponse({"error": "Only GET method allowed"}, status=405)
+    
+    try:
+        # Find user
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
+        
+        # Get images
+        images = UserImage.objects.filter(user=user).order_by('-is_primary', '-uploaded_at')
+        
+        images_data = []
+        for img in images:
+            images_data.append({
+                "id": str(img.id),
+                "url": img.get_image_url(),
+                "image_type": img.image_type,
+                "is_primary": img.is_primary,
+                "caption": img.caption,
+                "uploaded_at": img.uploaded_at.isoformat()
+            })
+        
+        return JsonResponse({
+            "success": True,
+            "images": images_data,
+            "count": len(images_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to get images: {str(e)}"}, status=500)
+
+@csrf_exempt
+def delete_user_image(request, image_id):
+    """Delete a user image"""
+    if request.method != 'DELETE':
+        return JsonResponse({"error": "Only DELETE method allowed"}, status=405)
+    
+    try:
+        # Find image
+        try:
+            user_image = UserImage.objects.get(id=image_id)
+        except UserImage.DoesNotExist:
+            return JsonResponse({"error": "Image not found"}, status=404)
+        
+        # Delete the image (this will also delete the file)
+        user_image.delete()
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Image deleted successfully"
+        })
+        
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to delete image: {str(e)}"}, status=500)
+
+@csrf_exempt
+def set_primary_image(request, image_id):
+    """Set an image as the primary profile picture"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST method allowed"}, status=405)
+    
+    try:
+        # Find image
+        try:
+            user_image = UserImage.objects.get(id=image_id)
+        except UserImage.DoesNotExist:
+            return JsonResponse({"error": "Image not found"}, status=404)
+        
+        # Set as primary (this will automatically unset others)
+        user_image.is_primary = True
+        user_image.save()
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Primary image updated successfully"
+        })
+        
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to set primary image: {str(e)}"}, status=500)

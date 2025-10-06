@@ -36,13 +36,13 @@
 				<key>focused</key>
 				<string></string>
 				<key>leading</key>
-				<string>                .safeAreaInset(edge: .top) {
-                    customTopBar
+				<string>                }
+                .safeAreaInset(edge: .top) {
 </string>
 				<key>trailing</key>
-				<string>                }
+				<string>                    customTopBar
+                }
             }
-        }
 </string>
 			</dict>
 			<key>type</key>

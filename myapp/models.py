@@ -1,4 +1,5 @@
 import uuid
+import os
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -6,6 +7,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 import json
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.files.storage import default_storage
+from PIL import Image
+from io import BytesIO
 
 # Skill level choices for user skills
 SKILL_LEVEL_CHOICES = [
@@ -14,6 +18,82 @@ SKILL_LEVEL_CHOICES = [
     ('ADVANCED', 'Advanced'),
     ('EXPERT', 'Expert'),
 ]
+
+def user_image_upload_path(instance, filename):
+    """Generate upload path for user images"""
+    return f'users/{instance.user.username}/images/{filename}'
+
+class UserImage(models.Model):
+    """Professional model for storing user profile images"""
+    IMAGE_TYPES = [
+        ('profile', 'Profile Picture'),
+        ('gallery', 'Gallery Image'),
+        ('cover', 'Cover Photo'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to=user_image_upload_path, max_length=500)
+    image_type = models.CharField(max_length=20, choices=IMAGE_TYPES, default='gallery')
+    is_primary = models.BooleanField(default=False, help_text="Primary profile picture")
+    caption = models.CharField(max_length=255, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-is_primary', '-uploaded_at']
+        unique_together = ('user', 'is_primary')  # Only one primary per user
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one primary image per user
+        if self.is_primary:
+            UserImage.objects.filter(user=self.user, is_primary=True).update(is_primary=False)
+        
+        super().save(*args, **kwargs)
+        
+        # Optimize image after saving
+        self.optimize_image()
+    
+    def optimize_image(self):
+        """Optimize image size and quality"""
+        try:
+            if self.image:
+                # Open the image
+                img = Image.open(self.image.path)
+                
+                # Convert to RGB if necessary
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGB')
+                
+                # Resize if too large (max 1920x1920)
+                max_size = (1920, 1920)
+                if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
+                    img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                
+                # Save optimized version
+                img.save(self.image.path, 'JPEG', quality=85, optimize=True)
+        except Exception as e:
+            print(f"Error optimizing image {self.id}: {e}")
+    
+    def delete(self, *args, **kwargs):
+        # Delete the file from storage
+        if self.image:
+            try:
+                if default_storage.exists(self.image.name):
+                    default_storage.delete(self.image.name)
+            except Exception as e:
+                print(f"Error deleting image file {self.image.name}: {e}")
+        
+        super().delete(*args, **kwargs)
+    
+    def get_image_url(self):
+        """Get the full URL for the image"""
+        if self.image:
+            return self.image.url
+        return None
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_image_type_display()}"
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -26,6 +106,9 @@ class UserProfile(models.Model):
     degree = models.CharField(max_length=255, blank=True, help_text="User's degree program")
     year = models.CharField(max_length=50, blank=True, help_text="User's academic year")
     bio = models.TextField(blank=True, help_text="User's bio/description")
+    
+    # Legacy field - will be deprecated
+    profile_picture = models.TextField(blank=True, help_text="Base64 encoded profile picture (deprecated)")
     
     # New fields for smart matching
     interests = models.JSONField(default=list, blank=True, help_text="JSON array of user interests")
@@ -52,6 +135,46 @@ class UserProfile(models.Model):
     def set_skills(self, skills_dict):
         """Set the skills dictionary"""
         self.skills = skills_dict
+    
+    def get_primary_image(self):
+        """Get the user's primary profile image"""
+        try:
+            return self.user.images.filter(is_primary=True).first()
+        except:
+            return None
+    
+    def get_profile_images(self):
+        """Get all profile images for the user"""
+        try:
+            return self.user.images.filter(image_type='profile').order_by('-is_primary', '-uploaded_at')
+        except:
+            return UserImage.objects.none()
+    
+    def get_gallery_images(self):
+        """Get all gallery images for the user"""
+        try:
+            return self.user.images.filter(image_type='gallery').order_by('-uploaded_at')
+        except:
+            return UserImage.objects.none()
+    
+    def get_all_images(self):
+        """Get all images for the user"""
+        try:
+            return self.user.images.all().order_by('-is_primary', '-uploaded_at')
+        except:
+            return UserImage.objects.none()
+    
+    def get_profile_picture_url(self):
+        """Get the URL of the primary profile picture"""
+        primary_image = self.get_primary_image()
+        if primary_image:
+            return primary_image.get_image_url()
+        
+        # Fallback to legacy base64 field
+        if self.profile_picture:
+            return f"data:image/jpeg;base64,{self.profile_picture}"
+        
+        return None
     
     def get_matching_score(self, event):
         """

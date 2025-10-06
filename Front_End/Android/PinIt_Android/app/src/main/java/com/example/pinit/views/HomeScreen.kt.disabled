@@ -1,0 +1,413 @@
+package com.example.pinit.views
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.pinit.components.*
+import com.example.pinit.models.UserAccountManager
+import com.example.pinit.models.WeatherViewModel
+import androidx.navigation.NavHostController
+import com.example.pinit.repository.EventRepository
+import com.example.pinit.models.StudyEventMap
+import com.example.pinit.websocket.RealTimeEventsManagerSingleton
+import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    accountManager: UserAccountManager,
+    onNavigateToProfile: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToFriends: () -> Unit,
+    onNavigateToCalendar: () -> Unit,
+    onNavigateToInvitations: () -> Unit,
+    onNavigateToMap: () -> Unit,
+    onNavigateToEventDetail: (String) -> Unit,
+    onNavigateToEventCreation: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val weatherViewModel: WeatherViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val eventRepository = remember { EventRepository() }
+    val realTimeManager = remember { RealTimeEventsManagerSingleton.getInstance() }
+    val scope = rememberCoroutineScope()
+    
+    // State for events
+    var events by remember { mutableStateOf<List<StudyEventMap>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isRealTimeConnected by remember { mutableStateOf(false) }
+    
+    // Load events when screen appears
+    LaunchedEffect(accountManager.currentUser) {
+        accountManager.currentUser?.let { username ->
+            scope.launch {
+                eventRepository.getEventsForUser(username).collect { result ->
+                    result.fold(
+                        onSuccess = { eventList ->
+                            events = eventList
+                            isLoading = false
+                            errorMessage = null
+                        },
+                        onFailure = { error ->
+                            errorMessage = error.message
+                            isLoading = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+    
+    // Listen to real-time events
+    LaunchedEffect(realTimeManager) {
+        realTimeManager.addEventListener { realTimeEvents ->
+            events = realTimeEvents
+        }
+        
+        realTimeManager.addNewEventListener { newEvent ->
+            // Handle new event (could show a snackbar or notification)
+        }
+        
+        realTimeManager.addUpdatedEventListener { updatedEvent ->
+            // Handle updated event
+        }
+        
+        realTimeManager.addDeletedEventListener { deletedEventId ->
+            // Handle deleted event
+        }
+    }
+    
+    // Monitor real-time connection status
+    LaunchedEffect(realTimeManager.isConnected) {
+        isRealTimeConnected = realTimeManager.isConnected
+    }
+    
+    // Fetch weather data
+    LaunchedEffect(Unit) {
+        weatherViewModel.fetchWeather("Buenos Aires")
+    }
+    
+    Scaffold(
+        topBar = {
+            PinItTopAppBar(
+                title = "PinIt",
+                userName = accountManager.currentUser ?: "Guest",
+                onProfileClick = onNavigateToProfile,
+                onSettingsClick = onNavigateToSettings,
+                connectionError = accountManager.connectionErrorMessage,
+                onRetryConnection = { accountManager.pingAllServers() },
+                isRealTimeConnected = isRealTimeConnected
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNavigateToEventCreation,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Create Event"
+                )
+            }
+        },
+        modifier = modifier
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            // Weather Card
+            item {
+                WeatherCard(weatherViewModel = weatherViewModel)
+            }
+            
+            // Quick Actions Grid
+            item {
+                QuickActionsGrid(
+                    onFriendsClick = onNavigateToFriends,
+                    onCalendarClick = onNavigateToCalendar,
+                    onInvitationsClick = onNavigateToInvitations,
+                    onMapClick = onNavigateToMap
+                )
+            }
+            
+            // Upcoming Events Section
+            item {
+                PinItSectionHeader(
+                    title = "Upcoming Events",
+                    subtitle = "${events.size} events scheduled",
+                    actionText = "See All",
+                    onActionClick = onNavigateToCalendar
+                )
+            }
+            
+            // Events List
+            if (isLoading) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PinItLoadingIndicator()
+                    }
+                }
+            } else if (errorMessage != null) {
+                item {
+                    PinItEmptyState(
+                        title = "Unable to Load Events",
+                        description = errorMessage ?: "Please check your connection and try again.",
+                        icon = Icons.Default.Error,
+                        actionText = "Retry",
+                        onActionClick = {
+                            // Retry loading events
+                            scope.launch {
+                                accountManager.currentUser?.let { username ->
+                                    eventRepository.getEventsForUser(username).collect { result ->
+                                        result.fold(
+                                            onSuccess = { eventList ->
+                                                events = eventList
+                                                errorMessage = null
+                                            },
+                                            onFailure = { error ->
+                                                errorMessage = error.message
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
+            } else if (events.isEmpty()) {
+                item {
+                    PinItEmptyState(
+                        title = "No Events Yet",
+                        description = "Create your first event or discover events happening around you.",
+                        icon = Icons.Default.Event,
+                        actionText = "Create Event",
+                        onActionClick = onNavigateToEventCreation
+                    )
+                }
+            } else {
+                items(events.take(5)) { event ->
+                    EventCard(
+                        title = event.title,
+                        description = event.description,
+                        eventType = event.eventType?.name ?: "OTHER",
+                        location = formatLocation(event.coordinate),
+                        time = formatEventTime(event.time),
+                        isAutoMatched = event.isAutoMatched ?: false,
+                        onClick = { /* TODO: Navigate to event detail */ }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PinItTopAppBar(
+    title: String,
+    userName: String,
+    onProfileClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    connectionError: String?,
+    onRetryConnection: () -> Unit,
+    isRealTimeConnected: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    TopAppBar(
+        title = {
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Welcome back, $userName",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        actions = {
+            // Real-time connection indicator
+            if (isRealTimeConnected) {
+                Icon(
+                    imageVector = Icons.Default.Wifi,
+                    contentDescription = "Real-time Connected",
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            }
+            
+            if (connectionError != null) {
+                IconButton(onClick = onRetryConnection) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Retry Connection",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings"
+                )
+            }
+            
+            IconButton(onClick = onProfileClick) {
+                ProfilePicture(
+                    imageUrl = null, // TODO: Load from user profile
+                    size = ProfilePictureSize.Small
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        modifier = modifier
+    )
+}
+
+@Composable
+fun WeatherCard(
+    weatherViewModel: WeatherViewModel,
+    modifier: Modifier = Modifier
+) {
+    // TODO: Implement weather collection when WeatherViewModel is properly set up
+    val weather = null
+    
+    PinItCard(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Buenos Aires",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "Loading...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.WbSunny,
+                    contentDescription = "Weather",
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+                Text(
+                    text = "--°C",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun QuickActionsGrid(
+    onFriendsClick: () -> Unit,
+    onCalendarClick: () -> Unit,
+    onInvitationsClick: () -> Unit,
+    onMapClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        PinItSectionHeader(
+            title = "Quick Actions",
+            subtitle = "Access your most used features"
+        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PinItButton(
+                text = "Study Chat",
+                onClick = onFriendsClick,
+                leadingIcon = Icons.Default.People,
+                modifier = Modifier.weight(1f),
+                variant = ButtonVariant.Primary
+            )
+            
+            PinItButton(
+                text = "Calendar",
+                onClick = onCalendarClick,
+                leadingIcon = Icons.Default.CalendarMonth,
+                modifier = Modifier.weight(1f),
+                variant = ButtonVariant.Secondary
+            )
+        }
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PinItButton(
+                text = "Invitations",
+                onClick = onInvitationsClick,
+                leadingIcon = Icons.Default.Mail,
+                modifier = Modifier.weight(1f),
+                variant = ButtonVariant.Tertiary
+            )
+            
+            PinItButton(
+                text = "Map",
+                onClick = onMapClick,
+                leadingIcon = Icons.Default.Map,
+                modifier = Modifier.weight(1f),
+                variant = ButtonVariant.Outline
+            )
+        }
+    }
+}
+
+// Helper functions
+private fun formatLocation(coordinate: Pair<Double, Double>?): String {
+    return if (coordinate != null) {
+        "Lat: ${String.format("%.2f", coordinate.first)}, Lon: ${String.format("%.2f", coordinate.second)}"
+    } else {
+        "Location not specified"
+    }
+}
+
+private fun formatEventTime(time: java.time.LocalDateTime): String {
+    return time.toString().substring(0, 16).replace("T", " ")
+}

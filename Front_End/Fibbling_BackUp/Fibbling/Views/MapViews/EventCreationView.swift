@@ -31,7 +31,10 @@ struct EventCreationView: View {
     @State private var selectedFriends: [String] = []
     @State private var locationSuggestions: [String] = []
     @State private var showLocationSuggestions = false
-    @State private var locationMapItems: [MKMapItem] = []
+    @State private var isGeocoding = false
+    @State private var showSuccessAnimation = false
+    @State private var isSearchingSuggestions = false
+    @State private var isLocationSelected = false
     
     var onSave: (StudyEvent) -> Void
     
@@ -44,40 +47,46 @@ struct EventCreationView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
+        ZStack {
                 // Professional background
-                Color.bgSurface
-                    .ignoresSafeArea()
-                
-                // Subtle gradient
-                LinearGradient(
-                    colors: [Color.gradientStart.opacity(0.03), Color.gradientEnd.opacity(0.01)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+            Color.bgSurface
                 .ignoresSafeArea()
-                
+            
+                // Subtle gradient
+            LinearGradient(
+                    colors: [Color.gradientStart.opacity(0.03), Color.gradientEnd.opacity(0.01)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
                 ScrollView {
                     VStack(spacing: 24) {
                         // Header with progress
                         headerSection
+                            .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                         
                         // Main content in cards
                         VStack(spacing: 20) {
                             // Essential Info Card
                             essentialInfoCard
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                             
                             // Date & Time Card
                             dateTimeCard
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                             
                             // Location Card
                             locationCard
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                             
                             // Event Settings Card
                             settingsCard
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                             
                             // Optional Features Card
                             optionalFeaturesCard
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                         }
                         .padding(.horizontal, 20)
                         
@@ -85,6 +94,7 @@ struct EventCreationView: View {
                         createButton
                             .padding(.horizontal, 20)
                             .padding(.bottom, 30)
+                            .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                     }
                 }
             }
@@ -98,15 +108,20 @@ struct EventCreationView: View {
                         dismiss()
                     }
                     .foregroundColor(.textPrimary)
-                }
             }
-            .sheet(isPresented: $showImagePicker) {
+        }
+        .sheet(isPresented: $showImagePicker) {
                 EventImagePicker(selectedImages: $selectedImages)
             }
             .sheet(isPresented: $showFriendPicker) {
                 FriendPickerView(selectedFriends: $selectedFriends)
                     .environmentObject(accountManager)
             }
+            .animation(.easeInOut(duration: 0.3), value: showLocationSuggestions)
+            .animation(.easeInOut(duration: 0.3), value: isGeocoding)
+            .animation(.easeInOut(duration: 0.3), value: isSearchingSuggestions)
+            .animation(.easeInOut(duration: 0.3), value: showSuccessAnimation)
+            .animation(.easeInOut(duration: 0.3), value: isLoading)
         }
         .overlay {
             if isLoading {
@@ -118,7 +133,7 @@ struct EventCreationView: View {
     // MARK: - Header Section
     private var headerSection: some View {
         VStack(spacing: 12) {
-            HStack {
+        HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Create Your Event")
                         .font(.title2.bold())
@@ -128,9 +143,9 @@ struct EventCreationView: View {
                         .font(.subheadline)
                         .foregroundColor(.textSecondary)
                 }
-                
-                Spacer()
-                
+            
+            Spacer()
+            
                 // Quick stats
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(maxParticipants)")
@@ -150,9 +165,9 @@ struct EventCreationView: View {
                         .frame(width: 8, height: 8)
                         .animation(.easeInOut(duration: 0.3), value: completionProgress)
                 }
-                
-                Spacer()
-                
+            
+            Spacer()
+            
                 Text("\(Int(completionProgress * 25))% Complete")
                     .font(.caption)
                     .foregroundColor(.textSecondary)
@@ -169,8 +184,8 @@ struct EventCreationView: View {
             
             VStack(spacing: 16) {
                 // Event Title
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Event Title")
+                    VStack(alignment: .leading, spacing: 8) {
+                            Text("Event Title")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
                     
@@ -180,7 +195,7 @@ struct EventCreationView: View {
                 
                 // Event Type
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Event Type")
+                            Text("Event Type")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
                     
@@ -196,7 +211,7 @@ struct EventCreationView: View {
                 
                 // Description
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Description")
+                            Text("Description")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
                     
@@ -228,24 +243,24 @@ struct EventCreationView: View {
                 
                 // Time Range
                 HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 8) {
                         Text("Start Time")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.textPrimary)
                         
                         DatePicker("", selection: $eventDate, displayedComponents: [.hourAndMinute])
-                            .datePickerStyle(.compact)
-                            .labelsHidden()
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
+                                        .datePickerStyle(.compact)
+                                    .labelsHidden()
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 8) {
                         Text("End Time")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.textPrimary)
                         
                         DatePicker("", selection: $eventEndDate, displayedComponents: [.hourAndMinute])
-                            .datePickerStyle(.compact)
-                            .labelsHidden()
+                                        .datePickerStyle(.compact)
+                                    .labelsHidden()
                     }
                 }
                 
@@ -266,58 +281,92 @@ struct EventCreationView: View {
     
     // MARK: - Location Card
     private var locationCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 16) {
             cardHeader("Where", icon: "location.fill", color: .orange)
             
             VStack(spacing: 16) {
-                // Location Name with Suggestions
+                // Simple Location Input with Suggestions
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Location")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.textPrimary)
+                    HStack {
+                        Text(isLocationSelected ? "Location Selected" : "Location")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.textPrimary)
+                        
+                        Spacer()
+                        
+                        if isLocationSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                    }
                     
                     VStack(spacing: 0) {
-                        TextField("e.g., Central Library, Coffee Shop", text: $locationName)
-                            .textFieldStyle(ModernTextFieldStyle())
-                            .onChange(of: locationName) { newValue in
-                                if newValue.count > 2 {
-                                    searchLocationSuggestions(query: newValue)
-                                } else {
-                                    locationSuggestions = []
-                                    showLocationSuggestions = false
+                        HStack {
+                            TextField("Enter location (e.g., Brandenburger Tor, Berlin)", text: $locationName)
+                                .textFieldStyle(ModernTextFieldStyle())
+                                .onChange(of: locationName) { _, newValue in
+                                    // Reset location selected state when user types
+                                    if !newValue.isEmpty {
+                                        isLocationSelected = false
+                                    }
+                                    
+                                    // Only show suggestions, don't auto-geocode
+                                    if newValue.count > 2 {
+                                        searchLocationSuggestions(query: newValue)
+                                    } else {
+                                        locationSuggestions = []
+                                        showLocationSuggestions = false
+                                    }
                                 }
+                                .onSubmit {
+                                    // Geocode when user presses return
+                                    if !locationName.isEmpty {
+                                        geocodeLocation(locationName)
+                                    }
+                                }
+                            
+                            // Find Location button
+                            Button(action: {
+                                if !locationName.isEmpty {
+                                    geocodeLocation(locationName)
+                                }
+                            }) {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(.orange)
+                                    .font(.system(size: 16, weight: .medium))
                             }
+                            .disabled(locationName.isEmpty || isGeocoding)
+                            
+                            // Geocoding/Searching indicator with smooth animation
+                            if isGeocoding || isSearchingSuggestions {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .foregroundColor(.orange)
+                                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                            }
+                        }
                         
-                        // Location Suggestions
+                        // Location Suggestions - Simplified
                         if showLocationSuggestions && !locationSuggestions.isEmpty {
                             VStack(spacing: 0) {
-                                ForEach(locationSuggestions.prefix(5), id: \.self) { suggestion in
+                                ForEach(locationSuggestions.prefix(3), id: \.self) { suggestion in
                                     Button(action: {
                                         locationName = suggestion
                                         showLocationSuggestions = false
                                         locationSuggestions = []
-                                        
-                                        // Update coordinates based on selected location
-                                        if let mapItem = locationMapItems.first(where: { item in
-                                            var name = item.name ?? ""
-                                            if let locality = item.placemark.locality {
-                                                name += ", \(locality)"
-                                            }
-                                            return name == suggestion
-                                        }) {
-                                            selectedCoordinate = mapItem.placemark.coordinate
-                                        }
+                                        geocodeLocation(suggestion)
                                     }) {
-                                        HStack {
+                                HStack {
                                             Image(systemName: "location")
-                                                .foregroundColor(.textSecondary)
-                                                .font(.caption)
+                                                .foregroundColor(.orange)
+                                                        .font(.caption)
                                             
                                             Text(suggestion)
                                                 .font(.subheadline)
                                                 .foregroundColor(.textPrimary)
                                             
-                                            Spacer()
+                                                Spacer()
                                         }
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
@@ -325,7 +374,7 @@ struct EventCreationView: View {
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                     
-                                    if suggestion != locationSuggestions.prefix(5).last {
+                                    if suggestion != locationSuggestions.prefix(3).last {
                                         Divider()
                                             .padding(.horizontal, 16)
                                     }
@@ -337,6 +386,56 @@ struct EventCreationView: View {
                             .padding(.top, 4)
                         }
                     }
+                    
+                    
+                    // Show current coordinates and location info for reference
+                    if !locationName.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                                Image(systemName: "mappin.circle")
+                                    .foregroundColor(.orange)
+                                    .font(.caption)
+                                
+                                Text("Coordinates: \(String(format: "%.4f", selectedCoordinate.latitude)), \(String(format: "%.4f", selectedCoordinate.longitude))")
+                                    .font(.caption)
+                                .foregroundColor(.textSecondary)
+                                
+                                Spacer()
+                            }
+                            
+                            // Show if location was found successfully with animation
+                            if isLocationSelected {
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
+                                    
+                                    Text("Location selected successfully")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                    
+                                    Spacer()
+                                }
+                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
+                }
+                
+                // Location Status
+                if !locationName.isEmpty {
+                        HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        
+                        Text("Location set: \(locationName)")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                        
+                        Spacer()
+                    }
+                    .padding(.top, 8)
                 }
             }
         }
@@ -351,24 +450,24 @@ struct EventCreationView: View {
             VStack(spacing: 16) {
                 // Privacy Setting
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 4) {
                         Text("Event Visibility")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.textPrimary)
-                        
+                                
                         Text(isPublic ? "Anyone can see and join" : "Only invited people can see")
-                            .font(.caption)
-                            .foregroundColor(.textSecondary)
-                    }
+                                    .font(.caption)
+                                    .foregroundColor(.textSecondary)
+                            }
                     
                     Spacer()
                     
                     Toggle("", isOn: $isPublic)
                         .toggleStyle(SwitchToggleStyle(tint: .brandPrimary))
                 }
-                
+                        
                 // Friend Invitations (only show if private)
-                if !isPublic {
+                        if !isPublic {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("Invite Friends")
@@ -395,7 +494,7 @@ struct EventCreationView: View {
                                         HStack(spacing: 4) {
                                             Text(friend)
                                                 .font(.caption.weight(.medium))
-                                                .foregroundColor(.brandPrimary)
+                                .foregroundColor(.brandPrimary)
                                             
                                             Button(action: { removeFriend(friend) }) {
                                                 Image(systemName: "xmark")
@@ -417,20 +516,20 @@ struct EventCreationView: View {
                             }
                         } else {
                             Text("No friends invited yet")
-                                .font(.caption)
-                                .foregroundColor(.textSecondary)
+                                    .font(.caption)
+                                    .foregroundColor(.textSecondary)
                                 .padding(.vertical, 8)
                         }
                     }
                 }
                 
                 // Max Participants
-                VStack(alignment: .leading, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 8) {
                     Text("Maximum Participants")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
-                    
-                    HStack {
+                                    
+                                    HStack {
                         Text("\(maxParticipants) people")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.brandPrimary)
@@ -453,7 +552,7 @@ struct EventCreationView: View {
             
             VStack(spacing: 16) {
                 // Auto-matching Toggle
-                HStack {
+                                    HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Smart Matching")
                             .font(.subheadline.weight(.medium))
@@ -478,9 +577,9 @@ struct EventCreationView: View {
                             .foregroundColor(.textPrimary)
                         
                         // Tags display
-                        if !tags.isEmpty {
-                            FlowLayout(spacing: 8) {
-                                ForEach(tags, id: \.self) { tag in
+                                    if !tags.isEmpty {
+                                        FlowLayout(spacing: 8) {
+                                            ForEach(tags, id: \.self) { tag in
                                     tagView(tag)
                                 }
                             }
@@ -502,85 +601,129 @@ struct EventCreationView: View {
                         // Quick suggestions
                         if tags.isEmpty {
                             Text("Popular tags:")
-                                .font(.caption)
-                                .foregroundColor(.textSecondary)
-                            
+                                                .font(.caption)
+                                                .foregroundColor(.textSecondary)
+                                            
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
                                     ForEach(popularTags.prefix(6), id: \.self) { tag in
                                         Button(tag) {
                                             addTag(tag)
                                         }
-                                        .font(.caption)
-                                        .foregroundColor(.brandPrimary)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
+                                                            .font(.caption)
+                                                            .foregroundColor(.brandPrimary)
+                                                            .padding(.horizontal, 12)
+                                                            .padding(.vertical, 6)
                                         .background(Color.brandPrimary.opacity(0.1))
                                         .cornerRadius(8)
                                     }
                                 }
                                 .padding(.horizontal, 4)
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-            }
-        }
         .cardStyle()
     }
     
     // MARK: - Create Button
     private var createButton: some View {
         Button(action: createEvent) {
-            HStack {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title3)
+            HStack(spacing: 12) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.9)
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                }
                 
-                Text("Create Event")
+                Text(isLoading ? "Creating Event..." : "Create Event")
                     .font(.headline.weight(.semibold))
+                    .transition(.opacity)
             }
-            .foregroundColor(.white)
+                                        .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(
                 LinearGradient(
-                    gradient: Gradient(colors: [Color.brandPrimary, Color.brandAccent]),
+                    gradient: Gradient(colors: isLoading ? 
+                        [Color.brandPrimary.opacity(0.8), Color.brandAccent.opacity(0.8)] :
+                        [Color.brandPrimary, Color.brandAccent]),
                     startPoint: .leading,
                     endPoint: .trailing
                 )
             )
             .cornerRadius(16)
-            .shadow(color: Color.brandPrimary.opacity(0.3), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.brandPrimary.opacity(isLoading ? 0.2 : 0.3), radius: isLoading ? 4 : 8, x: 0, y: isLoading ? 2 : 4)
+            .scaleEffect(isLoading ? 0.98 : 1.0)
         }
-        .disabled(!isFormValid)
+        .disabled(!isFormValid || isLoading)
         .opacity(isFormValid ? 1.0 : 0.6)
+        .animation(.easeInOut(duration: 0.3), value: isLoading)
+        .animation(.easeInOut(duration: 0.3), value: isFormValid)
     }
     
     // MARK: - Loading Overlay
     private var loadingOverlay: some View {
         ZStack {
-            Color.black.opacity(0.3)
+            Color.black.opacity(0.4)
                 .ignoresSafeArea()
+                .transition(.opacity)
             
-            VStack(spacing: 16) {
-                ProgressView()
-                    .scaleEffect(1.2)
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+            VStack(spacing: 20) {
+                // Animated progress indicator
+                ZStack {
+                    Circle()
+                        .stroke(Color.white.opacity(0.3), lineWidth: 4)
+                        .frame(width: 60, height: 60)
+                    
+                    Circle()
+                        .trim(from: 0, to: 0.7)
+                        .stroke(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.brandPrimary, Color.brandAccent]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                        )
+                        .frame(width: 60, height: 60)
+                        .rotationEffect(.degrees(-90))
+                        .rotationEffect(.degrees(isLoading ? 360 : 0))
+                        .animation(.linear(duration: 1.0).repeatForever(autoreverses: false), value: isLoading)
+                }
                 
-                Text("Creating Event...")
-                    .font(.headline)
-                    .foregroundColor(.white)
+                VStack(spacing: 8) {
+                    Text("Creating Event...")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
+                    
+                    Text("Please wait while we set up your event")
+                                            .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
             }
-            .padding(24)
-            .background(Color.bgCard.opacity(0.9))
-            .cornerRadius(16)
-            .shadow(radius: 10)
+            .padding(32)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.bgCard.opacity(0.95))
+                    .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
+            )
+            .scaleEffect(isLoading ? 1.0 : 0.9)
+            .opacity(isLoading ? 1.0 : 0.0)
+            .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
         }
     }
     
     // MARK: - Helper Views
     private func cardHeader(_ title: String, icon: String, color: Color) -> some View {
-        HStack {
+                                HStack {
             Image(systemName: icon)
                 .foregroundColor(color)
                 .font(.title3)
@@ -607,11 +750,11 @@ struct EventCreationView: View {
                     .minimumScaleFactor(0.8)
             }
             .frame(width: 55, height: 50)
-            .background(
+                                                .background(
                 RoundedRectangle(cornerRadius: 10)
                     .fill(selectedEventType == type ? eventTypeColor(type) : Color.bgSecondary)
-            )
-            .overlay(
+                                                )
+                                                .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(selectedEventType == type ? Color.clear : Color.bgSecondary, lineWidth: 1)
             )
@@ -628,7 +771,7 @@ struct EventCreationView: View {
             Button(action: { removeTag(tag) }) {
                 Image(systemName: "xmark")
                     .font(.caption2)
-                    .foregroundColor(.textSecondary)
+                                        .foregroundColor(.textSecondary)
             }
         }
         .padding(.horizontal, 10)
@@ -655,8 +798,8 @@ struct EventCreationView: View {
         !eventTitle.isEmpty &&
         !eventDescription.isEmpty &&
         !locationName.isEmpty &&
-        eventDate < eventEndDate &&
-        (!enableAutoMatching || !tags.isEmpty)
+        eventDate < eventEndDate
+        // Removed the auto-matching tags requirement to make it easier
     }
     
     private var popularTags: [String] {
@@ -681,30 +824,150 @@ struct EventCreationView: View {
     }
     
     private func searchLocationSuggestions(query: String) {
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = query
-        request.region = MKCoordinateRegion(
-            center: selectedCoordinate,
-            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-        )
+        isSearchingSuggestions = true
         
-        let search = MKLocalSearch(request: request)
-        search.start { response, error in
+        let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
+        let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=5&types=poi,place,locality,neighborhood,address"
+        
+        guard let url = URL(string: urlString) else {
             DispatchQueue.main.async {
-                if let response = response {
-                    self.locationMapItems = response.mapItems
-                    self.locationSuggestions = response.mapItems.compactMap { item in
-                        var name = item.name ?? ""
-                        if let locality = item.placemark.locality {
-                            name += ", \(locality)"
-                        }
-                        return name.isEmpty ? nil : name
-                    }
-                    self.showLocationSuggestions = true
-                } else {
-                    self.locationMapItems = []
+                self.isSearchingSuggestions = false
+                self.locationSuggestions = []
+                self.showLocationSuggestions = false
+            }
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                self.isSearchingSuggestions = false
+                
+                if let error = error {
                     self.locationSuggestions = []
                     self.showLocationSuggestions = false
+                    return
+                }
+                
+                guard let data = data else {
+                    self.locationSuggestions = []
+                    self.showLocationSuggestions = false
+                    return
+                }
+                
+                do {
+                    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                    
+                    if let json = json,
+                       let features = json["features"] as? [[String: Any]] {
+                        
+                        self.locationSuggestions = features.compactMap { feature in
+                            guard let placeName = feature["place_name"] as? String else {
+                                return nil
+                            }
+                            return placeName
+                        }.filter { !$0.isEmpty }
+                        
+                        self.showLocationSuggestions = !self.locationSuggestions.isEmpty
+                    } else {
+                        self.locationSuggestions = []
+                        self.showLocationSuggestions = false
+                    }
+                } catch {
+                    self.locationSuggestions = []
+                    self.showLocationSuggestions = false
+                }
+            }
+        }.resume()
+    }
+    
+    private func geocodeLocation(_ address: String) {
+        // Set loading state
+        isGeocoding = true
+        
+        // Use Mapbox Geocoding REST API directly for much better worldwide results
+        let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
+        let encodedQuery = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? address
+        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=1&types=poi,place,locality,neighborhood,address"
+        
+        guard let url = URL(string: urlString) else {
+            DispatchQueue.main.async {
+                self.isGeocoding = false
+                self.fallbackGeocode(address)
+            }
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                self.isGeocoding = false
+                
+                if let error = error {
+                    self.fallbackGeocode(address)
+                    return
+                }
+                
+                guard let data = data else {
+                    self.fallbackGeocode(address)
+                    return
+                }
+                
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let features = json["features"] as? [[String: Any]],
+                       let firstFeature = features.first,
+                       let geometry = firstFeature["geometry"] as? [String: Any],
+                       let coordinates = geometry["coordinates"] as? [Double],
+                       coordinates.count >= 2 {
+                        
+                        let longitude = coordinates[0]
+                        let latitude = coordinates[1]
+                        let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                        
+                        self.selectedCoordinate = coordinate
+                        self.isLocationSelected = true
+                        
+                        // Hide suggestions when location is selected
+                        self.showLocationSuggestions = false
+                        self.locationSuggestions = []
+                        
+                        // Update location name with the found result for better accuracy
+                        if let placeName = firstFeature["place_name"] as? String {
+                            self.locationName = placeName
+                        }
+                        
+                        // Show success animation
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            self.showSuccessAnimation = true
+                        }
+                        
+                        // Hide success animation after delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                self.showSuccessAnimation = false
+                            }
+                        }
+                    } else {
+                        self.fallbackGeocode(address)
+                    }
+                } catch {
+                    self.fallbackGeocode(address)
+                }
+            }
+        }.resume()
+    }
+    
+    private func fallbackGeocode(_ address: String) {
+        let geocoder = CLGeocoder()
+        // Create a custom location manager to avoid device location bias
+        geocoder.geocodeAddressString(address, in: nil) { placemarks, error in
+            DispatchQueue.main.async {
+                if let placemark = placemarks?.first {
+                    self.selectedCoordinate = placemark.location?.coordinate ?? self.selectedCoordinate
+                    print("📍 Fallback geocoded '\(address)' to: \(self.selectedCoordinate)")
+                } else {
+                    print("❌ Complete geocoding failure for '\(address)'")
+                    // Keep current coordinate as last resort
                 }
             }
         }
@@ -753,7 +1016,7 @@ struct EventCreationView: View {
     // MARK: - Event Creation
     private func createEvent() {
         isLoading = true
-        
+
         // Prepare the API request
         guard let url = URL(string: APIConfig.fullURL(for: "createEvent")) else {
             isLoading = false
@@ -788,7 +1051,7 @@ struct EventCreationView: View {
         // Add auto-matching data if enabled
         if enableAutoMatching {
             jsonBody["auto_matching_enabled"] = true
-            jsonBody["interest_tags"] = tags
+                jsonBody["interest_tags"] = tags
         }
         
         do {
@@ -843,10 +1106,10 @@ struct EventCreationView: View {
                                 print("❌ JSON parsing error: \(error.localizedDescription)")
                             }
                         }
-                    } else {
+                        } else {
                         print("❌ Server error: HTTP \(httpResponse.statusCode)")
-                    }
-                }
+                                }
+                            }
             }
         }.resume()
     }
@@ -859,7 +1122,8 @@ struct ModernTextFieldStyle: TextFieldStyle {
             .padding()
             .background(Color.bgSecondary)
             .cornerRadius(12)
-            .overlay(
+            .foregroundColor(.black) // Ensure text is black for visibility
+        .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.bgSecondary, lineWidth: 1)
             )
@@ -888,7 +1152,7 @@ struct FriendPickerView: View {
     private var filteredFriends: [String] {
         if searchQuery.isEmpty {
             return accountManager.friends
-        } else {
+                        } else {
             return accountManager.friends.filter { $0.localizedCaseInsensitiveContains(searchQuery) }
         }
     }
@@ -897,31 +1161,32 @@ struct FriendPickerView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Search bar
-                HStack {
+            HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.textSecondary)
                     
                     TextField("Search friends", text: $searchQuery)
                         .textFieldStyle(PlainTextFieldStyle())
-                }
-                .padding()
+                        .foregroundColor(.black) // Ensure text is black for visibility
+                    }
+                    .padding()
                 .background(Color.bgSecondary)
-                .cornerRadius(12)
-                .padding()
+                    .cornerRadius(12)
+                        .padding()
                 
                 // Friends list
                 List(filteredFriends, id: \.self) { friend in
-                    HStack {
+                            HStack {
                         Image(systemName: "person.circle.fill")
                             .foregroundColor(.brandPrimary)
-                            .font(.title2)
+                                    .font(.title2)
                         
                         Text(friend)
                             .font(.subheadline)
                             .foregroundColor(.textPrimary)
-                        
-                        Spacer()
-                        
+                                
+                                Spacer()
+                                
                         if selectedFriends.contains(friend) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.brandPrimary)

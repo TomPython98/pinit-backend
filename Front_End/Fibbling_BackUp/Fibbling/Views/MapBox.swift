@@ -716,19 +716,8 @@ struct StudyMapBoxView: UIViewRepresentable {
         mapView.location.options.puckType = .puck2D(puck2DConfiguration)
         mapView.location.options.puckBearingEnabled = true
         
-        mapView.mapboxMap.onCameraChanged.observe { [weak mapView] event in
-            guard let mapView = mapView else { return }
-            let topLeft = mapView.mapboxMap.coordinate(for: CGPoint(x: 0, y: 0))
-            let bottomRight = mapView.mapboxMap.coordinate(for: CGPoint(x: mapView.bounds.width, y: mapView.bounds.height))
-            let center = event.cameraState.center
-            let span = MKCoordinateSpan(
-                latitudeDelta: abs(topLeft.latitude - bottomRight.latitude),
-                longitudeDelta: abs(topLeft.longitude - bottomRight.longitude)
-            )
-            DispatchQueue.main.async {
-                region.wrappedValue = MKCoordinateRegion(center: center, span: span)
-            }
-        }.store(in: &context.coordinator.cancelables)
+        // Removed onCameraChanged observer to prevent constant recentering
+        // This was causing the map to always snap back to the center point
         
         mapView.mapboxMap.onStyleLoaded
             .observeNext { _ in

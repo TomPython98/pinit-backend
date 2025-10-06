@@ -4,6 +4,7 @@ import PhotosUI
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var profileManager = UserProfileManager()
+    @StateObject private var imageManager = ImageManager.shared
     
     // User profile data
     @State private var username = ""
@@ -14,9 +15,12 @@ struct EditProfileView: View {
     @State private var bio = ""
     @State private var selectedImage: PhotosPickerItem?
     @State private var profileImage: Image?
+    @State private var profileImageData: Data?
+    @State private var showImagePicker = false
     @State private var isLoading = false
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var showingImageGallery = false
     
     // Form validation
     @State private var emailIsValid = true
@@ -51,6 +55,9 @@ struct EditProfileView: View {
             }
             .onAppear {
                 loadProfileData()
+                Task {
+                    await imageManager.loadUserImages(username: username)
+                }
             }
             .alert("Profile", isPresented: $showAlert) {
                 Button("OK") { }
@@ -63,10 +70,132 @@ struct EditProfileView: View {
     // MARK: - Profile Form
     private var profileForm: some View {
         VStack(alignment: .leading, spacing: 16) {
+            profilePictureSection
             basicInfoSection
             bioSection
             interestsSection
             saveButton
+        }
+    }
+    
+    // MARK: - Profile Picture Section
+    private var profilePictureSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "camera")
+                    .foregroundColor(.brandPrimary)
+                Text("Profile Pictures")
+                    .font(.headline)
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+                
+                Button("Manage All") {
+                    showingImageGallery = true
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.brandPrimary)
+            }
+            
+            // Primary Profile Picture
+            HStack(spacing: 20) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            gradient: Gradient(colors: [.brandPrimary, .brandSecondary]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 80, height: 80)
+                    
+                    if let primaryImage = imageManager.getPrimaryImage() {
+                        AsyncImage(url: URL(string: primaryImage.url)) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                            case .failure, .empty:
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 32))
+                                    .foregroundColor(.white)
+                            @unknown default:
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 32))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                    } else if let profileImage = profileImage {
+                        profileImage
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 80, height: 80)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Primary Profile Picture")
+                        .font(.subheadline)
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("This is your main profile picture")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                    
+                    HStack(spacing: 12) {
+                        Button(action: { showImagePicker = true }) {
+                            Text("Upload New")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.brandPrimary)
+                        }
+                        
+                        if imageManager.getPrimaryImage() != nil {
+                            Button(action: { showingImageGallery = true }) {
+                                Text("Change")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.textSecondary)
+                            }
+                        }
+                    }
+                }
+                
+                Spacer()
+            }
+            
+            // Quick Stats
+            if !imageManager.userImages.isEmpty {
+                HStack {
+                    Image(systemName: "photo.stack")
+                        .foregroundColor(.textSecondary)
+                    Text("\(imageManager.userImages.count) images total")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                    
+                    Spacer()
+                    
+                    Text("Tap 'Manage All' to organize")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+            }
+        }
+        .photosPicker(isPresented: $showImagePicker, selection: $selectedImage, matching: .images)
+        .onChange(of: selectedImage) { newValue in
+            Task {
+                if let newValue = newValue {
+                    await handleImageSelection(newValue)
+                }
+            }
+        }
+        .sheet(isPresented: $showingImageGallery) {
+            ImageGalleryView(username: username)
         }
     }
     
@@ -323,35 +452,132 @@ struct EditProfileView: View {
         
         isLoading = true
         
-        // Save to backend using UserProfileManager
-        profileManager.updateUserProfile(
-            username: username,
-            fullName: fullName,
-            university: profileManager.university,
-            degree: profileManager.degree,
-            year: profileManager.year,
-            bio: bio,
-            interests: interests,
-            skills: profileManager.skills,
-            autoInviteEnabled: profileManager.autoInviteEnabled,
-            preferredRadius: profileManager.preferredRadius
-        ) { success in
-            DispatchQueue.main.async {
-                self.isLoading = false
-                if success {
-                    self.alertMessage = "Profile saved successfully!"
-                    self.showAlert = true
-                    
-                    // Dismiss after a short delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        self.dismiss()
+        Task {
+            // First upload profile picture if one was selected
+            let pictureUploadSuccess = await uploadProfilePicture()
+            
+            // Then update profile using UserProfileManager
+            profileManager.updateUserProfile(
+                username: username,
+                fullName: fullName,
+                university: profileManager.university,
+                degree: profileManager.degree,
+                year: profileManager.year,
+                bio: bio,
+                interests: interests,
+                skills: profileManager.skills,
+                autoInviteEnabled: profileManager.autoInviteEnabled,
+                preferredRadius: profileManager.preferredRadius
+            ) { success in
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    if success && pictureUploadSuccess {
+                        self.alertMessage = "Profile saved successfully!"
+                        self.showAlert = true
+                        
+                        // Dismiss after a short delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            self.dismiss()
+                        }
+                    } else {
+                        let errorMsg = !pictureUploadSuccess ? "Failed to upload profile picture" : (self.profileManager.errorMessage ?? "Failed to save profile")
+                        self.alertMessage = errorMsg
+                        self.showAlert = true
                     }
-                } else {
-                    self.alertMessage = self.profileManager.errorMessage ?? "Failed to save profile"
-                    self.showAlert = true
                 }
             }
         }
+    }
+    
+    // MARK: - Image Loading
+    private func loadImage(from item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let uiImage = UIImage(data: data) else {
+            return
+        }
+        
+        DispatchQueue.main.async {
+            self.profileImage = Image(uiImage: uiImage)
+            self.profileImageData = data
+        }
+    }
+    
+    private func handleImageSelection(_ item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let uiImage = UIImage(data: data) else {
+            return
+        }
+        
+        // Compress image if needed
+        let compressedData = compressImage(uiImage, maxSize: 1920)
+        
+        let request = ImageUploadRequest(
+            username: username,
+            imageData: compressedData,
+            imageType: .profile,
+            isPrimary: imageManager.getPrimaryImage() == nil, // Set as primary if no primary exists
+            caption: "",
+            filename: "profile_\(Date().timeIntervalSince1970).jpg"
+        )
+        
+        await imageManager.uploadImage(request)
+    }
+    
+    private func compressImage(_ image: UIImage, maxSize: CGFloat) -> Data {
+        let size = image.size
+        let aspectRatio = size.width / size.height
+        
+        var newSize = size
+        if max(size.width, size.height) > maxSize {
+            if aspectRatio > 1 {
+                newSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
+            } else {
+                newSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
+            }
+        }
+        
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let compressedImage = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+        
+        return compressedImage.jpegData(compressionQuality: 0.8) ?? Data()
+    }
+    
+    // MARK: - Profile Picture Upload
+    private func uploadProfilePicture() async -> Bool {
+        guard let imageData = profileImageData else { return true } // No image to upload
+        
+        // Convert to base64 for backend
+        let base64String = imageData.base64EncodedString()
+        
+        // Use the existing update profile endpoint
+        guard let url = URL(string: "https://pinit-backend-production.up.railway.app/api/update_user_profile/") else {
+            return false
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody: [String: Any] = [
+            "username": username,
+            "profile_picture": base64String
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            
+            let (_, response) = try await URLSession.shared.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                return httpResponse.statusCode == 200 || httpResponse.statusCode == 201
+            }
+        } catch {
+            print("Profile picture upload error: \(error)")
+        }
+        
+        return false
     }
 }
 

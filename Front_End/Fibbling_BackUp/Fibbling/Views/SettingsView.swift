@@ -20,9 +20,6 @@ struct SettingsView: View {
     // State variables
     @State private var showLogoutAlert = false
     @State private var showDeleteAlert = false
-    @State private var selectedImage: PhotosPickerItem?
-    @State private var profileImage: Image?
-    @State private var showImagePicker = false
     @State private var bio = ""
     @State private var isEditingBio = false
     @State private var showNotificationPreferences = false
@@ -491,28 +488,9 @@ struct SettingsView: View {
                     ))
                     .frame(width: 100, height: 100)
                 
-                if let profileImage = profileImage {
-                    profileImage
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 100, height: 100)
-                        .clipShape(Circle())
-                } else {
-                    Image(systemName: PinItIcons.profile)
-                        .font(.system(size: 40))
-                        .foregroundStyle(.white)
-                }
-                
-                // Camera button
-                Button(action: { showImagePicker = true }) {
-                    Image(systemName: PinItIcons.camera)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(Color.pinItPrimary))
-                        .overlay(Circle().stroke(.white, lineWidth: 2))
-                }
-                .offset(x: 35, y: 35)
+                Image(systemName: PinItIcons.profile)
+                    .font(.system(size: 40))
+                    .foregroundStyle(.white)
             }
             
             VStack(spacing: 8) {
