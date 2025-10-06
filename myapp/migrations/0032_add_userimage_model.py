@@ -1,13 +1,14 @@
 # Generated manually for UserImage model
 
 from django.db import migrations, models
+from django.db.models import deletion
 import uuid
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('myapp', '0031_auto_20241001_1236'),  # Update this to match your latest migration
+        ('myapp', '0030_userprofile_bio_userprofile_degree_and_more'),
     ]
 
     operations = [
