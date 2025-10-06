@@ -124,8 +124,14 @@ else:
         default_acl = 'public-read'
         querystring_auth = False
     
-    DEFAULT_FILE_STORAGE = 'StudyCon.settings.R2Storage'
-    STATICFILES_STORAGE = 'StudyCon.settings.R2Storage'
+    # Configure S3Boto3Storage for R2
+    AWS_S3_CUSTOM_DOMAIN = 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev'
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_QUERYSTRING_AUTH = False
+    
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3.S3Storage'
+    STATICFILES_STORAGE = 'storages.backends.s3.S3Storage'
     MEDIA_URL = 'https://pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev/'
     print(f"✅ R2 configured with S3-compatible credentials")
     print(f"✅ Endpoint: {AWS_S3_ENDPOINT_URL}")
