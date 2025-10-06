@@ -3953,6 +3953,27 @@ def set_primary_image(request, image_id):
         return JsonResponse({"error": f"Failed to set primary image: {str(e)}"}, status=500)
 
 @csrf_exempt
+def run_migration(request):
+    """Run migration to add object storage fields"""
+    try:
+        from django.core.management import execute_from_command_line
+        import sys
+        
+        # Run the migration
+        execute_from_command_line(['manage.py', 'migrate', 'myapp', '0034'])
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Migration 0034 applied successfully"
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        })
+
+@csrf_exempt
 def debug_r2_status(request):
     """Debug endpoint to check R2 configuration and database schema"""
     try:

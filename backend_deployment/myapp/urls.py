@@ -20,5 +20,6 @@ urlpatterns = [
     path('api/user_image/<str:image_id>/set_primary/', views.set_primary_image, name='set_primary_image'),
     path('api/user_image/<str:image_id>/serve/', views.serve_image, name='serve_image'),
     path('api/debug/r2-status/', views.debug_r2_status, name='debug_r2_status'),
+    path('api/run-migration/', views.run_migration, name='run_migration'),
 ]
 
