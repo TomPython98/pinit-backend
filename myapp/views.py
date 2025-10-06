@@ -3998,6 +3998,7 @@ def test_r2_storage(request):
     """Test R2 storage directly"""
     try:
         from django.core.files.storage import default_storage
+from myapp.storage import R2Storage
         from django.core.files.base import ContentFile
         from django.conf import settings
         import tempfile

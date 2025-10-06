@@ -1,116 +1,118 @@
-"""
-Custom Cloudflare R2 Storage Backend using API Token
-"""
-import requests
-import json
-import os
 from django.core.files.storage import Storage
 from django.conf import settings
-from django.utils.deconstruct import deconstructible
-from django.core.files.base import ContentFile
-import mimetypes
+import boto3
+from botocore.exceptions import ClientError
+import os
 
-@deconstructible
-class CloudflareR2Storage(Storage):
+class R2Storage(Storage):
     """
-    Custom storage backend for Cloudflare R2 using API token
+    Custom storage class for Cloudflare R2
     """
     
-    def __init__(self, account_id=None, bucket_name=None, api_token=None):
-        self.account_id = account_id or os.getenv('CLOUDFLARE_ACCOUNT_ID', 'da76c95301856b7cd9fee0a8f758097a')
-        self.bucket_name = bucket_name or os.getenv('CLOUDFLARE_R2_BUCKET_NAME', 'pinit-images')
-        self.api_token = api_token or os.getenv('CLOUDFLARE_R2_API_TOKEN')
-        self.base_url = f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}/r2/buckets/{self.bucket_name}"
-    
-    def _get_headers(self):
-        """Get headers for Cloudflare API requests"""
-        return {
-            'Authorization': f'Bearer {self.api_token}',
-            'Content-Type': 'application/json'
-        }
-    
-    def _get_object_url(self, name):
-        """Get the public URL for an object"""
-        return f"https://{self.account_id}.r2.cloudflarestorage.com/{self.bucket_name}/{name}"
+    def __init__(self):
+        self.bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+        self.custom_domain = 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev'
+        
+        # Initialize S3 client for R2
+        self.s3_client = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME
+        )
     
     def _open(self, name, mode='rb'):
-        """Open a file for reading"""
+        """Open file for reading"""
         try:
-            url = f"{self.base_url}/objects/{name}"
-            headers = self._get_headers()
-            
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            
-            return ContentFile(response.content)
-        except Exception as e:
-            raise FileNotFoundError(f"Could not open file {name}: {e}")
+            response = self.s3_client.get_object(Bucket=self.bucket_name, Key=name)
+            return response['Body']
+        except ClientError as e:
+            raise FileNotFoundError(f"File {name} not found: {e}")
     
     def _save(self, name, content):
-        """Save a file to R2"""
+        """Save file to R2"""
         try:
-            url = f"{self.base_url}/objects/{name}"
-            headers = {
-                'Authorization': f'Bearer {self.api_token}',
-                'Content-Type': mimetypes.guess_type(name)[0] or 'application/octet-stream'
-            }
+            # Reset file pointer to beginning
+            content.seek(0)
             
-            # Read content
-            if hasattr(content, 'read'):
-                file_data = content.read()
-            else:
-                file_data = content
-            
-            response = requests.put(url, data=file_data, headers=headers)
-            response.raise_for_status()
-            
+            # Upload to R2
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=name,
+                Body=content.read(),
+                ContentType=getattr(content, 'content_type', 'application/octet-stream'),
+                ACL='public-read'
+            )
             return name
-        except Exception as e:
-            raise Exception(f"Could not save file {name}: {e}")
+        except ClientError as e:
+            raise Exception(f"Failed to save file {name}: {e}")
     
     def delete(self, name):
-        """Delete a file from R2"""
+        """Delete file from R2"""
         try:
-            url = f"{self.base_url}/objects/{name}"
-            headers = self._get_headers()
-            
-            response = requests.delete(url, headers=headers)
-            response.raise_for_status()
-        except Exception as e:
-            raise Exception(f"Could not delete file {name}: {e}")
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=name)
+        except ClientError as e:
+            raise Exception(f"Failed to delete file {name}: {e}")
     
     def exists(self, name):
-        """Check if a file exists in R2"""
+        """Check if file exists in R2"""
         try:
-            url = f"{self.base_url}/objects/{name}"
-            headers = self._get_headers()
-            
-            response = requests.head(url, headers=headers)
-            return response.status_code == 200
-        except:
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=name)
+            return True
+        except ClientError:
             return False
     
-    def url(self, name):
-        """Get the public URL for a file"""
-        return self._get_object_url(name)
+    def listdir(self, path):
+        """List directory contents"""
+        try:
+            response = self.s3_client.list_objects_v2(
+                Bucket=self.bucket_name,
+                Prefix=path.rstrip('/') + '/' if path else '',
+                Delimiter='/'
+            )
+            
+            dirs = []
+            files = []
+            
+            # Get directories
+            for prefix in response.get('CommonPrefixes', []):
+                dirs.append(prefix['Prefix'].rstrip('/').split('/')[-1])
+            
+            # Get files
+            for obj in response.get('Contents', []):
+                if obj['Key'] != path.rstrip('/') + '/':
+                    files.append(obj['Key'].split('/')[-1])
+            
+            return dirs, files
+        except ClientError as e:
+            raise Exception(f"Failed to list directory {path}: {e}")
     
     def size(self, name):
-        """Get the size of a file"""
+        """Get file size"""
         try:
-            url = f"{self.base_url}/objects/{name}"
-            headers = self._get_headers()
-            
-            response = requests.head(url, headers=headers)
-            response.raise_for_status()
-            
-            return int(response.headers.get('Content-Length', 0))
-        except:
-            return 0
+            response = self.s3_client.head_object(Bucket=self.bucket_name, Key=name)
+            return response['ContentLength']
+        except ClientError as e:
+            raise Exception(f"Failed to get size of {name}: {e}")
     
-    def get_valid_name(self, name):
-        """Get a valid name for the file"""
-        return name
+    def url(self, name):
+        """Get public URL for file"""
+        if self.custom_domain:
+            return f"https://{self.custom_domain}/{name}"
+        else:
+            return f"https://{self.bucket_name}.{settings.AWS_S3_ENDPOINT_URL.replace('https://', '')}/{name}"
     
     def get_available_name(self, name, max_length=None):
-        """Get an available name for the file"""
-        return name
+        """Get available name if file exists"""
+        if not self.exists(name):
+            return name
+        
+        # Generate unique name
+        name, ext = os.path.splitext(name)
+        counter = 1
+        while True:
+            new_name = f"{name}_{counter}{ext}"
+            if not self.exists(new_name):
+                return new_name
+            counter += 1

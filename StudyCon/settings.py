@@ -124,14 +124,17 @@ else:
         default_acl = 'public-read'
         querystring_auth = False
     
-    # Configure S3Boto3Storage for R2
-    AWS_S3_CUSTOM_DOMAIN = 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev'
-    AWS_S3_FILE_OVERWRITE = False
-    AWS_DEFAULT_ACL = 'public-read'
-    AWS_S3_QUERYSTRING_AUTH = False
+    # Use custom R2Storage class
+    DEFAULT_FILE_STORAGE = 'myapp.storage.R2Storage'
+    STATICFILES_STORAGE = 'myapp.storage.R2Storage'
     
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3.S3Storage'
-    STATICFILES_STORAGE = 'storages.backends.s3.S3Storage'
+    # Force Django to use our storage class
+    from myapp.storage import R2Storage
+    DEFAULT_FILE_STORAGE = R2Storage
+    
+    # Override default_storage directly
+    import django.core.files.storage
+    django.core.files.storage.default_storage = R2Storage()
     MEDIA_URL = 'https://pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev/'
     print(f"✅ R2 configured with S3-compatible credentials")
     print(f"✅ Endpoint: {AWS_S3_ENDPOINT_URL}")
