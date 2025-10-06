@@ -18,5 +18,11 @@ urlpatterns = [
     path('api/user_images/<str:username>/', views.get_user_images, name='get_user_images'),
     path('api/user_image/<str:image_id>/delete/', views.delete_user_image, name='delete_user_image'),
     path('api/user_image/<str:image_id>/set_primary/', views.set_primary_image, name='set_primary_image'),
+    path('api/user_image/<str:image_id>/serve/', views.serve_image, name='serve_image'),
+    path('api/debug/r2-status/', views.debug_r2_status, name='debug_r2_status'),
+    path('api/run-migration/', views.run_migration, name='run_migration'),
+    path('api/test-r2-storage/', views.test_r2_storage, name='test_r2_storage'),
+    path('api/update-existing-images/', views.update_existing_images, name='update_existing_images'),
+    path('api/debug-database-schema/', views.debug_database_schema, name='debug_database_schema'),
 ]
 

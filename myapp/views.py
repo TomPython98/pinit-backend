@@ -4154,3 +4154,61 @@ def update_existing_images(request):
             "success": False,
             "error": str(e)
         }, status=500)
+
+@csrf_exempt
+def debug_database_schema(request):
+    """Debug endpoint to check database schema and migrations"""
+    try:
+        from django.conf import settings
+        from django.db import connection
+        from myapp.models import UserImage
+        
+        debug_info = {
+            "DEBUG": settings.DEBUG,
+            "DEFAULT_FILE_STORAGE": getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set'),
+            "MEDIA_URL": getattr(settings, 'MEDIA_URL', 'Not set'),
+        }
+        
+        # Check UserImage model fields
+        fields = [field.name for field in UserImage._meta.fields]
+        debug_info["UserImage_fields"] = fields
+        debug_info["has_storage_key"] = 'storage_key' in fields
+        debug_info["has_public_url"] = 'public_url' in fields
+        
+        # Check database schema
+        try:
+            with connection.cursor() as cursor:
+                # Check if UserImage table exists
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='myapp_userimage';")
+                table_exists = cursor.fetchone() is not None
+                debug_info["userimage_table_exists"] = table_exists
+                
+                if table_exists:
+                    # Get table schema
+                    cursor.execute("PRAGMA table_info(myapp_userimage);")
+                    columns = cursor.fetchall()
+                    debug_info["userimage_columns"] = [col[1] for col in columns]
+                    
+                    # Check for constraints
+                    cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='myapp_userimage';")
+                    table_sql = cursor.fetchone()
+                    if table_sql:
+                        debug_info["userimage_table_sql"] = table_sql[0]
+                
+                # Check migration history
+                cursor.execute("SELECT name FROM django_migrations WHERE app='myapp' ORDER BY id DESC LIMIT 10;")
+                recent_migrations = cursor.fetchall()
+                debug_info["recent_migrations"] = [mig[0] for mig in recent_migrations]
+                
+                # Check if our specific migrations were applied
+                cursor.execute("SELECT name FROM django_migrations WHERE app='myapp' AND name IN ('0034_add_object_storage_fields', '0035_fix_userimage_constraint_production');")
+                our_migrations = cursor.fetchall()
+                debug_info["our_migrations_applied"] = [mig[0] for mig in our_migrations]
+                
+        except Exception as e:
+            debug_info["database_error"] = str(e)
+        
+        return JsonResponse(debug_info)
+        
+    except Exception as e:
+        return JsonResponse({"error": f"Debug failed: {str(e)}"}, status=500)
