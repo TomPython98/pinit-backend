@@ -3988,6 +3988,50 @@ def run_migration(request):
         })
 
 @csrf_exempt
+def test_r2_storage(request):
+    """Test R2 storage directly"""
+    try:
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        from django.conf import settings
+        import tempfile
+        import os
+        
+        # Test R2 storage
+        test_content = b"Hello from PinIt R2 test!"
+        import time
+        test_filename = f"test/r2-test-{int(time.time())}.txt"
+        
+        # Try to save to R2
+        try:
+            default_storage.save(test_filename, ContentFile(test_content))
+            file_url = default_storage.url(test_filename)
+            
+            return JsonResponse({
+                "success": True,
+                "message": "R2 storage test successful",
+                "storage_class": str(type(default_storage)),
+                "file_url": file_url,
+                "is_r2_url": file_url.startswith('https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com'),
+                "settings_debug": settings.DEBUG,
+                "default_storage": getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set')
+            })
+        except Exception as e:
+            return JsonResponse({
+                "success": False,
+                "error": f"R2 storage test failed: {str(e)}",
+                "storage_class": str(type(default_storage)),
+                "settings_debug": settings.DEBUG,
+                "default_storage": getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set')
+            })
+            
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        })
+
+@csrf_exempt
 def debug_r2_status(request):
     """Debug endpoint to check R2 configuration and database schema"""
     try:
