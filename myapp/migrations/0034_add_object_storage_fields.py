@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('myapp', '0033_fix_userimage_constraint'),
+        ('myapp', '0032_add_userimage_model'),
     ]
 
     operations = [
