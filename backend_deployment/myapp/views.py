@@ -4116,3 +4116,35 @@ def serve_image(request, image_id):
         
     except Exception as e:
         return JsonResponse({"error": f"Failed to serve image: {str(e)}"}, status=500)
+
+@csrf_exempt
+def update_existing_images(request):
+    """Update existing images to use R2 URLs"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST method allowed"}, status=405)
+    
+    try:
+        # Get all images
+        images = UserImage.objects.all()
+        updated_count = 0
+        
+        for img in images:
+            if img.image and not img.public_url:
+                # Update the public_url field
+                img.public_url = img.image.url
+                img.storage_key = img.image.name
+                img.save(update_fields=['public_url', 'storage_key'])
+                updated_count += 1
+        
+        return JsonResponse({
+            "success": True,
+            "message": f"Updated {updated_count} images to use R2 URLs",
+            "total_images": images.count(),
+            "updated_count": updated_count
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)

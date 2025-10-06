@@ -22,5 +22,6 @@ urlpatterns = [
     path('api/debug/r2-status/', views.debug_r2_status, name='debug_r2_status'),
     path('api/run-migration/', views.run_migration, name='run_migration'),
     path('api/test-r2-storage/', views.test_r2_storage, name='test_r2_storage'),
+    path('api/update-existing-images/', views.update_existing_images, name='update_existing_images'),
 ]
 
