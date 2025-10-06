@@ -3953,6 +3953,51 @@ def set_primary_image(request, image_id):
         return JsonResponse({"error": f"Failed to set primary image: {str(e)}"}, status=500)
 
 @csrf_exempt
+def debug_r2_status(request):
+    """Debug endpoint to check R2 configuration and database schema"""
+    try:
+        from django.conf import settings
+        from myapp.models import UserImage
+        
+        # Check Django settings
+        debug_info = {
+            "DEBUG": settings.DEBUG,
+            "DEFAULT_FILE_STORAGE": getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set'),
+            "AWS_ACCESS_KEY_ID": getattr(settings, 'AWS_ACCESS_KEY_ID', 'Not set'),
+            "AWS_STORAGE_BUCKET_NAME": getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'Not set'),
+            "AWS_S3_ENDPOINT_URL": getattr(settings, 'AWS_S3_ENDPOINT_URL', 'Not set'),
+            "MEDIA_URL": getattr(settings, 'MEDIA_URL', 'Not set'),
+        }
+        
+        # Check UserImage model fields
+        fields = [field.name for field in UserImage._meta.fields]
+        debug_info["UserImage_fields"] = fields
+        debug_info["has_storage_key"] = 'storage_key' in fields
+        debug_info["has_public_url"] = 'public_url' in fields
+        
+        # Check if R2 storage is being used
+        try:
+            from storages.backends.s3boto3 import S3Boto3Storage
+            storage = S3Boto3Storage()
+            debug_info["storage_class"] = str(type(storage))
+            debug_info["storage_working"] = True
+        except Exception as e:
+            debug_info["storage_class"] = "Error"
+            debug_info["storage_working"] = False
+            debug_info["storage_error"] = str(e)
+        
+        return JsonResponse({
+            "success": True,
+            "debug_info": debug_info
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        })
+
+@csrf_exempt
 def serve_image(request, image_id):
     """Serve image file directly through API endpoint"""
     try:
