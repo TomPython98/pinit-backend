@@ -3,7 +3,6 @@ import PhotosUI
 
 struct ImageGalleryView: View {
     @StateObject private var imageManager = ImageManager.shared
-    @EnvironmentObject var accountManager: AccountManager
     
     @State private var selectedImageType: UserImage.ImageType = .gallery
     @State private var showingImagePicker = false
@@ -401,5 +400,4 @@ struct CaptionEditorView: View {
 
 #Preview {
     ImageGalleryView(username: "testuser")
-        .environmentObject(AccountManager())
 }

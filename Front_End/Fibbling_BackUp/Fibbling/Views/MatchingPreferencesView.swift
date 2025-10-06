@@ -1,8 +1,11 @@
 import SwiftUI
+import PhotosUI
 
 struct MatchingPreferencesView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var theme = PinItTheme()
+    @StateObject private var imageManager = ImageManager.shared
+    @EnvironmentObject var accountManager: UserAccountManager
 
     // MARK: - App Storage for Matching Preferences
     @AppStorage("allowAutoMatching") private var allowAutoMatching = true
@@ -22,6 +25,13 @@ struct MatchingPreferencesView: View {
     @State private var newSkill = ""
     @State private var showAddInterest = false
     @State private var showAddSkill = false
+    
+    // Image management state
+    @State private var showingImageGallery = false
+    @State private var showingImagePicker = false
+    @State private var selectedImage: PhotosPickerItem?
+    @State private var profileImage: Image?
+    @State private var profileImageData: Data?
 
     let availableInterests = [
         "Study Groups", "Language Exchange", "Cultural Events", "Sports", "Music",
@@ -67,6 +77,98 @@ struct MatchingPreferencesView: View {
                                         .foregroundStyle(Color.pinItTextSecondary)
                                         .multilineTextAlignment(.center)
                                         .padding(.horizontal)
+                                }
+                            }
+                        }
+                        
+                        // Profile Images Section
+                        settingsCard("Profile Images", icon: "camera", color: .pinItPrimary) {
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Primary Profile Picture Display
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(LinearGradient(
+                                                gradient: Gradient(colors: [Color.pinItPrimary, Color.pinItSecondary]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ))
+                                            .frame(width: 60, height: 60)
+                                        
+                                        if let primaryImage = imageManager.getPrimaryImage() {
+                                            AsyncImage(url: URL(string: primaryImage.url)) { phase in
+                                                switch phase {
+                                                case .success(let image):
+                                                    image
+                                                        .resizable()
+                                                        .aspectRatio(contentMode: .fill)
+                                                        .frame(width: 60, height: 60)
+                                                        .clipShape(Circle())
+                                                case .failure, .empty:
+                                                    Image(systemName: "person.fill")
+                                                        .font(.title2)
+                                                        .foregroundColor(.white)
+                                                @unknown default:
+                                                    Image(systemName: "person.fill")
+                                                        .font(.title2)
+                                                        .foregroundColor(.white)
+                                                }
+                                            }
+                                        } else if let profileImage = profileImage {
+                                            profileImage
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 60, height: 60)
+                                                .clipShape(Circle())
+                                        } else {
+                                            Image(systemName: "person.fill")
+                                                .font(.title2)
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Profile Picture")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.pinItTextPrimary)
+                                        
+                                        Text("Manage your profile images")
+                                            .font(.caption)
+                                            .foregroundStyle(Color.pinItTextSecondary)
+                                        
+                                        HStack(spacing: 12) {
+                                            Button("Upload New") {
+                                                showingImagePicker = true
+                                            }
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundColor(.pinItPrimary)
+                                            
+                                            Button("Manage All") {
+                                                showingImageGallery = true
+                                            }
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundColor(.pinItTextSecondary)
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                
+                                // Image Stats
+                                if !imageManager.userImages.isEmpty {
+                                    HStack {
+                                        Image(systemName: "photo.stack")
+                                            .foregroundColor(.pinItTextSecondary)
+                                        Text("\(imageManager.userImages.count) images")
+                                            .font(.caption)
+                                            .foregroundColor(.pinItTextSecondary)
+                                        
+                                        Spacer()
+                                        
+                                        Text("Tap 'Manage All' to organize")
+                                            .font(.caption)
+                                            .foregroundColor(.pinItTextSecondary)
+                                    }
                                 }
                             }
                         }
@@ -202,6 +304,26 @@ struct MatchingPreferencesView: View {
         .sheet(isPresented: $showAddInterest) {
             addInterestSheet
         }
+        .sheet(isPresented: $showingImageGallery) {
+            if let username = accountManager.currentUser {
+                ImageGalleryView(username: username)
+            }
+        }
+        .photosPicker(isPresented: $showingImagePicker, selection: $selectedImage, matching: .images)
+        .onChange(of: selectedImage) { _, newValue in
+            Task {
+                if let newValue = newValue {
+                    await handleImageSelection(newValue)
+                }
+            }
+        }
+        .onAppear {
+            if let username = accountManager.currentUser {
+                Task {
+                    await imageManager.loadUserImages(username: username)
+                }
+            }
+        }
     }
     
     // MARK: - Settings Card
@@ -276,6 +398,50 @@ struct MatchingPreferencesView: View {
     
     private func removeInterest(_ interest: String) {
         matchingInterests.removeAll { $0 == interest }
+    }
+    
+    // MARK: - Image Handling
+    private func handleImageSelection(_ item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let uiImage = UIImage(data: data),
+              let username = accountManager.currentUser else {
+            return
+        }
+        
+        // Compress image if needed
+        let compressedData = compressImage(uiImage, maxSize: 1920)
+        
+        let request = ImageUploadRequest(
+            username: username,
+            imageData: compressedData,
+            imageType: .profile,
+            isPrimary: imageManager.getPrimaryImage() == nil, // Set as primary if no primary exists
+            caption: "",
+            filename: "profile_\(Date().timeIntervalSince1970).jpg"
+        )
+        
+        await imageManager.uploadImage(request)
+    }
+    
+    private func compressImage(_ image: UIImage, maxSize: CGFloat) -> Data {
+        let size = image.size
+        let aspectRatio = size.width / size.height
+        
+        var newSize = size
+        if max(size.width, size.height) > maxSize {
+            if aspectRatio > 1 {
+                newSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
+            } else {
+                newSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
+            }
+        }
+        
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let compressedImage = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+        
+        return compressedImage.jpegData(compressionQuality: 0.8) ?? Data()
     }
 }
 
