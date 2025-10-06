@@ -115,8 +115,17 @@ else:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     
     # Force R2 storage for all file fields
-    DEFAULT_FILE_STORAGE = 'myapp.storage_r2.R2Storage'
-    STATICFILES_STORAGE = 'myapp.storage_r2.R2Storage'
+    from storages.backends.s3boto3 import S3Boto3Storage
+    
+    class R2Storage(S3Boto3Storage):
+        bucket_name = AWS_STORAGE_BUCKET_NAME
+        custom_domain = 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev'
+        file_overwrite = False
+        default_acl = 'public-read'
+        querystring_auth = False
+    
+    DEFAULT_FILE_STORAGE = 'StudyCon.settings.R2Storage'
+    STATICFILES_STORAGE = 'StudyCon.settings.R2Storage'
     MEDIA_URL = 'https://pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev/'
     print(f"✅ R2 configured with S3-compatible credentials")
     print(f"✅ Endpoint: {AWS_S3_ENDPOINT_URL}")
