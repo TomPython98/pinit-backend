@@ -1112,7 +1112,7 @@ def get_user_profile(request, username):
         degree = getattr(userprofile, 'degree', '')
         year = getattr(userprofile, 'year', '')
         bio = getattr(userprofile, 'bio', '')
-        profile_picture = getattr(userprofile, 'profile_picture', '')
+        profile_picture = getattr(userprofile, 'profile_picture', '') if hasattr(userprofile, 'profile_picture') else ''
         
         # Get interests if available or provide empty list
         interests = []
@@ -3021,7 +3021,7 @@ def update_user_interests(request):
             degree = data.get("degree", "")
             year = data.get("year", "")
             bio = data.get("bio", "")
-            profile_picture = data.get("profile_picture", "")
+            profile_picture = data.get("profile_picture", "") if hasattr(UserProfile, 'profile_picture') else ""
             
             # Smart matching preferences
             interests = data.get("interests", [])
@@ -3045,7 +3045,8 @@ def update_user_interests(request):
             profile.degree = degree
             profile.year = year
             profile.bio = bio
-            profile.profile_picture = profile_picture
+            if hasattr(profile, 'profile_picture'):
+                profile.profile_picture = profile_picture
             
             # Update smart matching preferences
             if hasattr(profile, 'set_interests'):
