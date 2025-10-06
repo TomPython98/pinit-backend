@@ -101,10 +101,10 @@ if DEBUG:
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 else:
     # Production: use Cloudflare R2
-    AWS_ACCESS_KEY_ID = os.getenv('CLOUDFLARE_R2_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.getenv('CLOUDFLARE_R2_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = os.getenv('CLOUDFLARE_R2_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL = f"https://{os.getenv('CLOUDFLARE_ACCOUNT_ID')}.r2.cloudflarestorage.com"
+    AWS_ACCESS_KEY_ID = '4f368c0bf5f06c10e8381b85f946ff1f'
+    AWS_SECRET_ACCESS_KEY = 'RD1oPR2xgAp8Eo5ZaUSdcLkSH-ZQi4ArnlupEH4F'
+    AWS_STORAGE_BUCKET_NAME = 'pinit-images'
+    AWS_S3_ENDPOINT_URL = 'https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com'
     AWS_S3_REGION_NAME = 'auto'
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_DEFAULT_ACL = 'public-read'
@@ -112,7 +112,7 @@ else:
         'CacheControl': 'max-age=86400',
     }
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    MEDIA_URL = f'https://{os.getenv("CLOUDFLARE_R2_CUSTOM_DOMAIN", f"{os.getenv("CLOUDFLARE_ACCOUNT_ID")}.r2.cloudflarestorage.com")}/'
+    MEDIA_URL = 'https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com/pinit-images/'
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
