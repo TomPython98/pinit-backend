@@ -28,7 +28,8 @@ struct ImageGalleryView: View {
                     }
                 }
                 .pickerStyle(SegmentedPickerStyle())
-                .padding()
+                .padding(.horizontal)
+                .padding(.top)
                 
                 // Images Grid
                 if imageManager.isLoading {
@@ -55,17 +56,25 @@ struct ImageGalleryView: View {
                             ForEach(filteredImages) { image in
                                 ImageGridItem(
                                     image: image,
-                                    onDelete: { imageToDelete = image; showingDeleteAlert = true },
-                                    onSetPrimary: { Task { await imageManager.setPrimaryImage(imageId: image.id, username: username) } },
+                                    onDelete: { 
+                                        imageToDelete = image
+                                        showingDeleteAlert = true 
+                                    },
+                                    onSetPrimary: { 
+                                        Task { 
+                                            await imageManager.setPrimaryImage(imageId: image.id, username: username) 
+                                        } 
+                                    },
                                     onEditCaption: { 
                                         imageToCaption = image
-                        newCaption = image.caption
-                        showingCaptionEditor = true
-                    }
+                                        newCaption = image.caption
+                                        showingCaptionEditor = true
+                                    }
                                 )
                             }
                         }
-                        .padding()
+                        .padding(.horizontal)
+                        .padding(.bottom)
                     }
                 }
                 
@@ -119,6 +128,10 @@ struct ImageGalleryView: View {
             .onAppear {
                 Task {
                     await imageManager.loadUserImages(username: username)
+                    print("🖼️ Loaded \(imageManager.userImages.count) images for \(username)")
+                    for image in imageManager.userImages {
+                        print("  - \(image.imageType.rawValue): \(image.url)")
+                    }
                 }
             }
         }
@@ -137,11 +150,12 @@ struct ImageGalleryView: View {
         // Compress image if needed
         let compressedData = compressImage(uiImage, maxSize: 1920)
         
+        // Only profile images should be primary
         let request = ImageUploadRequest(
             username: username,
             imageData: compressedData,
             imageType: selectedImageType,
-            isPrimary: selectedImageType == .profile && imageManager.getPrimaryImage() == nil,
+            isPrimary: selectedImageType == .profile,
             caption: "",
             filename: "image_\(Date().timeIntervalSince1970).jpg"
         )
@@ -181,7 +195,10 @@ struct ImageGridItem: View {
     @State private var showingImageDetail = false
     
     var body: some View {
-        AsyncImage(url: URL(string: image.url)) { phase in
+        let fullURL = ImageManager.shared.getFullImageURL(image)
+        let _ = print("🖼️ Loading image: \(fullURL)")
+        
+        AsyncImage(url: URL(string: fullURL)) { phase in
             switch phase {
             case .success(let loadedImage):
                 loadedImage
@@ -222,25 +239,44 @@ struct ImageGridItem: View {
                     .onTapGesture {
                         showingImageDetail = true
                     }
-            case .failure:
+            case .failure(let error):
                 Rectangle()
                     .fill(Color.gray.opacity(0.3))
                     .frame(width: 100, height: 100)
                     .overlay(
-                        Image(systemName: "photo")
-                            .foregroundColor(.gray)
+                        VStack {
+                            Image(systemName: "photo")
+                                .foregroundColor(.gray)
+                            Text("No Image")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
                     )
                     .cornerRadius(8)
+                    .onTapGesture {
+                        print("❌ Image load failed: \(error.localizedDescription)")
+                        print("❌ Original URL: \(image.url)")
+                        print("❌ Full URL: \(fullURL)")
+                    }
             case .empty:
                 Rectangle()
                     .fill(Color.gray.opacity(0.1))
                     .frame(width: 100, height: 100)
                     .overlay(
                         ProgressView()
+                            .scaleEffect(0.8)
                     )
                     .cornerRadius(8)
             @unknown default:
-                EmptyView()
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 100, height: 100)
+                    .overlay(
+                        Text("Unknown")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    )
+                    .cornerRadius(8)
             }
         }
         .sheet(isPresented: $showingImageDetail) {
@@ -260,7 +296,7 @@ struct ImageDetailView: View {
     var body: some View {
         NavigationView {
             VStack {
-                AsyncImage(url: URL(string: image.url)) { phase in
+                AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(image))) { phase in
                     switch phase {
                     case .success(let loadedImage):
                         loadedImage
@@ -348,7 +384,7 @@ struct CaptionEditorView: View {
         NavigationView {
             VStack {
                 if let image = image {
-                    AsyncImage(url: URL(string: image.url)) { phase in
+                    AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(image))) { phase in
                         switch phase {
                         case .success(let loadedImage):
                             loadedImage

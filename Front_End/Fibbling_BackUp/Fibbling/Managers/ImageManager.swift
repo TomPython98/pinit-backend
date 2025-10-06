@@ -208,6 +208,15 @@ class ImageManager: ObservableObject {
         return userImages.filter { $0.imageType == .cover }
     }
     
+    func getFullImageURL(_ image: UserImage) -> String {
+        // Use R2 URL directly - the backend now returns R2 URLs
+        if image.url.hasPrefix("http") {
+            return image.url
+        }
+        // Fallback to API endpoint if needed
+        return "\(baseURL)/api/user_image/\(image.id)/serve/"
+    }
+    
     func clearError() {
         errorMessage = nil
     }

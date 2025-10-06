@@ -1,4 +1,4 @@
-# Generated migration to fix UserImage unique constraint in production
+# Generated migration to fix UserImage unique constraint
 
 from django.db import migrations, models
 
@@ -6,14 +6,14 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('myapp', '0034_add_object_storage_fields'),
+        ('myapp', '0032_add_userimage_model'),
     ]
 
     operations = [
-        # Remove any existing constraint that might be causing issues
-        migrations.RunSQL(
-            "ALTER TABLE myapp_userimage DROP CONSTRAINT IF EXISTS unique_primary_per_user;",
-            reverse_sql="-- No reverse operation needed"
+        # Remove the broken constraint
+        migrations.RemoveConstraint(
+            model_name='userimage',
+            name='unique_primary_per_user',
         ),
         # Add the correct constraint - only one primary per user
         migrations.AddConstraint(

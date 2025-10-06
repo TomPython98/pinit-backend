@@ -769,7 +769,6 @@ struct ProfileView: View {
     
     // State for editable fields
     @State private var editMode: Bool = false
-    @State private var showEditProfileSheet: Bool = false
     @State private var name: String = ""
     @State private var university: String = ""
     @State private var degree: String = ""
@@ -796,29 +795,58 @@ struct ProfileView: View {
     @State private var selectedImage: PhotosPickerItem?
     @State private var showImagePicker = false
     @State private var profileImageData: Data?
+    @State private var isUploadingImage = false
+    @State private var uploadError: String?
+    @State private var showUploadAlert = false
+    @State private var showImageGallery = false
+    @StateObject private var imageManager = ImageManager.shared
+    
+    // Local storage for profile image
+    @AppStorage("profileImageData") private var storedProfileImageData: Data = Data()
     
     // Load profile picture from backend using new ImageManager
     private func loadProfilePictureFromBackend() {
-        guard let username = accountManager.currentUser else { return }
+        guard let username = accountManager.currentUser else { 
+            print("❌ No username available for loading profile picture")
+            return 
+        }
+        
+        print("🔄 Loading profile picture for user: \(username)")
         
         Task {
-            await ImageManager.shared.loadUserImages(username: username)
+            await imageManager.loadUserImages(username: username)
+            print("📊 Loaded \(imageManager.userImages.count) images from backend")
             
             // Update UI with primary image
-            if let primaryImage = ImageManager.shared.getPrimaryImage() {
-                DispatchQueue.main.async {
-                    // Load image from URL
-                    if let url = URL(string: primaryImage.url) {
+            if let primaryImage = imageManager.getPrimaryImage() {
+                await MainActor.run {
+                    // Load image from URL using full URL
+                    let fullURL = imageManager.getFullImageURL(primaryImage)
+                    print("🖼️ Attempting to load image from: \(fullURL)")
+                    if let url = URL(string: fullURL) {
                         URLSession.shared.dataTask(with: url) { data, response, error in
+                            if let httpResponse = response as? HTTPURLResponse {
+                                print("📡 HTTP Response: \(httpResponse.statusCode)")
+                            }
                             if let data = data, let uiImage = UIImage(data: data) {
                                 DispatchQueue.main.async {
                                     self.profileImage = Image(uiImage: uiImage)
                                     self.profileImageData = data
+                                    print("✅ Profile image loaded from backend: \(fullURL)")
+                                }
+                            } else {
+                                print("❌ Failed to load image from URL: \(fullURL)")
+                                if let error = error {
+                                    print("❌ Error: \(error.localizedDescription)")
                                 }
                             }
                         }.resume()
+                    } else {
+                        print("❌ Invalid URL: \(fullURL)")
                     }
                 }
+            } else {
+                print("ℹ️ No primary image found for user: \(username)")
             }
         }
     }
@@ -826,32 +854,60 @@ struct ProfileView: View {
     // Upload profile picture to backend using new ImageManager
     private func uploadProfilePicture() async -> Bool {
         guard let imageData = profileImageData,
-              let username = accountManager.currentUser else { return true }
+              let username = accountManager.currentUser else { 
+            await MainActor.run {
+                uploadError = "No image data or username available"
+                showUploadAlert = true
+            }
+            return false 
+        }
+        
+        await MainActor.run {
+            isUploadingImage = true
+            uploadError = nil
+        }
         
         // Compress image if needed
         let compressedData = compressImage(UIImage(data: imageData) ?? UIImage(), maxSize: 1920)
         
+        // For profile images, always set as primary (backend will handle unsetting others)
         let request = ImageUploadRequest(
             username: username,
             imageData: compressedData,
             imageType: .profile,
-            isPrimary: ImageManager.shared.getPrimaryImage() == nil, // Set as primary if no primary exists
+            isPrimary: true, // Always set profile images as primary
             caption: "",
             filename: "profile_\(Date().timeIntervalSince1970).jpg"
         )
         
-        return await ImageManager.shared.uploadImage(request)
+        let success = await imageManager.uploadImage(request)
+        
+        await MainActor.run {
+            isUploadingImage = false
+            if !success {
+                uploadError = imageManager.errorMessage ?? "Upload failed"
+                showUploadAlert = true
+            }
+        }
+        
+        return success
     }
     
     private func loadImage(from item: PhotosPickerItem) async {
         guard let data = try? await item.loadTransferable(type: Data.self),
               let uiImage = UIImage(data: data) else {
+            await MainActor.run {
+                uploadError = "Failed to load image data"
+                showUploadAlert = true
+            }
             return
         }
         
-        DispatchQueue.main.async {
+        await MainActor.run {
             self.profileImage = Image(uiImage: uiImage)
             self.profileImageData = data
+            self.storedProfileImageData = data // Store locally as backup
+            self.uploadError = nil // Clear any previous errors
         }
     }
     
@@ -1056,14 +1112,44 @@ struct ProfileView: View {
             .onChange(of: selectedImage) { _, newValue in
                 Task {
                     if let newValue = newValue {
+                        // First load the image and wait for it to complete
                         await loadImage(from: newValue)
+                        
+                        // Small delay to ensure image data is set
+                        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+                        
+                        // Check if we have image data before uploading
+                        guard profileImageData != nil else {
+                            await MainActor.run {
+                                uploadError = "Image data not available for upload"
+                                showUploadAlert = true
+                            }
+                            return
+                        }
+                        
                         // Upload to backend
                         let uploadSuccess = await uploadProfilePicture()
                         if uploadSuccess {
                             print("Profile picture uploaded successfully")
-                            // Reload images from backend
+                            // Reload images from backend and update UI
                             if let username = accountManager.currentUser {
-                                await ImageManager.shared.loadUserImages(username: username)
+                                await imageManager.loadUserImages(username: username)
+                                // Update the profile image with the newly uploaded image
+                                if let primaryImage = imageManager.getPrimaryImage() {
+                                    await MainActor.run {
+                                        let fullURL = imageManager.getFullImageURL(primaryImage)
+                                        if let url = URL(string: fullURL) {
+                                            URLSession.shared.dataTask(with: url) { data, response, error in
+                                                if let data = data, let uiImage = UIImage(data: data) {
+                                                    DispatchQueue.main.async {
+                                                        self.profileImage = Image(uiImage: uiImage)
+                                                        self.profileImageData = data
+                                                    }
+                                                }
+                                            }.resume()
+                                        }
+                                    }
+                                }
                             }
                         } else {
                             print("Failed to upload profile picture")
@@ -1082,20 +1168,74 @@ struct ProfileView: View {
                     profileManager.fetchProfileCompletion(username: user) { _ in }
                     // Load real user stats
                     loadUserStats()
+                    
+                    // Load profile picture - try stored data first, then backend
+                    if !storedProfileImageData.isEmpty, let uiImage = UIImage(data: storedProfileImageData) {
+                        profileImage = Image(uiImage: uiImage)
+                        profileImageData = storedProfileImageData
+                        print("✅ Loaded profile image from local storage")
+                    } else {
+                        // Load profile picture from backend
+                        loadProfilePictureFromBackend()
+                    }
+                }
+            }
+            .onReceive(imageManager.$userImages) { _ in
+                // Update profile image when imageManager's userImages change
+                if let primaryImage = imageManager.getPrimaryImage() {
+                    let fullURL = imageManager.getFullImageURL(primaryImage)
+                    print("🔄 Loading profile image from: \(fullURL)")
+                    if let url = URL(string: fullURL) {
+                        URLSession.shared.dataTask(with: url) { data, response, error in
+                            if let httpResponse = response as? HTTPURLResponse {
+                                print("📡 Image load response: \(httpResponse.statusCode)")
+                            }
+                            if let data = data, let uiImage = UIImage(data: data) {
+                                DispatchQueue.main.async {
+                                    self.profileImage = Image(uiImage: uiImage)
+                                    self.profileImageData = data
+                                    self.storedProfileImageData = data // Store locally as backup
+                                    print("✅ Profile image loaded successfully")
+                                }
+                            } else {
+                                print("❌ Failed to load profile image: \(error?.localizedDescription ?? "Unknown error")")
+                                // If backend fails, try to use stored data as fallback
+                                if !self.storedProfileImageData.isEmpty, let uiImage = UIImage(data: self.storedProfileImageData) {
+                                    DispatchQueue.main.async {
+                                        self.profileImage = Image(uiImage: uiImage)
+                                        self.profileImageData = self.storedProfileImageData
+                                        print("🔄 Using stored profile image as fallback")
+                                    }
+                                }
+                            }
+                        }.resume()
+                    }
+                } else {
+                    print("ℹ️ No primary image found")
                 }
             }
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Profile Update"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
-            .sheet(isPresented: $showEditProfileSheet, onDismiss: {
-                // Refresh profile data when returning from edit
-                if let user = accountManager.currentUser {
-                    loadProfileData()
-                    profileManager.fetchProfileCompletion(username: user) { _ in }
+            .alert("Image Upload", isPresented: $showUploadAlert) {
+                Button("OK") { }
+            } message: {
+                Text(uploadError ?? "Upload failed")
+            }
+            .fullScreenCover(isPresented: $showImageGallery) {
+                if let username = accountManager.currentUser {
+                    NavigationView {
+                        ImageGalleryView(username: username)
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .navigationBarTrailing) {
+                                    Button("Done") {
+                                        showImageGallery = false
+                                    }
+                                }
+                            }
+                    }
                 }
-            }) {
-                ProfileView()
-                    .environmentObject(accountManager)
             }
         }
     }
@@ -1197,7 +1337,7 @@ struct ProfileView: View {
             // Benefits message
             if effectiveProfileCompletionPercentage < 1.0 {
                 Button(action: {
-                    showEditProfileSheet = true
+                    editMode = true
                 }) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -1250,7 +1390,7 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(effectiveMissingItems, id: \.self) { item in
                             Button(action: {
-                                showEditProfileSheet = true
+                                editMode = true
                             }) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "circle.fill")
@@ -1352,7 +1492,7 @@ struct ProfileView: View {
             if effectiveProfileCompletionPercentage < 1.0 {
                 VStack(spacing: 8) {
                     Button(action: {
-                        showEditProfileSheet = true
+                        editMode = true
                     }) {
                         HStack {
                             Image(systemName: "pencil.circle.fill")
@@ -1666,9 +1806,10 @@ struct ProfileView: View {
         }
     }
     
-    // MARK: - Profile Header with refined styling
+    // MARK: - Profile Header with Professional Image Upload
     private var profileHeader: some View {
-        VStack {
+        VStack(spacing: 20) {
+            // Profile Image Section
             ZStack {
                 // Profile circle with refined layering
                 Circle()
@@ -1680,10 +1821,8 @@ struct ProfileView: View {
                     .fill(Color.bgCard)
                     .frame(width: 126, height: 126)
                 
-                // Profile image with more refined colors - now clickable
-                Button(action: {
-                    showImagePicker = true
-                }) {
+                // Profile image with loading state
+                ZStack {
                     if let profileImage = profileImage {
                         profileImage
                             .resizable()
@@ -1697,31 +1836,166 @@ struct ProfileView: View {
                             .frame(width: 112, height: 112)
                             .foregroundColor(Color.brandPrimary)
                     }
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Edit camera button with refined gradient
-                if editMode {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.gradientStart, .gradientMiddle, .gradientEnd],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                    
+                    // Loading overlay
+                    if isUploadingImage {
+                        Circle()
+                            .fill(Color.black.opacity(0.6))
+                            .frame(width: 112, height: 112)
+                            .overlay(
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(1.2)
                             )
-                        )
-                        .frame(width: 38, height: 38)
-                        .overlay(
-                            Image(systemName: "camera.fill")
-                                .foregroundColor(.white)
-                                .font(.system(size: 16))
-                                .offset(y: 0.5) // Subtle icon positioning
-                        )
-                        .offset(x: 42, y: 42)
-                        .shadow(color: Color.cardShadow, radius: 6, x: 0, y: 3)
+                    }
+                }
+                
+                // Camera button - always visible when in edit mode
+                if editMode {
+                    Button(action: {
+                        showImagePicker = true
+                    }) {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.gradientStart, .gradientMiddle, .gradientEnd],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 38, height: 38)
+                            .overlay(
+                                Image(systemName: "camera.fill")
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 16))
+                            )
+                            .shadow(color: Color.cardShadow, radius: 6, x: 0, y: 3)
+                    }
+                    .offset(x: 42, y: 42)
+                    .disabled(isUploadingImage)
                 }
             }
             .padding(.top, 16)
+            
+            // Professional Image Upload Section
+            if editMode {
+                VStack(spacing: 12) {
+                    // Upload Actions
+                    VStack(spacing: 12) {
+                        // First row - Upload and Manage
+                        HStack(spacing: 12) {
+                            // Upload New Photo Button
+                            Button(action: {
+                                showImagePicker = true
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "photo.badge.plus")
+                                        .font(.system(size: 14, weight: .medium))
+                                    Text("Upload Photo")
+                                        .font(.system(size: 13, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [.gradientStart, .gradientMiddle, .gradientEnd],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                        .shadow(color: Color.cardShadow, radius: 3, x: 0, y: 1)
+                                )
+                            }
+                            .disabled(isUploadingImage)
+                            
+                            // Manage Gallery Button
+                            Button(action: {
+                                showImageGallery = true
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "photo.stack")
+                                        .font(.system(size: 14, weight: .medium))
+                                    Text("Manage Photos")
+                                        .font(.system(size: 13, weight: .medium))
+                                }
+                                .foregroundColor(.brandPrimary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.bgSecondary)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(Color.brandPrimary, lineWidth: 1)
+                                        )
+                                )
+                            }
+                            .disabled(isUploadingImage)
+                        }
+                        
+                        // Second row - Refresh
+                        Button(action: {
+                            loadProfilePictureFromBackend()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 14, weight: .medium))
+                                Text("Refresh Images")
+                                    .font(.system(size: 13, weight: .medium))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.blue)
+                                    .shadow(color: Color.cardShadow, radius: 3, x: 0, y: 1)
+                            )
+                        }
+                        .disabled(isUploadingImage)
+                    }
+                    
+                    // Upload Status
+                    if isUploadingImage {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .brandPrimary))
+                                .scaleEffect(0.8)
+                            Text("Uploading image...")
+                                .font(.caption)
+                                .foregroundColor(.textSecondary)
+                        }
+                    } else if let error = uploadError {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                                .font(.caption)
+                            Text(error)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                    } else if imageManager.userImages.isEmpty {
+                        Text("No photos uploaded yet")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    } else {
+                        Text("\(imageManager.userImages.count) photo\(imageManager.userImages.count == 1 ? "" : "s") uploaded")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.bgCard)
+                        .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+                )
+                .padding(.horizontal, 16)
+            }
             
             // User name field with refined styling
             if editMode {

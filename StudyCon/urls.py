@@ -78,8 +78,13 @@ urlpatterns = [
     path('', include('myapp.urls')),
 ]
 
-# Serve media files in development
+# Serve media files in development and production
 if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # Serve media files in production
+    from django.conf import settings
+    from django.conf.urls.static import static
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
