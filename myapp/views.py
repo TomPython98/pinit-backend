@@ -3997,8 +3997,7 @@ def run_migration(request):
 def test_r2_storage(request):
     """Test R2 storage directly"""
     try:
-        from django.core.files.storage import default_storage
-        from myapp.storage import R2Storage
+        from django.core.files.storage import storages
         from django.core.files.base import ContentFile
         from django.conf import settings
         import tempfile
@@ -4009,15 +4008,16 @@ def test_r2_storage(request):
         import time
         test_filename = f"test/r2-test-{int(time.time())}.txt"
         
-        # Try to save to R2
+        # Try to save to R2 using modern storages
         try:
-            default_storage.save(test_filename, ContentFile(test_content))
-            file_url = default_storage.url(test_filename)
+            storage = storages["default"]
+            storage.save(test_filename, ContentFile(test_content))
+            file_url = storage.url(test_filename)
             
             return JsonResponse({
                 "success": True,
                 "message": "R2 storage test successful",
-                "storage_class": str(type(default_storage).__name__),
+                "storage_class": str(type(storage).__name__),
                 "file_url": file_url,
                 "is_r2_url": file_url.startswith('https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com'),
                 "settings_debug": settings.DEBUG,
@@ -4027,7 +4027,7 @@ def test_r2_storage(request):
             return JsonResponse({
                 "success": False,
                 "error": f"R2 storage test failed: {str(e)}",
-                "storage_class": str(type(default_storage).__name__),
+                "storage_class": "Error",
                 "settings_debug": settings.DEBUG,
                 "default_storage": getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set')
             })
@@ -4155,6 +4155,23 @@ def update_existing_images(request):
             "success": False,
             "error": str(e)
         }, status=500)
+
+@csrf_exempt
+def debug_storage_config(request):
+    """Debug endpoint to check storage configuration"""
+    try:
+        from django.core.files.storage import storages
+        from django.conf import settings
+        
+        return JsonResponse({
+            "default_backend": str(type(storages["default"]).__name__),
+            "aws_bucket": getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'Not set'),
+            "custom_domain": getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', None),
+            "storages_keys": list(getattr(settings, 'STORAGES', {}).keys()),
+            "endpoint_url": getattr(settings, 'AWS_S3_ENDPOINT_URL', 'Not set'),
+        })
+    except Exception as e:
+        return JsonResponse({"error": f"Debug failed: {str(e)}"}, status=500)
 
 @csrf_exempt
 def debug_database_schema(request):

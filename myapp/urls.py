@@ -23,6 +23,6 @@ urlpatterns = [
     path('api/run-migration/', views.run_migration, name='run_migration'),
     path('api/test-r2-storage/', views.test_r2_storage, name='test_r2_storage'),
     path('api/update-existing-images/', views.update_existing_images, name='update_existing_images'),
-    path('api/debug-database-schema/', views.debug_database_schema, name='debug_database_schema'),
+    path('api/debug-storage-config/', views.debug_storage_config, name='debug_storage_config'),
 ]
 

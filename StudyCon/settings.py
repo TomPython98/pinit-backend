@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "storages",  # Required for S3/R2 storage
     "myapp",
     "corsheaders", 
     'rest_framework',
@@ -124,17 +125,15 @@ else:
         default_acl = 'public-read'
         querystring_auth = False
     
-    # Use custom R2Storage class
-    DEFAULT_FILE_STORAGE = 'myapp.storage.R2Storage'
-    STATICFILES_STORAGE = 'myapp.storage.R2Storage'
-    
-    # Force Django to use our storage class
-    from myapp.storage import R2Storage
-    DEFAULT_FILE_STORAGE = R2Storage
-    
-    # Override default_storage directly
-    import django.core.files.storage
-    django.core.files.storage.default_storage = R2Storage()
+    # Modern Django 4.2+ STORAGES configuration
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
     MEDIA_URL = 'https://pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev/'
     print(f"✅ R2 configured with S3-compatible credentials")
     print(f"✅ Endpoint: {AWS_S3_ENDPOINT_URL}")
