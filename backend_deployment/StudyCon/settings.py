@@ -119,11 +119,11 @@ else:
     
     class R2Storage(S3Boto3Storage):
         bucket_name = AWS_STORAGE_BUCKET_NAME
-        custom_domain = None
+        custom_domain = 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev'
         file_overwrite = False
     
     DEFAULT_FILE_STORAGE = 'StudyCon.settings.R2Storage'
-    MEDIA_URL = 'https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com/pinit-images/'
+    MEDIA_URL = 'https://pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev/pinit-images/'
     print(f"✅ R2 configured with S3-compatible credentials")
     print(f"✅ Endpoint: {AWS_S3_ENDPOINT_URL}")
     print(f"✅ Bucket: {AWS_STORAGE_BUCKET_NAME}")
