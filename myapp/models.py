@@ -34,7 +34,7 @@ class UserImage(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to=user_image_upload_path, max_length=500, storage=None)
+    image = models.ImageField(upload_to=user_image_upload_path, max_length=500)
     image_type = models.CharField(max_length=20, choices=IMAGE_TYPES, default='gallery')
     is_primary = models.BooleanField(default=False, help_text="Primary profile picture")
     caption = models.CharField(max_length=255, blank=True)
