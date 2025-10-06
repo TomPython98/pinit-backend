@@ -4017,7 +4017,7 @@ def test_r2_storage(request):
             return JsonResponse({
                 "success": True,
                 "message": "R2 storage test successful",
-                "storage_class": str(type(default_storage)),
+                "storage_class": str(type(default_storage).__name__),
                 "file_url": file_url,
                 "is_r2_url": file_url.startswith('https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com'),
                 "settings_debug": settings.DEBUG,
@@ -4027,7 +4027,7 @@ def test_r2_storage(request):
             return JsonResponse({
                 "success": False,
                 "error": f"R2 storage test failed: {str(e)}",
-                "storage_class": str(type(default_storage)),
+                "storage_class": str(type(default_storage).__name__),
                 "settings_debug": settings.DEBUG,
                 "default_storage": getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set')
             })
