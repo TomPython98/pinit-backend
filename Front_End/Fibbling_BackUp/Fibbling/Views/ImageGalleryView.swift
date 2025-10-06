@@ -11,50 +11,74 @@ struct ImageGalleryView: View {
     @State private var showingCaptionEditor = false
     @State private var imageToCaption: UserImage?
     @State private var newCaption = ""
+    @State private var searchText = ""
+    @State private var showingImageDetail = false
+    @State private var selectedImage: UserImage?
     
     let username: String
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Image Type Selector
-                Picker("Image Type", selection: $selectedImageType) {
-                    ForEach(UserImage.ImageType.allCases, id: \.self) { type in
-                        HStack {
-                            Image(systemName: type.icon)
-                            Text(type.displayName)
+                // Header with search and filter
+                VStack(spacing: 16) {
+                    // Search bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        TextField("Search images...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray6))
+                    )
+                    .padding(.horizontal)
+                    
+                    // Image Type Selector with modern design
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(UserImage.ImageType.allCases, id: \.self) { type in
+                                FilterChip(
+                                    title: type.displayName,
+                                    icon: type.icon,
+                                    isSelected: selectedImageType == type,
+                                    count: filteredImages(for: type).count
+                                ) {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        selectedImageType = type
+                                    }
+                                }
+                            }
                         }
-                        .tag(type)
+                        .padding(.horizontal)
                     }
                 }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                .padding(.top)
+                .padding(.top, 8)
+                .background(Color(.systemBackground))
                 
-                // Images Grid
+                // Images Grid with modern layout
                 if imageManager.isLoading {
-                    ProgressView("Loading images...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    LoadingStateView()
                 } else if filteredImages.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: selectedImageType.icon)
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray)
-                        
-                        Text("No \(selectedImageType.displayName.lowercased())s yet")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        
-                        Text("Tap the + button to add your first image")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    ImageEmptyStateView(
+                        imageType: selectedImageType,
+                        onAddImage: { showingImagePicker = true }
+                    )
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)
+                            ],
+                            spacing: 12
+                        ) {
                             ForEach(filteredImages) { image in
-                                ImageGridItem(
+                                ModernImageGridItem(
                                     image: image,
                                     onDelete: { 
                                         imageToDelete = image
@@ -69,23 +93,31 @@ struct ImageGalleryView: View {
                                         imageToCaption = image
                                         newCaption = image.caption
                                         showingCaptionEditor = true
+                                    },
+                                    onTap: {
+                                        selectedImage = image
+                                        showingImageDetail = true
                                     }
                                 )
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity),
+                                    removal: .scale.combined(with: .opacity)
+                                ))
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom)
+                        .padding(.bottom, 100) // Extra padding for tab bar
                     }
                 }
-                
-                Spacer()
             }
-            .navigationTitle("My Images")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Photos")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingImagePicker = true }) {
-                        Image(systemName: "plus")
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.accentColor)
                     }
                 }
             }
@@ -116,7 +148,7 @@ struct ImageGalleryView: View {
                 Text("Are you sure you want to delete this image? This action cannot be undone.")
             }
             .sheet(isPresented: $showingCaptionEditor) {
-                CaptionEditorView(
+                ModernCaptionEditorView(
                     image: imageToCaption,
                     caption: $newCaption,
                     onSave: { caption in
@@ -125,20 +157,46 @@ struct ImageGalleryView: View {
                     }
                 )
             }
+            .fullScreenCover(isPresented: $showingImageDetail) {
+                if let image = selectedImage {
+                    ModernImageDetailView(
+                        image: image,
+                        onSetPrimary: { 
+                            Task { 
+                                await imageManager.setPrimaryImage(imageId: image.id, username: username) 
+                            }
+                        },
+                        onDelete: { 
+                            imageToDelete = image
+                            showingDeleteAlert = true
+                            showingImageDetail = false
+                        }
+                    )
+                }
+            }
             .onAppear {
                 Task {
                     await imageManager.loadUserImages(username: username)
                     print("🖼️ Loaded \(imageManager.userImages.count) images for \(username)")
-                    for image in imageManager.userImages {
-                        print("  - \(image.imageType.rawValue): \(image.url)")
-                    }
                 }
             }
         }
     }
     
     private var filteredImages: [UserImage] {
-        imageManager.userImages.filter { $0.imageType == selectedImageType }
+        let typeFiltered = imageManager.userImages.filter { $0.imageType == selectedImageType }
+        
+        if searchText.isEmpty {
+            return typeFiltered
+        } else {
+            return typeFiltered.filter { image in
+                image.caption.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
+    
+    private func filteredImages(for type: UserImage.ImageType) -> [UserImage] {
+        imageManager.userImages.filter { $0.imageType == type }
     }
     
     private func handleImageSelection(_ item: PhotosPickerItem) async {
@@ -147,270 +205,457 @@ struct ImageGalleryView: View {
             return
         }
         
-        // Compress image if needed
-        let compressedData = compressImage(uiImage, maxSize: 1920)
-        
-        // Only profile images should be primary
+        // Create ImageUploadRequest
         let request = ImageUploadRequest(
             username: username,
-            imageData: compressedData,
+            imageData: data,
             imageType: selectedImageType,
-            isPrimary: selectedImageType == .profile,
+            isPrimary: false, // New images are not primary by default
             caption: "",
             filename: "image_\(Date().timeIntervalSince1970).jpg"
         )
         
         await imageManager.uploadImage(request)
     }
+}
+
+// MARK: - Filter Chip Component
+struct FilterChip: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let count: Int
+    let action: () -> Void
     
-    private func compressImage(_ image: UIImage, maxSize: CGFloat) -> Data {
-        let size = image.size
-        let aspectRatio = size.width / size.height
-        
-        var newSize = size
-        if max(size.width, size.height) > maxSize {
-            if aspectRatio > 1 {
-                newSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
-            } else {
-                newSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                
+                Text(title)
+                    .font(.system(size: 14, weight: .medium))
+                
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? Color.white.opacity(0.3) : Color.secondary.opacity(0.2))
+                        )
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(isSelected ? Color.accentColor : Color(.systemGray6))
+            )
+            .foregroundColor(isSelected ? .white : .primary)
         }
-        
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        let compressedImage = renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: newSize))
-        }
-        
-        return compressedImage.jpegData(compressionQuality: 0.8) ?? Data()
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
-// MARK: - Image Grid Item
-struct ImageGridItem: View {
+// MARK: - Loading State View
+struct LoadingStateView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            
+            ProgressView()
+                .scaleEffect(1.2)
+                .tint(.accentColor)
+            
+            VStack(spacing: 8) {
+                Text("Loading Photos")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Text("Please wait while we load your images")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Image Empty State View
+struct ImageEmptyStateView: View {
+    let imageType: UserImage.ImageType
+    let onAddImage: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.1))
+                        .frame(width: 100, height: 100)
+                    
+                    Image(systemName: imageType.icon)
+                        .font(.system(size: 40, weight: .light))
+                        .foregroundColor(.accentColor)
+                }
+                
+                VStack(spacing: 8) {
+                    Text("No \(imageType.displayName.lowercased())s yet")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    Text("Start building your collection by adding your first photo")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+            }
+            
+            Button(action: onAddImage) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 16, weight: .medium))
+                    Text("Add Photo")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(Color.accentColor)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Modern Image Grid Item
+struct ModernImageGridItem: View {
     let image: UserImage
     let onDelete: () -> Void
     let onSetPrimary: () -> Void
     let onEditCaption: () -> Void
+    let onTap: () -> Void
     
-    @State private var showingImageDetail = false
+    @State private var isPressed = false
+    @State private var showingActions = false
     
     var body: some View {
         let fullURL = ImageManager.shared.getFullImageURL(image)
-        let _ = print("🖼️ Loading image: \(fullURL)")
         
-        AsyncImage(url: URL(string: fullURL)) { phase in
-            switch phase {
-            case .success(let loadedImage):
-                loadedImage
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 100, height: 100)
-                    .clipped()
-                    .cornerRadius(8)
-                    .overlay(
-                        VStack {
-                            HStack {
-                                Spacer()
-                                if image.isPrimary {
-                                    Image(systemName: "star.fill")
-                                        .foregroundColor(.yellow)
-                                        .background(Circle().fill(Color.black.opacity(0.6)))
-                                        .padding(4)
-                                }
+        ZStack {
+            // Main image
+            AsyncImage(url: URL(string: fullURL)) { phase in
+                switch phase {
+                case .success(let loadedImage):
+                    loadedImage
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 120)
+                        .clipped()
+                        .cornerRadius(12)
+                case .failure:
+                    Rectangle()
+                        .fill(Color(.systemGray5))
+                        .frame(height: 120)
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "photo")
+                                    .font(.title2)
+                                    .foregroundColor(.secondary)
+                                Text("Failed to load")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
-                            Spacer()
-                            HStack {
-                                Button(action: onEditCaption) {
-                                    Image(systemName: "pencil")
-                                        .foregroundColor(.white)
-                                        .background(Circle().fill(Color.black.opacity(0.6)))
-                                        .padding(4)
-                                }
-                                Spacer()
-                                Button(action: onDelete) {
-                                    Image(systemName: "trash")
-                                        .foregroundColor(.red)
-                                        .background(Circle().fill(Color.black.opacity(0.6)))
-                                        .padding(4)
-                                }
-                            }
-                        }
-                    )
-                    .onTapGesture {
-                        showingImageDetail = true
+                        )
+                        .cornerRadius(12)
+                case .empty:
+                    Rectangle()
+                        .fill(Color(.systemGray6))
+                        .frame(height: 120)
+                        .overlay(
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        )
+                        .cornerRadius(12)
+                @unknown default:
+                    Rectangle()
+                        .fill(Color(.systemGray5))
+                        .frame(height: 120)
+                        .cornerRadius(12)
+                }
+            }
+            
+            // Overlay with actions
+            VStack {
+                HStack {
+                    Spacer()
+                    
+                    // Primary indicator
+                    if image.isPrimary {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.yellow)
+                            .padding(6)
+                            .background(
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                            )
                     }
-            case .failure(let error):
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 100, height: 100)
-                    .overlay(
-                        VStack {
-                            Image(systemName: "photo")
-                                .foregroundColor(.gray)
-                            Text("No Image")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                    )
-                    .cornerRadius(8)
-                    .onTapGesture {
-                        print("❌ Image load failed: \(error.localizedDescription)")
-                        print("❌ Original URL: \(image.url)")
-                        print("❌ Full URL: \(fullURL)")
+                }
+                
+                Spacer()
+                
+                // Action buttons
+                HStack {
+                    Button(action: onEditCaption) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(6)
+                            .background(
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                            )
                     }
-            case .empty:
-                Rectangle()
-                    .fill(Color.gray.opacity(0.1))
-                    .frame(width: 100, height: 100)
-                    .overlay(
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    )
-                    .cornerRadius(8)
-            @unknown default:
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 100, height: 100)
-                    .overlay(
-                        Text("Unknown")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    )
-                    .cornerRadius(8)
+                    
+                    Spacer()
+                    
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.red)
+                            .padding(6)
+                            .background(
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                            )
+                    }
+                }
+            }
+            .padding(8)
+            .opacity(showingActions ? 1 : 0)
+        }
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .onTapGesture {
+            onTap()
+        }
+        .onLongPressGesture(minimumDuration: 0.1) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingActions.toggle()
+            }
+        } onPressingChanged: { pressing in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isPressed = pressing
             }
         }
-        .sheet(isPresented: $showingImageDetail) {
-            ImageDetailView(image: image, onSetPrimary: onSetPrimary, onDelete: onDelete)
+        .contextMenu {
+            if !image.isPrimary {
+                Button("Set as Primary", action: onSetPrimary)
+            }
+            Button("Edit Caption", action: onEditCaption)
+            Button("Delete", role: .destructive, action: onDelete)
         }
     }
 }
 
-// MARK: - Image Detail View
-struct ImageDetailView: View {
+// MARK: - Modern Image Detail View
+struct ModernImageDetailView: View {
     let image: UserImage
     let onSetPrimary: () -> Void
     let onDelete: () -> Void
     
     @Environment(\.dismiss) private var dismiss
+    @State private var showingCaptionEditor = false
+    @State private var caption = ""
     
     var body: some View {
         NavigationView {
-            VStack {
-                AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(image))) { phase in
-                    switch phase {
-                    case .success(let loadedImage):
-                        loadedImage
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    case .failure:
-                        Text("Failed to load image")
-                            .foregroundColor(.red)
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
+            ZStack {
+                Color.black.ignoresSafeArea()
                 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(image.imageType.displayName)
-                            .font(.headline)
-                        Spacer()
-                        if image.isPrimary {
-                            HStack {
-                                Image(systemName: "star.fill")
-                                    .foregroundColor(.yellow)
-                                Text("Primary")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    
-                    if !image.caption.isEmpty {
-                        Text(image.caption)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Text("Uploaded: \(image.formattedUploadDate)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-            }
-            .navigationTitle("Image Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        if !image.isPrimary {
-                            Button("Set as Primary") {
-                                onSetPrimary()
-                                dismiss()
-                            }
-                        }
-                        
-                        Button("Delete", role: .destructive) {
-                            onDelete()
-                            dismiss()
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Caption Editor
-struct CaptionEditorView: View {
-    let image: UserImage?
-    @Binding var caption: String
-    let onSave: (String) -> Void
-    
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack {
-                if let image = image {
+                VStack(spacing: 0) {
+                    // Image
                     AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(image))) { phase in
                         switch phase {
                         case .success(let loadedImage):
                             loadedImage
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(maxHeight: 200)
-                                .cornerRadius(8)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        case .failure:
+                            VStack(spacing: 16) {
+                                Image(systemName: "photo")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.white.opacity(0.6))
+                                Text("Failed to load image")
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                        case .empty:
+                            ProgressView()
+                                .tint(.white)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                    
+                    // Bottom info panel
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(image.imageType.displayName)
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                
+                                if image.isPrimary {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "star.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.yellow)
+                                        Text("Primary Photo")
+                                            .font(.caption)
+                                            .foregroundColor(.white.opacity(0.8))
+                                    }
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            Button(action: { showingCaptionEditor = true }) {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(
+                                        Circle()
+                                            .fill(.ultraThinMaterial)
+                                    )
+                            }
+                        }
+                        
+                        if !image.caption.isEmpty {
+                            Text(image.caption)
+                                .font(.body)
+                                .foregroundColor(.white.opacity(0.9))
+                        }
+                        
+                        Text("Uploaded \(image.formattedUploadDate)")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                    .padding(20)
+                    .background(
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                    )
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.white)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        if !image.isPrimary {
+                            Button("Set as Primary", action: onSetPrimary)
+                        }
+                        Button("Delete", role: .destructive, action: onDelete)
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingCaptionEditor) {
+            ModernCaptionEditorView(
+                image: image,
+                caption: $caption,
+                onSave: { newCaption in
+                    // TODO: Implement caption update
+                    showingCaptionEditor = false
+                }
+            )
+        }
+        .onAppear {
+            caption = image.caption
+        }
+    }
+}
+
+// MARK: - Modern Caption Editor
+struct ModernCaptionEditorView: View {
+    let image: UserImage?
+    @Binding var caption: String
+    let onSave: (String) -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var isTextFieldFocused: Bool
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                // Image preview
+                if let image = image {
+                    AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(image))) { phase in
+                        switch phase {
+                        case .success(let loadedImage):
+                            loadedImage
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(height: 200)
+                                .clipped()
+                                .cornerRadius(12)
                         case .failure:
                             Rectangle()
-                                .fill(Color.gray.opacity(0.3))
+                                .fill(Color(.systemGray5))
                                 .frame(height: 200)
-                                .overlay(Text("Failed to load"))
+                                .overlay(
+                                    Image(systemName: "photo")
+                                        .foregroundColor(.secondary)
+                                )
+                                .cornerRadius(12)
                         case .empty:
                             Rectangle()
-                                .fill(Color.gray.opacity(0.1))
+                                .fill(Color(.systemGray6))
                                 .frame(height: 200)
                                 .overlay(ProgressView())
+                                .cornerRadius(12)
                         @unknown default:
                             EmptyView()
                         }
                     }
                 }
                 
-                TextField("Add a caption...", text: $caption, axis: .vertical)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .lineLimit(3...6)
+                // Caption text field
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Caption")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    TextField("Add a caption...", text: $caption, axis: .vertical)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .focused($isTextFieldFocused)
+                        .lineLimit(3...6)
+                }
                 
                 Spacer()
             }
@@ -428,12 +673,12 @@ struct CaptionEditorView: View {
                     Button("Save") {
                         onSave(caption)
                     }
+                    .fontWeight(.semibold)
                 }
             }
         }
+        .onAppear {
+            isTextFieldFocused = true
+        }
     }
-}
-
-#Preview {
-    ImageGalleryView(username: "testuser")
 }
