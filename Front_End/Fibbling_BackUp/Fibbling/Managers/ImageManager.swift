@@ -19,6 +19,14 @@ class ImageManager: ObservableObject {
     private var imageCache: [String: UIImage] = [:] // url -> image
     private let cacheQueue = DispatchQueue(label: "imageCache", attributes: .concurrent)
     
+    // Professional components
+    private let professionalCache = ProfessionalImageCache.shared
+    private let networkMonitor = NetworkMonitor.shared
+    
+    // Prefetch queue
+    private var prefetchQueue: [String] = []
+    private var isPrefetching = false
+    
     private init() {
         // Listen for logout notifications to clear caches
         NotificationCenter.default.addObserver(
@@ -316,6 +324,9 @@ class ImageManager: ObservableObject {
         
         // Clear URLSession cache
         URLCache.shared.removeAllCachedResponses()
+        
+        // Clear professional cache
+        professionalCache.clearAll()
     }
     
     func clearUserCache(username: String) {
@@ -368,8 +379,9 @@ class ImageManager: ObservableObject {
     
     // MARK: - Cached AsyncImage
     @ViewBuilder
-    func cachedAsyncImage(url: String, contentMode: ContentMode = .fill) -> some View {
-        CachedAsyncImageView(url: url, contentMode: contentMode)
+    func cachedAsyncImage(url: String, contentMode: ContentMode = .fill, targetSize: CGSize? = nil) -> some View {
+        // Use professional cached image view for better performance
+        ProfessionalCachedImageView(url: url, contentMode: contentMode, targetSize: targetSize)
     }
     
     func getCachedImage(for url: String) -> UIImage? {
@@ -414,6 +426,118 @@ class ImageManager: ObservableObject {
     // MARK: - Get User Images from Cache
     func getUserImagesFromCache(username: String) -> [UserImage] {
         return userImageCache[username] ?? []
+    }
+    
+    // MARK: - Professional Features
+    
+    /// Prefetch images for a list of usernames to improve perceived performance
+    func prefetchImagesForUsers(_ usernames: [String]) {
+        guard !isPrefetching, networkMonitor.isConnected else { return }
+        
+        // Filter out already cached users
+        let uncachedUsers = usernames.filter { userImageCache[$0] == nil }
+        guard !uncachedUsers.isEmpty else { return }
+        
+        print("🔮 Prefetching images for \(uncachedUsers.count) users...")
+        
+        isPrefetching = true
+        prefetchQueue = uncachedUsers
+        
+        Task(priority: .background) {
+            await performPrefetch()
+        }
+    }
+    
+    private func performPrefetch() async {
+        let maxConcurrent = networkMonitor.connectionSpeed.maxConcurrentDownloads
+        
+        // Process queue in batches based on connection speed
+        while !prefetchQueue.isEmpty && networkMonitor.isConnected {
+            let batch = Array(prefetchQueue.prefix(maxConcurrent))
+            prefetchQueue.removeFirst(min(maxConcurrent, prefetchQueue.count))
+            
+            // Load images for batch concurrently
+            await withTaskGroup(of: Void.self) { group in
+                for username in batch {
+                    group.addTask(priority: .background) {
+                        await self.loadUserImages(username: username)
+                        
+                        // Also prefetch the actual image data
+                        let images = await MainActor.run {
+                            return self.getUserImagesFromCache(username: username)
+                        }
+                        
+                        if let primaryImage = images.first(where: { $0.isPrimary }) {
+                            let imageURL = await MainActor.run {
+                                return self.getFullImageURL(primaryImage)
+                            }
+                            
+                            // Prefetch thumbnail only to save bandwidth
+                            _ = await self.professionalCache.loadCachedImage(from: imageURL)
+                        }
+                    }
+                }
+            }
+            
+            // Small delay between batches to avoid overwhelming the network
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        }
+        
+        await MainActor.run {
+            isPrefetching = false
+            prefetchQueue.removeAll()
+        }
+        
+        print("✅ Prefetching complete")
+    }
+    
+    /// Cancel ongoing prefetch operations
+    func cancelPrefetch() {
+        isPrefetching = false
+        prefetchQueue.removeAll()
+    }
+    
+    /// Get cache statistics for debugging
+    func printCacheStatistics() {
+        print("📊 ImageManager Cache Stats:")
+        print("   User caches: \(userImageCache.count)")
+        print("   Current user: \(currentUsername ?? "none")")
+        print("   User images: \(userImages.count)")
+        print("   Prefetch queue: \(prefetchQueue.count)")
+        
+        professionalCache.printCacheStats()
+    }
+}
+
+// MARK: - Professional Image Cache Helper Extension
+extension ProfessionalImageCache {
+    /// Load image from URL with caching
+    func loadCachedImage(from url: String) async -> UIImage? {
+        // Check if we have it in any tier
+        if let fullRes = getImage(url: url, tier: .fullRes) {
+            return fullRes
+        }
+        
+        if let thumbnail = getImage(url: url, tier: .thumbnail) {
+            return thumbnail
+        }
+        
+        // Load from network
+        guard let imageURL = URL(string: url) else { return nil }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: imageURL)
+            if let image = UIImage(data: data) {
+                // Generate and cache thumbnail
+                let thumbnail = generateThumbnail(from: image)
+                setImage(thumbnail, url: url, tier: .thumbnail)
+                return thumbnail
+            }
+        } catch {
+            print("❌ Failed to prefetch image: \(error.localizedDescription)")
+        }
+        
+        return nil
     }
 }
 

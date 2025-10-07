@@ -386,7 +386,29 @@ struct EventDetailView: View {
                 fetchEventTags()
             }
             
+            // Prefetch images for attendees and host
+            prefetchAttendeeImages()
+            
             hasInitialized = true
+        }
+    }
+    
+    // MARK: - Image Prefetching
+    private func prefetchAttendeeImages() {
+        var usernamesToPrefetch: [String] = []
+        
+        // Add host
+        usernamesToPrefetch.append(localEvent.host)
+        
+        // Add attendees (limit to first 20 for performance)
+        let attendeesToPrefetch = Array(localEvent.attendees.prefix(20))
+        usernamesToPrefetch.append(contentsOf: attendeesToPrefetch)
+        
+        // Remove duplicates
+        usernamesToPrefetch = Array(Set(usernamesToPrefetch))
+        
+        if !usernamesToPrefetch.isEmpty {
+            ImageManager.shared.prefetchImagesForUsers(usernamesToPrefetch)
         }
     }
     

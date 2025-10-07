@@ -26,7 +26,8 @@ struct UserProfileImageView: View {
             if let primaryImage = getPrimaryImage() {
                 ImageManager.shared.cachedAsyncImage(
                     url: ImageManager.shared.getFullImageURL(primaryImage),
-                    contentMode: .fill
+                    contentMode: .fill,
+                    targetSize: CGSize(width: size * 2, height: size * 2) // 2x for retina
                 )
                 .frame(width: size, height: size)
                 .clipShape(Circle())

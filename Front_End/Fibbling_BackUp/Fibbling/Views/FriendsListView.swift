@@ -85,6 +85,15 @@ struct FriendsListView: View {
             fetchAllUsers()
             fetchFriendRequests()
             fetchCurrentUserFriends()
+            
+            // Prefetch images for visible users after a short delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                prefetchVisibleImages()
+            }
+        }
+        .onChange(of: selectedTab) { _ in
+            // Prefetch images when switching tabs
+            prefetchVisibleImages()
         }
         .alert("Social", isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
@@ -762,5 +771,28 @@ struct FriendsListView: View {
                 }
             }
         }.resume()
+    }
+    
+    // MARK: - Image Prefetching
+    private func prefetchVisibleImages() {
+        var usernamesToPrefetch: [String] = []
+        
+        switch selectedTab {
+        case 0: // Friends
+            // Prefetch images for friends (limit to first 20 for performance)
+            usernamesToPrefetch = Array(accountManager.friends.prefix(20))
+        case 1: // Requests
+            // Prefetch images for pending requests
+            usernamesToPrefetch = Array(pendingRequests.prefix(20))
+        case 2: // Discover
+            // Prefetch images for discover users (limit to first 15)
+            usernamesToPrefetch = Array(filteredUsers.prefix(15))
+        default:
+            break
+        }
+        
+        if !usernamesToPrefetch.isEmpty {
+            ImageManager.shared.prefetchImagesForUsers(usernamesToPrefetch)
+        }
     }
 }
