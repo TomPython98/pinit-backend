@@ -408,7 +408,9 @@ struct EventDetailView: View {
         usernamesToPrefetch = Array(Set(usernamesToPrefetch))
         
         if !usernamesToPrefetch.isEmpty {
-            ImageManager.shared.prefetchImagesForUsers(usernamesToPrefetch)
+            Task {
+                await ImageManager.shared.prefetchImagesForUsers(usernamesToPrefetch)
+            }
         }
     }
     

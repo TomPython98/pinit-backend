@@ -34,11 +34,11 @@ class ImageManager: ObservableObject {
     // Optimized URLSession for downloads
     private lazy var downloadSession: URLSession = {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 120
-        config.httpMaximumConnectionsPerHost = 6
+        config.timeoutIntervalForRequest = 10 // Reduced from 30s
+        config.timeoutIntervalForResource = 30 // Reduced from 120s
+        config.httpMaximumConnectionsPerHost = 10 // Increased from 6
         config.requestCachePolicy = .returnCacheDataElseLoad
-        config.urlCache = URLCache(memoryCapacity: 50 * 1024 * 1024, diskCapacity: 200 * 1024 * 1024)
+        config.urlCache = URLCache(memoryCapacity: 100 * 1024 * 1024, diskCapacity: 500 * 1024 * 1024) // Increased cache
         config.allowsCellularAccess = true
         config.waitsForConnectivity = false // Don't wait, fail fast
         config.httpShouldSetCookies = false
@@ -424,8 +424,9 @@ class ImageManager: ObservableObject {
     // MARK: - Professional Features
     
     /// Prefetch images for a list of usernames to improve perceived performance
-    func prefetchImagesForUsers(_ usernames: [String]) {
-        guard !isPrefetching, networkMonitor.isConnected else { return }
+    /// Returns when prefetching is complete
+    func prefetchImagesForUsers(_ usernames: [String]) async {
+        guard networkMonitor.isConnected else { return }
         
         // Filter out already cached users
         let uncachedUsers = usernames.filter { userImageCache[$0] == nil }
@@ -434,28 +435,63 @@ class ImageManager: ObservableObject {
         AppLogger.logImage("Prefetching images for \(uncachedUsers.count) users")
         
         isPrefetching = true
-        prefetchQueue = uncachedUsers
+        await performBatchPrefetch(usernames: uncachedUsers)
+        isPrefetching = false
+    }
+    
+    private func performBatchPrefetch(usernames: [String]) async {
+        AppLogger.logImage("Batch prefetching \(usernames.count) users")
         
-        Task(priority: .background) {
-            await performPrefetch()
+        let startTime = Date()
+        
+        // Load all user images concurrently with high priority
+        await withTaskGroup(of: Void.self) { group in
+            for username in usernames {
+                group.addTask(priority: .userInitiated) {
+                    await self.loadUserImages(username: username, forceRefresh: false)
+                }
+            }
         }
+        
+        // Prefetch actual image data for immediate display
+        await withTaskGroup(of: Void.self) { group in
+            for username in usernames {
+                group.addTask(priority: .userInitiated) {
+                    let images = await MainActor.run {
+                        return self.getUserImagesFromCache(username: username)
+                    }
+                    
+                    if let primaryImage = images.first(where: { $0.isPrimary }) {
+                        let imageURL = await MainActor.run {
+                            return self.getFullImageURL(primaryImage)
+                        }
+                        
+                        // Prefetch thumbnail for immediate display
+                        _ = await self.professionalCache.loadCachedImage(from: imageURL)
+                    }
+                }
+            }
+        }
+        
+        let duration = Date().timeIntervalSince(startTime)
+        AppLogger.logImage("Batch prefetching complete in \(String(format: "%.2f", duration))s")
     }
     
     private func performPrefetch() async {
-        let maxConcurrent = networkMonitor.connectionSpeed.maxConcurrentDownloads
+        let maxConcurrent = min(networkMonitor.connectionSpeed.maxConcurrentDownloads, 6) // Cap at 6 for stability
         
         // Process queue in batches based on connection speed
         while !prefetchQueue.isEmpty && networkMonitor.isConnected {
             let batch = Array(prefetchQueue.prefix(maxConcurrent))
             prefetchQueue.removeFirst(min(maxConcurrent, prefetchQueue.count))
             
-            // Load images for batch concurrently
+            // Load images for batch concurrently with higher priority
             await withTaskGroup(of: Void.self) { group in
                 for username in batch {
-                    group.addTask(priority: .background) {
-                        await self.loadUserImages(username: username)
+                    group.addTask(priority: .userInitiated) { // Higher priority for immediate UI updates
+                        await self.loadUserImages(username: username, forceRefresh: false)
                         
-                        // Also prefetch the actual image data
+                        // Prefetch the actual image data for immediate display
                         let images = await MainActor.run {
                             return self.getUserImagesFromCache(username: username)
                         }
@@ -465,15 +501,17 @@ class ImageManager: ObservableObject {
                                 return self.getFullImageURL(primaryImage)
                             }
                             
-                            // Prefetch thumbnail only to save bandwidth
+                            // Prefetch thumbnail for immediate display
                             _ = await self.professionalCache.loadCachedImage(from: imageURL)
                         }
                     }
                 }
             }
             
-            // Small delay between batches to avoid overwhelming the network
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            // Reduced delay between batches for faster loading
+            if !prefetchQueue.isEmpty {
+                try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+            }
         }
         
         await MainActor.run {

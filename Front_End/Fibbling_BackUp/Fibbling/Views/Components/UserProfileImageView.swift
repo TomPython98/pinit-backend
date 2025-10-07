@@ -23,10 +23,10 @@ struct UserProfileImageView: View {
     var body: some View {
         Group {
             if let primaryImage = getPrimaryImage() {
-                imageManager.cachedAsyncImage(
+                // Use cached image view for better performance
+                CachedProfileImageView(
                     url: imageManager.getFullImageURL(primaryImage),
-                    contentMode: .fill,
-                    targetSize: CGSize(width: size * 2, height: size * 2) // 2x for retina
+                    size: size
                 )
                 .frame(width: size, height: size)
                 .clipShape(Circle())
@@ -71,7 +71,13 @@ struct UserProfileImageView: View {
             }
         }
         .onAppear {
-            loadUserImages()
+            // Only load if not already cached - prefetch should handle this
+            let cachedImages = imageManager.getUserImagesFromCache(username: username)
+            if cachedImages.isEmpty {
+                loadUserImages()
+            } else {
+                refreshID = UUID() // Just refresh the view
+            }
         }
         .onReceive(imageManager.$userImages) { _ in
             // Update refreshID when the image manager's user images change
@@ -98,13 +104,21 @@ struct UserProfileImageView: View {
     }
     
     private func loadUserImages(forceRefresh: Bool = false) {
+        // Check if we already have cached images for this user
+        let cachedImages = imageManager.getUserImagesFromCache(username: username)
+        if !cachedImages.isEmpty && !forceRefresh {
+            // We already have images, just refresh the view
+            refreshID = UUID()
+            return
+        }
+        
         Task {
             // Load images for this specific user (force refresh from server if needed)
             await imageManager.loadUserImages(username: username, forceRefresh: forceRefresh)
             
             await MainActor.run {
                 refreshID = UUID() // Force view to refresh with new image
-                print("✅ UserProfileImageView: Updated with \(imageManager.userImages.count) fresh images for \(username)")
+                print("✅ UserProfileImageView: Updated with \(imageManager.getUserImagesFromCache(username: username).count) fresh images for \(username)")
             }
         }
     }
@@ -123,6 +137,61 @@ struct UserProfileImageView: View {
             return mostRecentImage
         }
         return nil
+    }
+}
+
+// MARK: - Cached Profile Image View
+struct CachedProfileImageView: View {
+    let url: String
+    let size: CGFloat
+    
+    @State private var image: UIImage?
+    @State private var isLoading = true
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else if isLoading {
+                Circle()
+                    .fill(Color(.systemGray6))
+                    .overlay(
+                        ProgressView()
+                            .scaleEffect(0.6)
+                    )
+            } else {
+                Circle()
+                    .fill(Color(.systemGray5))
+                    .overlay(
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: size * 0.4))
+                            .foregroundColor(.secondary)
+                    )
+            }
+        }
+        .onAppear {
+            loadImage()
+        }
+    }
+    
+    private func loadImage() {
+        // Check cache first
+        if let cachedImage = ImageManager.shared.getCachedImage(for: url) {
+            image = cachedImage
+            isLoading = false
+            return
+        }
+        
+        // Load from network
+        Task {
+            let result = await ImageManager.shared.loadCachedImage(from: url)
+            await MainActor.run {
+                image = result.image
+                isLoading = false
+            }
+        }
     }
 }
 

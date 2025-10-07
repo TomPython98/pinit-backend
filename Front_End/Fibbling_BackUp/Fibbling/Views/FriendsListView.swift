@@ -16,6 +16,7 @@ struct FriendsListView: View {
     @State private var alertMessage = ""
     @State private var selectedTab = 0
     @State private var isLoading = false
+    @State private var isPrefetchingImages = true // Start as true to show loading initially
     @State private var showChatView = false
     @State private var selectedChatUser = ""
     @State private var showUserProfileSheet = false
@@ -82,18 +83,20 @@ struct FriendsListView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
-            fetchAllUsers()
-            fetchFriendRequests()
-            fetchCurrentUserFriends()
-            
-            // Prefetch images for visible users after a short delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                prefetchVisibleImages()
+            Task {
+                fetchAllUsers()
+                fetchFriendRequests()
+                fetchCurrentUserFriends()
+                
+                // Wait for prefetch to complete before showing content
+                await prefetchVisibleImages()
             }
         }
         .onChange(of: selectedTab) { _ in
             // Prefetch images when switching tabs
-            prefetchVisibleImages()
+            Task {
+                await prefetchVisibleImages()
+            }
         }
         .alert("Social", isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
@@ -211,7 +214,7 @@ struct FriendsListView: View {
     private var contentView: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                if isLoading {
+                if isLoading || isPrefetchingImages {
                     loadingView
                 } else {
                     switch selectedTab {
@@ -767,25 +770,31 @@ struct FriendsListView: View {
     }
     
     // MARK: - Image Prefetching
-    private func prefetchVisibleImages() {
+    private func prefetchVisibleImages() async {
+        isPrefetchingImages = true
+        
         var usernamesToPrefetch: [String] = []
         
         switch selectedTab {
         case 0: // Friends
-            // Prefetch images for friends (limit to first 20 for performance)
-            usernamesToPrefetch = Array(accountManager.friends.prefix(20))
+            // Prefetch images for friends (increased limit for better UX)
+            usernamesToPrefetch = Array(accountManager.friends.prefix(50))
         case 1: // Requests
             // Prefetch images for pending requests
-            usernamesToPrefetch = Array(pendingRequests.prefix(20))
+            usernamesToPrefetch = Array(pendingRequests.prefix(30))
         case 2: // Discover
-            // Prefetch images for discover users (limit to first 15)
-            usernamesToPrefetch = Array(filteredUsers.prefix(15))
+            // Prefetch images for discover users (increased limit)
+            usernamesToPrefetch = Array(filteredUsers.prefix(25))
         default:
             break
         }
         
         if !usernamesToPrefetch.isEmpty {
-            ImageManager.shared.prefetchImagesForUsers(usernamesToPrefetch)
+            print("🚀 Starting prefetch for \(usernamesToPrefetch.count) users")
+            await ImageManager.shared.prefetchImagesForUsers(usernamesToPrefetch)
+            print("✅ Prefetch complete, images ready to display")
         }
+        
+        isPrefetchingImages = false
     }
 }
