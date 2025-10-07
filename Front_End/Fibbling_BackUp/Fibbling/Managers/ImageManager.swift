@@ -13,14 +13,36 @@ class ImageManager: ObservableObject {
     
     private let baseURL = "https://pinit-backend-production.up.railway.app"
     
-    // Image cache for faster loading
-    private var imageCache: [String: UIImage] = [:]
+    // Account-based caching
+    private var currentUsername: String?
+    private var userImageCache: [String: [UserImage]] = [:] // username -> images
+    private var imageCache: [String: UIImage] = [:] // url -> image
     private let cacheQueue = DispatchQueue(label: "imageCache", attributes: .concurrent)
     
-    private init() {}
+    private init() {
+        // Listen for logout notifications to clear caches
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("UserWillLogout"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.clearAllCaches()
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
     
     // MARK: - Load User Images
     func loadUserImages(username: String) async {
+        // Check if we have cached images for this user
+        if let cachedImages = userImageCache[username] {
+            userImages = cachedImages
+            currentUsername = username
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         
@@ -37,6 +59,10 @@ class ImageManager: ObservableObject {
                 if httpResponse.statusCode == 200 {
                     let response = try JSONDecoder().decode(UserImagesResponse.self, from: data)
                     userImages = response.images
+                    
+                    // Cache the images for this user
+                    userImageCache[username] = response.images
+                    currentUsername = username
                 } else {
                     errorMessage = "Failed to load images (Status: \(httpResponse.statusCode))"
                 }
@@ -106,6 +132,8 @@ class ImageManager: ObservableObject {
                 if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
                     let uploadResponse = try JSONDecoder().decode(ImageUploadResponse.self, from: data)
                     if uploadResponse.success {
+                        // Clear cache for this user to force refresh
+                        userImageCache.removeValue(forKey: request.username)
                         // Reload images to get updated list
                         await loadUserImages(username: request.username)
                         return true
@@ -200,7 +228,24 @@ class ImageManager: ObservableObject {
     
     // MARK: - Helper Methods
     func getPrimaryImage() -> UserImage? {
-        return userImages.first { $0.isPrimary }
+        // First try to find an image marked as primary
+        if let primaryImage = userImages.first(where: { $0.isPrimary }) {
+            return primaryImage
+        }
+        
+        // If no image is marked as primary (due to backend issue), 
+        // use the most recent profile image as primary
+        let profileImages = userImages.filter { $0.imageType == .profile }
+        if let mostRecentProfileImage = profileImages.sorted(by: { $0.uploadedAt > $1.uploadedAt }).first {
+            return mostRecentProfileImage
+        }
+        
+        // Fallback to most recent image of any type
+        if let mostRecentImage = userImages.sorted(by: { $0.uploadedAt > $1.uploadedAt }).first {
+            return mostRecentImage
+        }
+        
+        return nil
     }
     
     func getProfileImages() -> [UserImage] {
@@ -244,6 +289,36 @@ class ImageManager: ObservableObject {
     }
     
     // MARK: - Cache Management
+    func clearAllCaches() {
+        print("🧹 Clearing all caches")
+        
+        // Clear user image cache
+        userImageCache.removeAll()
+        
+        // Clear current user data
+        userImages.removeAll()
+        currentUsername = nil
+        
+        // Clear image cache
+        cacheQueue.async(flags: .barrier) {
+            self.imageCache.removeAll()
+        }
+        
+        // Clear URLSession cache
+        URLCache.shared.removeAllCachedResponses()
+    }
+    
+    func clearUserCache(username: String) {
+        print("🧹 Clearing cache for user: \(username)")
+        userImageCache.removeValue(forKey: username)
+        
+        // If this is the current user, clear current data
+        if currentUsername == username {
+            userImages.removeAll()
+            currentUsername = nil
+        }
+    }
+    
     private func clearImageCache() async {
         // Clear URLSession cache
         URLCache.shared.removeAllCachedResponses()
@@ -281,6 +356,12 @@ class ImageManager: ObservableObject {
         return (nil, false)
     }
     
+    // MARK: - Cached AsyncImage
+    @ViewBuilder
+    func cachedAsyncImage(url: String, contentMode: ContentMode = .fill) -> some View {
+        CachedAsyncImageView(url: url, contentMode: contentMode)
+    }
+    
     func getCachedImage(for url: String) -> UIImage? {
         return cacheQueue.sync {
             return imageCache[url]
@@ -298,6 +379,70 @@ class ImageManager: ObservableObject {
         for image in userImages {
             let fullURL = getFullImageURL(image)
             _ = await loadCachedImage(from: fullURL)
+        }
+    }
+}
+
+// MARK: - Cached AsyncImage View
+struct CachedAsyncImageView: View {
+    let url: String
+    let contentMode: ContentMode
+    
+    @State private var loadedImage: UIImage?
+    @State private var isLoading = true
+    @State private var loadError: String?
+    
+    var body: some View {
+        Group {
+            if let image = loadedImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: contentMode)
+            } else if isLoading {
+                Rectangle()
+                    .fill(Color(.systemGray6))
+                    .overlay(
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    )
+            } else {
+                Rectangle()
+                    .fill(Color(.systemGray5))
+                    .overlay(
+                        VStack(spacing: 8) {
+                            Image(systemName: "photo")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                            Text("Failed to load")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    )
+            }
+        }
+        .onAppear {
+            loadImage()
+        }
+    }
+    
+    private func loadImage() {
+        // Check if we already have this image cached
+        if let cachedImage = ImageManager.shared.getCachedImage(for: url) {
+            loadedImage = cachedImage
+            isLoading = false
+            return
+        }
+        
+        // Load from network
+        Task {
+            let result = await ImageManager.shared.loadCachedImage(from: url)
+            await MainActor.run {
+                loadedImage = result.image
+                isLoading = false
+                if result.image == nil {
+                    loadError = "Failed to load image"
+                }
+            }
         }
     }
 }

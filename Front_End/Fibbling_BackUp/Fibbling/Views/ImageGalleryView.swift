@@ -357,47 +357,11 @@ struct ModernImageGridItem: View {
         let fullURL = ImageManager.shared.getFullImageURL(image)
         
         ZStack {
-            // Main image
-            AsyncImage(url: URL(string: fullURL)) { phase in
-                switch phase {
-                case .success(let loadedImage):
-                    loadedImage
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 120)
-                        .clipped()
-                        .cornerRadius(12)
-                case .failure:
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                        .frame(height: 120)
-                        .overlay(
-                            VStack(spacing: 8) {
-                                Image(systemName: "photo")
-                                    .font(.title2)
-                                    .foregroundColor(.secondary)
-                                Text("Failed to load")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        )
-                        .cornerRadius(12)
-                case .empty:
-                    Rectangle()
-                        .fill(Color(.systemGray6))
-                        .frame(height: 120)
-                        .overlay(
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        )
-                        .cornerRadius(12)
-                @unknown default:
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                        .frame(height: 120)
-                        .cornerRadius(12)
-                }
-            }
+            // Main image using cached AsyncImage
+            ImageManager.shared.cachedAsyncImage(url: fullURL, contentMode: .fill)
+                .frame(height: 120)
+                .clipped()
+                .cornerRadius(12)
             
             // Overlay with actions
             VStack {
@@ -488,29 +452,9 @@ struct ModernImageDetailView: View {
                 Color.black.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Image
-                    AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(image))) { phase in
-                        switch phase {
-                        case .success(let loadedImage):
-                            loadedImage
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        case .failure:
-                            VStack(spacing: 16) {
-                                Image(systemName: "photo")
-                                    .font(.system(size: 50))
-                                    .foregroundColor(.white.opacity(0.6))
-                                Text("Failed to load image")
-                                    .foregroundColor(.white.opacity(0.8))
-                            }
-                        case .empty:
-                            ProgressView()
-                                .tint(.white)
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
+                    // Image using cached AsyncImage
+                    ImageManager.shared.cachedAsyncImage(url: ImageManager.shared.getFullImageURL(image), contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     
                     // Bottom info panel
                     VStack(alignment: .leading, spacing: 16) {
@@ -615,34 +559,10 @@ struct ModernCaptionEditorView: View {
             VStack(spacing: 20) {
                 // Image preview
                 if let image = image {
-                    AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(image))) { phase in
-                        switch phase {
-                        case .success(let loadedImage):
-                            loadedImage
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(height: 200)
-                                .clipped()
-                                .cornerRadius(12)
-                        case .failure:
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                                .frame(height: 200)
-                                .overlay(
-                                    Image(systemName: "photo")
-                                        .foregroundColor(.secondary)
-                                )
-                                .cornerRadius(12)
-                        case .empty:
-                            Rectangle()
-                                .fill(Color(.systemGray6))
-                                .frame(height: 200)
-                                .overlay(ProgressView())
-                                .cornerRadius(12)
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
+                    ImageManager.shared.cachedAsyncImage(url: ImageManager.shared.getFullImageURL(image), contentMode: .fill)
+                        .frame(height: 200)
+                        .clipped()
+                        .cornerRadius(12)
                 }
                 
                 // Caption text field

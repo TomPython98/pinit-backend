@@ -515,12 +515,23 @@ struct EditProfileView: View {
             username: username,
             imageData: compressedData,
             imageType: .profile,
-            isPrimary: imageManager.getPrimaryImage() == nil, // Set as primary if no primary exists
+            isPrimary: true, // Always set profile images as primary
             caption: "",
             filename: "profile_\(Date().timeIntervalSince1970).jpg"
         )
         
-        await imageManager.uploadImage(request)
+        let success = await imageManager.uploadImage(request)
+        
+        if success {
+            print("✅ Image uploaded successfully, refreshing ImageManager")
+            // The uploadImage method already calls loadUserImages, but let's ensure it's refreshed
+            await imageManager.loadUserImages(username: username)
+            
+            // Post notification to refresh other views
+            NotificationCenter.default.post(name: NSNotification.Name("ProfileImageUpdated"), object: nil)
+        } else {
+            print("❌ Image upload failed")
+        }
     }
     
     private func compressImage(_ image: UIImage, maxSize: CGFloat) -> Data {

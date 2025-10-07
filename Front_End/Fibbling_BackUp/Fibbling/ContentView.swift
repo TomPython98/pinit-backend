@@ -806,72 +806,18 @@ struct ProfileView: View {
     // Local storage for profile image
     @AppStorage("profileImageData") private var storedProfileImageData: Data = Data()
     
-    // Load profile picture from backend using new ImageManager
-    private func loadProfilePictureFromBackend() {
+    // Refresh profile images from backend
+    private func refreshProfileImages() {
         guard let username = accountManager.currentUser else { 
-            print("❌ No username available for loading profile picture")
             return 
         }
         
-        print("🔄 Loading profile picture for user: \(username)")
-        
-        // Clear local cache to force fresh data
-        storedProfileImageData = Data()
-        profileImage = nil
-        profileImageData = nil
-        
         Task {
             await imageManager.loadUserImages(username: username)
-            print("📊 Loaded \(imageManager.userImages.count) images from backend")
-            
-            // Preload all images for better performance
-            await imageManager.preloadImages()
-            print("✅ Preloaded all images to cache")
-            
-            // Update UI with primary image
-            if let primaryImage = imageManager.getPrimaryImage() {
-                let fullURL = imageManager.getFullImageURL(primaryImage)
-                print("🖼️ Attempting to load image from: \(fullURL)")
-                
-                // Check if image is already cached before showing loading indicator
-                let isCached = imageManager.getCachedImage(for: fullURL) != nil
-                
-                if !isCached {
-                    await MainActor.run {
-                        self.isImageLoading = true
-                    }
-                }
-                
-                // Use cached image loading for better performance
-                let result = await imageManager.loadCachedImage(from: fullURL)
-                if let uiImage = result.image {
-                    await MainActor.run {
-                        self.profileImage = Image(uiImage: uiImage)
-                        if let imageData = uiImage.jpegData(compressionQuality: 0.8) {
-                            self.profileImageData = imageData
-                            self.storedProfileImageData = imageData // Store for backup
-                        }
-                        self.isImageLoading = false
-                        if result.fromCache {
-                            print("✅ Profile image loaded from cache: \(fullURL)")
-                        } else {
-                            print("✅ Profile image loaded from network: \(fullURL)")
-                        }
-                    }
-                } else {
-                    await MainActor.run {
-                        self.isImageLoading = false
-                    }
-                    print("❌ Failed to load image from URL: \(fullURL)")
-                }
-            } else {
-                await MainActor.run {
-                    self.isImageLoading = false
-                }
-                print("ℹ️ No primary image found for user: \(username)")
-            }
         }
     }
+    
+    
     
     // Upload profile picture to backend using new ImageManager
     private func uploadProfilePicture() async -> Bool {
@@ -1107,7 +1053,7 @@ struct ProfileView: View {
             .navigationTitle("Your Profile")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                loadProfilePictureFromBackend()
+                // Images are loaded via ImageManager in the main onAppear
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -1191,50 +1137,18 @@ struct ProfileView: View {
                     // Load real user stats
                     loadUserStats()
                     
-                    // Load profile picture from backend (don't use local cache for R2 images)
-                    loadProfilePictureFromBackend()
+                    // Load images using ImageManager (will use cache if available)
+                    Task {
+                        await imageManager.loadUserImages(username: user)
+                    }
                 }
             }
             .onReceive(imageManager.$userImages) { _ in
-                // Update profile image when imageManager's userImages change
-                if let primaryImage = imageManager.getPrimaryImage() {
-                    let fullURL = imageManager.getFullImageURL(primaryImage)
-                    print("🔄 Loading profile image from: \(fullURL)")
-                    
-                    Task {
-                        // Only show loading indicator if we need to fetch from network
-                        let result = await imageManager.loadCachedImage(from: fullURL)
-                        
-                        if let uiImage = result.image {
-                            await MainActor.run {
-                                self.profileImage = Image(uiImage: uiImage)
-                                if let imageData = uiImage.jpegData(compressionQuality: 0.8) {
-                                    self.profileImageData = imageData
-                                    self.storedProfileImageData = imageData // Store for backup
-                                }
-                                self.isImageLoading = false
-                                if result.fromCache {
-                                    print("✅ Profile image loaded from cache")
-                                } else {
-                                    print("✅ Profile image loaded from network")
-                                }
-                            }
-                        } else {
-                            await MainActor.run {
-                                self.isImageLoading = false
-                            }
-                            print("❌ Failed to load profile image")
-                        }
-                    }
-                } else {
-                    print("ℹ️ No primary image found")
-                    // Clear profile image if no primary image exists
-                    DispatchQueue.main.async {
-                        self.profileImage = nil
-                        self.profileImageData = nil
-                        self.isImageLoading = false
-                    }
-                }
+                // AsyncImage will automatically update when the ImageManager changes
+                // No need for complex manual image loading
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ProfileImageUpdated"))) { _ in
+                refreshProfileImages()
             }
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Profile Update"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
@@ -1260,7 +1174,31 @@ struct ProfileView: View {
                 }
             }
             .fullScreenCover(isPresented: $showFullScreenImage) {
-                if let profileImage = profileImage {
+                if let primaryImage = imageManager.getPrimaryImage() {
+                    ZStack {
+                        Color.black.ignoresSafeArea()
+                        
+                        VStack {
+                            // Header with close button
+                            HStack {
+                                Spacer()
+                                Button("Done") {
+                                    showFullScreenImage = false
+                                }
+                                .foregroundColor(.white)
+                                .padding()
+                            }
+                            
+                            Spacer()
+                            
+                            // Full screen image
+                            imageManager.cachedAsyncImage(url: imageManager.getFullImageURL(primaryImage), contentMode: .fit)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            
+                            Spacer()
+                        }
+                    }
+                } else if let profileImage = profileImage {
                     ZStack {
                         Color.black.ignoresSafeArea()
                         
@@ -1874,7 +1812,14 @@ struct ProfileView: View {
                 
                 // Profile image with loading state
                 ZStack {
-                    if let profileImage = profileImage {
+                    if let primaryImage = imageManager.getPrimaryImage() {
+                        imageManager.cachedAsyncImage(url: imageManager.getFullImageURL(primaryImage), contentMode: .fill)
+                            .frame(width: 112, height: 112)
+                            .clipShape(Circle())
+                            .onTapGesture {
+                                showFullScreenImage = true
+                            }
+                    } else if let profileImage = profileImage {
                         profileImage
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -1945,8 +1890,26 @@ struct ProfileView: View {
                     .offset(x: 42, y: 42)
                     .disabled(isUploadingImage)
                 }
+                
+                // Refresh button - always visible
+                Button(action: {
+                    refreshProfileImages()
+                }) {
+                    Circle()
+                        .fill(Color.bgCard)
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            Image(systemName: "arrow.clockwise")
+                                .foregroundColor(.brandPrimary)
+                                .font(.system(size: 14, weight: .medium))
+                        )
+                        .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+                }
+                .offset(x: -42, y: 42)
+                .disabled(isImageLoading || isUploadingImage)
             }
             .padding(.top, 16)
+            
             
             // Professional Image Upload Section
             if editMode {
@@ -2009,7 +1972,7 @@ struct ProfileView: View {
                         
                         // Second row - Refresh
                         Button(action: {
-                            loadProfilePictureFromBackend()
+                            refreshProfileImages()
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "arrow.clockwise")
