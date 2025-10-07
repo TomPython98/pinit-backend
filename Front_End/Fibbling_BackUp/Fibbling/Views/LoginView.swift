@@ -68,7 +68,7 @@ struct LoginView: View {
                             
                             ZStack(alignment: .trailing) {
                                 if showPassword {
-                                    TextField("", text: $password)
+                                    TextField("Enter your password", text: $password)
                                         .padding(12)
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
@@ -80,7 +80,7 @@ struct LoginView: View {
                                         )
                                         .foregroundColor(Color.textPrimary)
                                 } else {
-                                    SecureField("", text: $password)
+                                    SecureField("Enter your password", text: $password)
                                         .padding(12)
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
@@ -216,8 +216,11 @@ struct LoginView: View {
                     .foregroundColor(.textPrimary)
             }
             
+            // Generate placeholder based on field type
+            let placeholder = getPlaceholder(for: title, keyboardType: keyboardType)
+            
             if isSecure {
-                SecureField("", text: text)
+                SecureField(placeholder, text: text)
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
@@ -229,7 +232,7 @@ struct LoginView: View {
                     )
                     .foregroundColor(Color.textPrimary)
             } else {
-                TextField("", text: text)
+                TextField(placeholder, text: text)
                     .keyboardType(keyboardType)
                     .autocapitalization(.none)
                     .padding(12)
@@ -243,6 +246,25 @@ struct LoginView: View {
                     )
                     .foregroundColor(Color.textPrimary)
             }
+        }
+    }
+    
+    // Generate contextual placeholders
+    private func getPlaceholder(for title: String, keyboardType: UIKeyboardType) -> String {
+        switch title.lowercased() {
+        case let t where t.contains("email"):
+            return "Enter your email address"
+        case let t where t.contains("username"):
+            return "Enter your username"
+        case let t where t.contains("confirm"):
+            return "Re-enter your password"
+        case let t where t.contains("password"):
+            return "Enter your password"
+        default:
+            if keyboardType == .emailAddress {
+                return "example@email.com"
+            }
+            return "Enter \(title.lowercased())"
         }
     }
     

@@ -233,17 +233,10 @@ struct FriendsListView: View {
     
     // MARK: - Loading View
     private var loadingView: some View {
-        VStack(spacing: 20) {
-            ProgressView()
-                .scaleEffect(1.5)
-                .tint(Color.brandPrimary)
-            
-            Text("Loading social data...")
-                .font(.subheadline)
-                .foregroundColor(Color.textSecondary)
+        VStack(spacing: 16) {
+            // Show skeleton loaders for better perceived performance
+            SkeletonListView(itemType: .userCard, count: 5)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
     }
     
     // MARK: - Friends Section

@@ -112,34 +112,62 @@ struct ChatView: View {
     var messagesListView: some View {
         ScrollViewReader { scrollProxy in
             ScrollView {
-                LazyVStack(spacing: 8) {
-                    // Use the state property instead of fetching in the view directly
-                    ForEach(0..<messagesArray.count, id: \.self) { index in
-                        let msg = messagesArray[index]
+                if messagesArray.isEmpty {
+                    // Empty state for no messages
+                    VStack(spacing: 20) {
+                        Spacer()
                         
-                        if msg.sender == "📅" {
-                            // Date message
-                            Text(msg.message)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .padding(.vertical, 6)
-                                .padding(.horizontal, 12)
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(16)
-                                .padding(.vertical, 4)
-                        } else {
-                            // Regular message bubble
-                            MessageBubble(message: msg, isFromCurrentUser: msg.sender == sender)
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .font(.system(size: 60))
+                            .foregroundColor(Color.textMuted)
+                        
+                        VStack(spacing: 8) {
+                            Text("No Messages Yet")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color.textPrimary)
+                            
+                            Text("Start the conversation by sending a message below")
+                                .font(.subheadline)
+                                .foregroundColor(Color.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
                         }
+                        
+                        Spacer()
                     }
-                    
-                    // Bottom spacer for scrolling
-                    Color.clear
-                        .frame(height: 1)
-                        .id("bottomID")
+                    .frame(maxWidth: .infinity, minHeight: 400)
+                    .padding(.vertical, 60)
+                } else {
+                    LazyVStack(spacing: 8) {
+                        // Use the state property instead of fetching in the view directly
+                        ForEach(0..<messagesArray.count, id: \.self) { index in
+                            let msg = messagesArray[index]
+                            
+                            if msg.sender == "📅" {
+                                // Date message
+                                Text(msg.message)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(16)
+                                    .padding(.vertical, 4)
+                            } else {
+                                // Regular message bubble
+                                MessageBubble(message: msg, isFromCurrentUser: msg.sender == sender)
+                            }
+                        }
+                        
+                        // Bottom spacer for scrolling
+                        Color.clear
+                            .frame(height: 1)
+                            .id("bottomID")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
             }
             .onChange(of: scrollToBottom) { _, shouldScroll in
                 if shouldScroll {
