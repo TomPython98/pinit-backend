@@ -225,7 +225,8 @@ class ImageLoader: ObservableObject {
         request.timeoutInterval = timeout
         request.cachePolicy = .returnCacheDataElseLoad
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        // Use ImageManager's optimized download session
+        let (data, response) = try await ImageManager.shared.downloadImage(from: request)
         
         // Check HTTP response
         if let httpResponse = response as? HTTPURLResponse {

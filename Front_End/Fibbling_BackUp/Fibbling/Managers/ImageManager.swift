@@ -22,10 +22,26 @@ class ImageManager: ObservableObject {
     // Professional components
     private let professionalCache = ProfessionalImageCache.shared
     private let networkMonitor = NetworkMonitor.shared
+    private let uploadManager = ImageUploadManager.shared
     
     // Prefetch queue
     private var prefetchQueue: [String] = []
     private var isPrefetching = false
+    
+    // Optimized URLSession for downloads
+    private lazy var downloadSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 120
+        config.httpMaximumConnectionsPerHost = 6
+        config.requestCachePolicy = .returnCacheDataElseLoad
+        config.urlCache = URLCache(memoryCapacity: 50 * 1024 * 1024, diskCapacity: 200 * 1024 * 1024)
+        config.allowsCellularAccess = true
+        config.waitsForConnectivity = false // Don't wait, fail fast
+        config.httpShouldSetCookies = false
+        config.httpShouldUsePipelining = true // Enable HTTP pipelining
+        return URLSession(configuration: config)
+    }()
     
     private init() {
         // Listen for logout notifications to clear caches
@@ -63,7 +79,7 @@ class ImageManager: ObservableObject {
         }
         
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await downloadSession.data(from: url)
             
             if let httpResponse = response as? HTTPURLResponse {
                 if httpResponse.statusCode == 200 {
@@ -97,83 +113,34 @@ class ImageManager: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        // Clear any cached images before upload
-        await clearImageCache()
+        // Use the professional upload manager with network-aware compression
+        let success = await uploadManager.uploadImage(request)
         
-        guard let url = URL(string: "\(baseURL)/api/upload_user_image/") else {
-            errorMessage = "Invalid URL"
-            isLoading = false
-            return false
-        }
-        
-        var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = "POST"
-        
-        // Create multipart form data
-        let boundary = "Boundary-\(UUID().uuidString)"
-        urlRequest.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        
-        var body = Data()
-        
-        // Add form fields
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"username\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(request.username)\r\n".data(using: .utf8)!)
-        
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"image_type\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(request.imageType.rawValue)\r\n".data(using: .utf8)!)
-        
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"is_primary\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(request.isPrimary ? "true" : "false")\r\n".data(using: .utf8)!)
-        
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"caption\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(request.caption)\r\n".data(using: .utf8)!)
-        
-        // Add image file
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(request.filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: \(request.mimeType)\r\n\r\n".data(using: .utf8)!)
-        body.append(request.imageData)
-        body.append("\r\n".data(using: .utf8)!)
-        
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-        
-        urlRequest.httpBody = body
-        
-        do {
-            let (data, response) = try await URLSession.shared.data(for: urlRequest)
-            
-            if let httpResponse = response as? HTTPURLResponse {
-                if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
-                    let uploadResponse = try JSONDecoder().decode(ImageUploadResponse.self, from: data)
-                    if uploadResponse.success {
-                        // Clear cache for this user to force refresh
-                        userImageCache.removeValue(forKey: request.username)
-                        // Reload images to get updated list
-                        await loadUserImages(username: request.username)
-                        return true
-                    } else {
-                        errorMessage = uploadResponse.message
-                    }
-                } else {
-                    // Try to parse error message
-                    if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let error = errorData["error"] as? String {
-                        errorMessage = error
-                    } else {
-                        errorMessage = "Upload failed (Status: \(httpResponse.statusCode))"
-                    }
-                }
-            }
-        } catch {
-            errorMessage = "Upload failed: \(error.localizedDescription)"
+        if !success {
+            errorMessage = uploadManager.uploadError
         }
         
         isLoading = false
-        return false
+        return success
+    }
+    
+    // MARK: - Background Upload
+    func queueUpload(_ request: ImageUploadRequest) {
+        uploadManager.queueUpload(request)
+    }
+    
+    // MARK: - Upload Progress
+    var uploadProgress: Double {
+        return uploadManager.getOverallProgress()
+    }
+    
+    var hasActiveUploads: Bool {
+        return uploadManager.hasActiveUploads()
+    }
+    
+    // MARK: - Optimized Download
+    func downloadImage(from request: URLRequest) async throws -> (Data, URLResponse) {
+        return try await downloadSession.data(for: request)
     }
     
     // MARK: - Delete Image

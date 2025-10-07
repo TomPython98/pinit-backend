@@ -205,10 +205,13 @@ struct ImageGalleryView: View {
             return
         }
         
+        // Compress image before upload - IMPORTANT!
+        let compressedData = compressImage(uiImage, maxSize: 1920)
+        
         // Create ImageUploadRequest
         let request = ImageUploadRequest(
             username: username,
-            imageData: data,
+            imageData: compressedData,
             imageType: selectedImageType,
             isPrimary: false, // New images are not primary by default
             caption: "",
@@ -216,6 +219,28 @@ struct ImageGalleryView: View {
         )
         
         await imageManager.uploadImage(request)
+    }
+    
+    private func compressImage(_ image: UIImage, maxSize: CGFloat) -> Data {
+        let size = image.size
+        let aspectRatio = size.width / size.height
+        
+        var newSize = size
+        if max(size.width, size.height) > maxSize {
+            if aspectRatio > 1 {
+                newSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
+            } else {
+                newSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
+            }
+        }
+        
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let compressedImage = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+        
+        // Initial compression
+        return compressedImage.jpegData(compressionQuality: 0.8) ?? Data()
     }
 }
 
