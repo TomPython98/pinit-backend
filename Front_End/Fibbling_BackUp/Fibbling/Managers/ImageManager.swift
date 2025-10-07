@@ -46,7 +46,9 @@ class ImageManager: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        guard let url = URL(string: "\(baseURL)/api/user_images/\(username)/") else {
+        // Use the backend_deployment URL which has the image endpoints
+        let imageBackendURL = "https://pinit-backend-production.up.railway.app"
+        guard let url = URL(string: "\(imageBackendURL)/api/user_images/\(username)/") else {
             errorMessage = "Invalid URL"
             isLoading = false
             return
@@ -64,11 +66,19 @@ class ImageManager: ObservableObject {
                     userImageCache[username] = response.images
                     currentUsername = username
                 } else {
-                    errorMessage = "Failed to load images (Status: \(httpResponse.statusCode))"
+                    print("⚠️ ImageManager: HTTP \(httpResponse.statusCode) for user \(username)")
+                    // Return empty array for non-200 responses
+                    userImages = []
+                    userImageCache[username] = []
+                    currentUsername = username
                 }
             }
         } catch {
-            errorMessage = "Failed to load images: \(error.localizedDescription)"
+            print("⚠️ ImageManager: Error loading images for \(username): \(error.localizedDescription)")
+            // Return empty array on error
+            userImages = []
+            userImageCache[username] = []
+            currentUsername = username
         }
         
         isLoading = false
@@ -380,6 +390,30 @@ class ImageManager: ObservableObject {
             let fullURL = getFullImageURL(image)
             _ = await loadCachedImage(from: fullURL)
         }
+    }
+    
+    // MARK: - Batch Load User Images
+    func loadMultipleUserImages(usernames: [String]) async {
+        // Load images for multiple users efficiently
+        await withTaskGroup(of: Void.self) { group in
+            for username in usernames {
+                group.addTask {
+                    // Only load if not already cached
+                    let hasCachedImages = await MainActor.run {
+                        return self.userImageCache[username] != nil
+                    }
+                    
+                    if !hasCachedImages {
+                        await self.loadUserImages(username: username)
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Get User Images from Cache
+    func getUserImagesFromCache(username: String) -> [UserImage] {
+        return userImageCache[username] ?? []
     }
 }
 

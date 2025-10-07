@@ -3399,6 +3399,7 @@ struct UserProfileView: View {
     @State private var showImagePicker = false
     @State private var showSocialFeedSheet = false
     @State private var showReportSheet = false
+    @State private var showFullScreenImage = false
     
     // Backend URL
     private let baseURL = APIConfig.primaryBaseURL
@@ -3504,6 +3505,9 @@ struct UserProfileView: View {
                             contentType: .user,
                             contentId: username
                         )
+                    }
+                    .sheet(isPresented: $showFullScreenImage) {
+                        FullScreenImageView(username: username)
                     }
         }
     }
@@ -3793,25 +3797,20 @@ struct UserProfileView: View {
         VStack(spacing: 20) {
             // Avatar and Name
             VStack(spacing: 16) {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.brandPrimary.opacity(0.15),
-                                Color.brandSecondary.opacity(0.1),
-                                Color.brandPrimary.opacity(0.05)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 120, height: 120)
-                    .overlay(
-                        Text(String(profile.username.prefix(1)).uppercased())
-                            .font(.system(size: 48, weight: .bold))
-                            .foregroundColor(Color.brandPrimary)
+                Button(action: {
+                    // Show full-screen image view
+                    showFullScreenImage = true
+                }) {
+                    UserProfileImageView(
+                        username: profile.username, 
+                        size: 120, 
+                        showBorder: true, 
+                        borderColor: .brandPrimary,
+                        enableFullScreen: true
                     )
                     .shadow(color: Color.brandPrimary.opacity(0.15), radius: 12, x: 0, y: 6)
+                }
+                .buttonStyle(PlainButtonStyle())
                 
                 VStack(spacing: 8) {
                     Text(profile.displayName)
@@ -4514,4 +4513,85 @@ struct Friend: Codable, Identifiable {
 
 struct EventsResponse: Codable {
     let events: [StudyEvent]
+}
+
+// MARK: - Full Screen Image View
+struct FullScreenImageView: View {
+    let username: String
+    @Environment(\.dismiss) var dismiss
+    @StateObject private var imageManager = ImageManager.shared
+    @State private var userImages: [UserImage] = []
+    @State private var currentImageIndex = 0
+    @State private var isLoading = true
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1.5)
+                } else if userImages.isEmpty {
+                    VStack(spacing: 20) {
+                        Image(systemName: "photo")
+                            .font(.system(size: 60))
+                            .foregroundColor(.white.opacity(0.6))
+                        Text("No images available")
+                            .font(.headline)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                } else {
+                    TabView(selection: $currentImageIndex) {
+                        ForEach(Array(userImages.enumerated()), id: \.offset) { index, image in
+                            ImageManager.shared.cachedAsyncImage(
+                                url: ImageManager.shared.getFullImageURL(image),
+                                contentMode: .fit
+                            )
+                            .tag(index)
+                        }
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    .ignoresSafeArea()
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.white)
+                }
+                
+                if !userImages.isEmpty {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Text("\(currentImageIndex + 1) of \(userImages.count)")
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                }
+            }
+        }
+        .onAppear {
+            loadUserImages()
+        }
+    }
+    
+    private func loadUserImages() {
+        // Check if we already have images for this user
+        if let cachedImages = imageManager.userImageCache[username] {
+            userImages = cachedImages
+            isLoading = false
+            return
+        }
+        
+        Task {
+            await imageManager.loadUserImages(username: username)
+            await MainActor.run {
+                userImages = imageManager.getUserImagesFromCache(username: username)
+                isLoading = false
+            }
+        }
+    }
 }

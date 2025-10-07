@@ -6,16 +6,19 @@ struct UserProfileImageView: View {
     let size: CGFloat
     let showBorder: Bool
     let borderColor: Color
+    let enableFullScreen: Bool
     
     @StateObject private var imageManager = ImageManager.shared
     @State private var userImages: [UserImage] = []
     @State private var isLoading = false
+    @State private var showFullScreen = false
     
-    init(username: String, size: CGFloat = 50, showBorder: Bool = true, borderColor: Color = .blue) {
+    init(username: String, size: CGFloat = 50, showBorder: Bool = true, borderColor: Color = .blue, enableFullScreen: Bool = false) {
         self.username = username
         self.size = size
         self.showBorder = showBorder
         self.borderColor = borderColor
+        self.enableFullScreen = enableFullScreen
     }
     
     var body: some View {
@@ -41,22 +44,37 @@ struct UserProfileImageView: View {
                     )
             } else {
                 Circle()
-                    .fill(Color(.systemGray5))
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                borderColor.opacity(0.2),
+                                borderColor.opacity(0.1),
+                                borderColor.opacity(0.05)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(width: size, height: size)
                     .overlay(
-                        VStack(spacing: 4) {
-                            Image(systemName: "person.circle")
+                        VStack(spacing: 2) {
+                            Image(systemName: "person.circle.fill")
                                 .font(.system(size: size * 0.4))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(borderColor)
                             Text(username.prefix(1).uppercased())
-                                .font(.system(size: size * 0.3, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: size * 0.25, weight: .bold))
+                                .foregroundColor(borderColor)
                         }
                     )
                     .overlay(
                         Circle()
                             .stroke(showBorder ? borderColor : Color.clear, lineWidth: showBorder ? 2 : 0)
                     )
+            }
+        }
+        .onTapGesture {
+            if enableFullScreen {
+                showFullScreen = true
             }
         }
         .onAppear {
@@ -68,6 +86,9 @@ struct UserProfileImageView: View {
                 userImages = images
             }
         }
+        .sheet(isPresented: $showFullScreen) {
+            FullScreenImageView(username: username)
+        }
     }
     
     private func loadUserImages() {
@@ -77,11 +98,17 @@ struct UserProfileImageView: View {
             return
         }
         
+        // Only load if we don't have any cached data and it's not already loading
+        guard !isLoading else { return }
+        
         isLoading = true
         Task {
+            // Load images for this specific user
             await imageManager.loadUserImages(username: username)
+            
             await MainActor.run {
-                userImages = imageManager.userImages
+                // Get images from cache
+                userImages = imageManager.getUserImagesFromCache(username: username)
                 isLoading = false
             }
         }
