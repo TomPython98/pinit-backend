@@ -11,11 +11,11 @@ class ImageManager: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let baseURL = "https://pinit-backend-production.up.railway.app"
+    let baseURL = "https://pinit-backend-production.up.railway.app"
     
     // Account-based caching
-    private var currentUsername: String?
-    private var userImageCache: [String: [UserImage]] = [:] // username -> images
+    var currentUsername: String?
+    var userImageCache: [String: [UserImage]] = [:] // username -> images
     private var imageCache: [String: UIImage] = [:] // url -> image
     private let cacheQueue = DispatchQueue(label: "imageCache", attributes: .concurrent)
     

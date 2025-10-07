@@ -350,10 +350,8 @@ struct FriendsListView: View {
             showUserProfileSheet = true
         }) {
             HStack(spacing: 16) {
-                // Avatar
-                Image(systemName: "person.circle.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(Color.brandPrimary)
+                // Profile Picture
+                UserProfileImageView(username: username, size: 50, borderColor: Color.brandPrimary)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(username)
@@ -402,10 +400,8 @@ struct FriendsListView: View {
     // MARK: - Friend Request Card
     private func friendRequestCard(username: String) -> some View {
         HStack(spacing: 16) {
-            // Avatar
-            Image(systemName: "person.circle.fill")
-                .font(.system(size: 50))
-                .foregroundColor(Color.brandWarning)
+            // Profile Picture
+            UserProfileImageView(username: username, size: 50, borderColor: Color.brandWarning)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(username)
@@ -461,10 +457,8 @@ struct FriendsListView: View {
             showUserProfileSheet = true
         }) {
             HStack(spacing: 16) {
-                // Avatar
-                Image(systemName: "person.circle.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(Color.brandSecondary)
+                // Profile Picture
+                UserProfileImageView(username: username, size: 50, borderColor: Color.brandSecondary)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(username)

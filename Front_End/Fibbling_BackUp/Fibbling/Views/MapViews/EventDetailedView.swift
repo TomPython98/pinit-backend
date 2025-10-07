@@ -842,15 +842,7 @@ extension EventDetailView {
             // Host Section
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Image(systemName: "person.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.textLight)
-                        .frame(width: 40, height: 40)
-                        .background(
-                            Circle()
-                                .fill(Color.brandSecondary)
-                                .shadow(color: Color.brandSecondary.opacity(0.25), radius: 4, x: 0, y: 2)
-                        )
+                    UserProfileImageView(username: localEvent.host, size: 40, borderColor: Color.brandSecondary)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Event Host")
@@ -1087,9 +1079,7 @@ extension EventDetailView {
                 .foregroundColor(Color.textSecondary)
             
             HStack(spacing: 12) {
-                Image(systemName: "person.circle.fill")
-                    .foregroundColor(Color.brandPrimary)
-                    .font(.title2)
+                UserProfileImageView(username: localEvent.host, size: 30, borderColor: Color.brandPrimary)
                 
                 VStack(alignment: .leading, spacing: 2) {
                 Text(localEvent.host)
@@ -1226,22 +1216,8 @@ extension EventDetailView {
                 VStack(spacing: 12) {
                             ForEach(Array(localEvent.attendees.enumerated()), id: \.offset) { index, attendee in
                         HStack(spacing: 12) {
-                            // Profile picture with enhanced styling
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.brandPrimary.opacity(0.2), Color.brandPrimary.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 50, height: 50)
-                                .overlay(
-                                    Text(String(attendee.prefix(1)).uppercased())
-                                        .font(.headline.weight(.bold))
-                                        .foregroundColor(Color.brandPrimary)
-                                )
-                                .shadow(color: Color.brandPrimary.opacity(0.15), radius: 4, x: 0, y: 2)
+                            // Profile Picture
+                            UserProfileImageView(username: attendee, size: 50, borderColor: Color.brandPrimary)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack(spacing: 8) {
@@ -1293,9 +1269,7 @@ extension EventDetailView {
                                     selectedUserProfile = attendee
                                     showUserProfileSheet = true
                                 }) {
-                                    Image(systemName: "person.circle")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.brandPrimary)
+                                    UserProfileImageView(username: attendee, size: 20, borderColor: .brandPrimary)
                                 }
                                 
                                 // Rate button (if event completed and not self)
@@ -1852,10 +1826,7 @@ struct EventSocialFeedView: View {
         VStack(spacing: 12) {
             HStack(alignment: .top, spacing: 10) {
                 // Profile Image
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .frame(width: 40, height: 40)
-                    .foregroundColor(.blue)
+                UserProfileImageView(username: accountManager.currentUser ?? "Guest", size: 40, borderColor: .blue)
                 
                 // Text input and controls
                 VStack(alignment: .leading, spacing: 10) {
@@ -2556,10 +2527,7 @@ struct EventPostView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
                 // Profile image
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .frame(width: 40, height: 40)
-                    .foregroundColor(.blue)
+                UserProfileImageView(username: post.username, size: 40, borderColor: .blue)
                 
                 // Post content
                 VStack(alignment: .leading, spacing: 6) {
@@ -2697,10 +2665,7 @@ struct EventPostView: View {
     private func replyView(for reply: EventInteractions.Post) -> some View {
         HStack(alignment: .top, spacing: 8) {
             // Smaller profile image for replies
-            Image(systemName: "person.circle.fill")
-                .resizable()
-                .frame(width: 24, height: 24)
-                .foregroundColor(.blue)
+            UserProfileImageView(username: reply.username, size: 24, borderColor: .blue)
             
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -2794,10 +2759,7 @@ struct PostDetailView: View {
                     
                     // Reply composer
                     HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "person.circle.fill")
-                            .resizable()
-                            .frame(width: 30, height: 30)
-                            .foregroundColor(Color.brandPrimary)
+                        UserProfileImageView(username: accountManager.currentUser ?? "Guest", size: 30, borderColor: Color.brandPrimary)
                         
                         VStack(alignment: .trailing, spacing: 8) {
                             TextField("Add your reply...", text: $replyText, axis: .vertical)
@@ -3093,10 +3055,7 @@ struct EnhancedEventPostView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
                 // Profile image
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .frame(width: 40, height: 40)
-                    .foregroundColor(.blue)
+                UserProfileImageView(username: post.username, size: 40, borderColor: .blue)
                 
                 // Post content
                 VStack(alignment: .leading, spacing: 6) {

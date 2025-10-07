@@ -478,20 +478,13 @@ struct SettingsView: View {
     // MARK: - Profile Section
     private var profileSection: some View {
         VStack(spacing: 16) {
-            // Profile Image
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(
-                        gradient: Gradient(colors: [.pinItPrimary, .pinItAccent]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 100, height: 100)
-                
-                Image(systemName: PinItIcons.profile)
-                    .font(.system(size: 40))
-                    .foregroundStyle(.white)
-            }
+            // Profile Picture
+            UserProfileImageView(
+                username: accountManager.currentUser ?? "Guest", 
+                size: 100, 
+                showBorder: true, 
+                borderColor: .pinItPrimary
+            )
             
             VStack(spacing: 8) {
                 Text(accountManager.currentUser ?? "Guest")

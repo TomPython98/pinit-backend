@@ -1177,9 +1177,7 @@ struct FriendPickerView: View {
                 // Friends list
                 List(filteredFriends, id: \.self) { friend in
                             HStack {
-                        Image(systemName: "person.circle.fill")
-                            .foregroundColor(.brandPrimary)
-                                    .font(.title2)
+                        UserProfileImageView(username: friend, size: 30, borderColor: .brandPrimary)
                         
                         Text(friend)
                             .font(.subheadline)
