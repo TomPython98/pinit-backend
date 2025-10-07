@@ -801,7 +801,7 @@ struct ProfileView: View {
     @State private var showImageGallery = false
     @State private var showFullScreenImage = false
     @State private var isImageLoading = false
-    @StateObject private var imageManager = ImageManager.shared
+    @ObservedObject private var imageManager = ImageManager.shared
     
     // Local storage for profile image
     @AppStorage("profileImageData") private var storedProfileImageData: Data = Data()
@@ -813,7 +813,7 @@ struct ProfileView: View {
         }
         
         Task {
-            await imageManager.loadUserImages(username: username)
+            await imageManager.loadUserImages(username: username, forceRefresh: true)
         }
     }
     
@@ -1099,9 +1099,23 @@ struct ProfileView: View {
                         let uploadSuccess = await uploadProfilePicture()
                         if uploadSuccess {
                             print("Profile picture uploaded successfully")
-                            // Reload images from backend and update UI
+                            // Small delay to ensure backend has processed the image
+                            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                            
+                            // Reload images from backend and update UI (force refresh)
                             if let username = accountManager.currentUser {
-                                await imageManager.loadUserImages(username: username)
+                                await imageManager.loadUserImages(username: username, forceRefresh: true)
+                                
+                                // Post notification to refresh all profile image views
+                                await MainActor.run {
+                                    NotificationCenter.default.post(
+                                        name: NSNotification.Name("ProfileImageUpdated"),
+                                        object: nil,
+                                        userInfo: ["username": username]
+                                    )
+                                    print("✅ Posted ProfileImageUpdated notification for \(username)")
+                                }
+                                
                                 // Update the profile image with the newly uploaded image
                                 if let primaryImage = imageManager.getPrimaryImage() {
                                     await MainActor.run {
@@ -1137,9 +1151,9 @@ struct ProfileView: View {
                     // Load real user stats
                     loadUserStats()
                     
-                    // Load images using ImageManager (will use cache if available)
+                    // Load images using ImageManager (force refresh on app start)
                     Task {
-                        await imageManager.loadUserImages(username: user)
+                        await imageManager.loadUserImages(username: user, forceRefresh: true)
                     }
                 }
             }

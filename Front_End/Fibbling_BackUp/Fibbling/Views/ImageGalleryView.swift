@@ -2,7 +2,7 @@ import SwiftUI
 import PhotosUI
 
 struct ImageGalleryView: View {
-    @StateObject private var imageManager = ImageManager.shared
+    @ObservedObject private var imageManager = ImageManager.shared
     
     @State private var selectedImageType: UserImage.ImageType = .gallery
     @State private var showingImagePicker = false
@@ -176,7 +176,7 @@ struct ImageGalleryView: View {
             }
             .onAppear {
                 Task {
-                    await imageManager.loadUserImages(username: username)
+                    await imageManager.loadUserImages(username: username, forceRefresh: true)
                     print("🖼️ Loaded \(imageManager.userImages.count) images for \(username)")
                 }
             }

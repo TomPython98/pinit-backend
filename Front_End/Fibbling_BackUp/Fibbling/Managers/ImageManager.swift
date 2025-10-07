@@ -24,6 +24,9 @@ class ImageManager: ObservableObject {
     private let networkMonitor = NetworkMonitor.shared
     private let uploadManager = ImageUploadManager.shared
     
+    // Prevent out-of-order updates from older requests clobbering fresh data
+    private var loadSequence: Int = 0
+    
     // Prefetch queue
     private var prefetchQueue: [String] = []
     private var isPrefetching = false
@@ -59,9 +62,9 @@ class ImageManager: ObservableObject {
     }
     
     // MARK: - Load User Images
-    func loadUserImages(username: String) async {
-        // Check if we have cached images for this user
-        if let cachedImages = userImageCache[username] {
+    func loadUserImages(username: String, forceRefresh: Bool = false) async {
+        // Check if we have cached images for this user (unless forcing refresh)
+        if !forceRefresh, let cachedImages = userImageCache[username] {
             userImages = cachedImages
             currentUsername = username
             return
@@ -69,41 +72,55 @@ class ImageManager: ObservableObject {
         
         isLoading = true
         errorMessage = nil
+        currentUsername = username
+        
+        // Bump sequence to identify the latest load request
+        loadSequence &+= 1
+        let thisLoad = loadSequence
         
         // Use the backend_deployment URL which has the image endpoints
         let imageBackendURL = "https://pinit-backend-production.up.railway.app"
-        guard let url = URL(string: "\(imageBackendURL)/api/user_images/\(username)/") else {
+        guard var urlComponents = URLComponents(string: "\(imageBackendURL)/api/user_images/\(username)/") else {
+            errorMessage = "Invalid URL"
+            isLoading = false
+            return
+        }
+        // Add cache buster to avoid any CDN/HTTP caches
+        let cacheBuster = URLQueryItem(name: "t", value: String(Int(Date().timeIntervalSince1970)))
+        var items = urlComponents.queryItems ?? []
+        items.append(cacheBuster)
+        urlComponents.queryItems = items
+        guard let finalURL = urlComponents.url else {
             errorMessage = "Invalid URL"
             isLoading = false
             return
         }
         
         do {
-            let (data, response) = try await downloadSession.data(from: url)
+            var request = URLRequest(url: finalURL)
+            // Force network fetch when refreshing
+            request.cachePolicy = forceRefresh ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
+            request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+            request.setValue("no-cache", forHTTPHeaderField: "Pragma")
+            let (data, response) = try await downloadSession.data(for: request)
             
             if let httpResponse = response as? HTTPURLResponse {
                 if httpResponse.statusCode == 200 {
                     let response = try JSONDecoder().decode(UserImagesResponse.self, from: data)
+                    // Ignore out-of-date responses
+                    guard thisLoad == loadSequence else { return }
                     userImages = response.images
-                    
                     // Cache the images for this user
                     userImageCache[username] = response.images
-                    currentUsername = username
                     AppLogger.logImage("Loaded \(response.images.count) images for user \(username)")
                 } else {
                     AppLogger.error("HTTP \(httpResponse.statusCode) when loading images for user \(username)", category: AppLogger.image)
-                    // Return empty array for non-200 responses
-                    userImages = []
-                    userImageCache[username] = []
-                    currentUsername = username
+                    // Do NOT clobber existing images on non-200; keep last known good state
                 }
             }
         } catch {
             AppLogger.error("Failed to load images for \(username)", error: error, category: AppLogger.image)
-            // Return empty array on error
-            userImages = []
-            userImageCache[username] = []
-            currentUsername = username
+            // Preserve current images/cache on error
         }
         
         isLoading = false
@@ -249,14 +266,18 @@ class ImageManager: ObservableObject {
     func getFullImageURL(_ image: UserImage) -> String {
         // Each upload creates a NEW file with unique filename, so the base URL is already unique
         // Just append the image ID as cache-busting parameter to ensure SwiftUI sees URL changes
-        if image.url.hasPrefix("http") {
+        guard let rawUrl = image.url, !rawUrl.isEmpty else {
+            // Fallback to API endpoint if URL missing
+            return "\(baseURL)/api/user_image/\(image.id)/serve/?id=\(image.id)"
+        }
+        if rawUrl.hasPrefix("http") {
             // If it's an R2 endpoint URL, convert to public URL
-            if image.url.contains("r2.cloudflarestorage.com") {
+            if rawUrl.contains("r2.cloudflarestorage.com") {
                 // Convert R2 endpoint URL to public URL
                 let publicDomain = "pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev"
                 
                 // Extract the path from the R2 URL (everything after /pinit-images/)
-                if let urlComponents = URLComponents(string: image.url) {
+                if let urlComponents = URLComponents(string: rawUrl) {
                     let fullPath = urlComponents.path
                     // Remove /pinit-images/ prefix and use the rest
                     if fullPath.hasPrefix("/pinit-images/") {
@@ -267,8 +288,8 @@ class ImageManager: ObservableObject {
                 }
             }
             // URL already contains unique filename, just add ID
-            let separator = image.url.contains("?") ? "&" : "?"
-            return "\(image.url)\(separator)id=\(image.id)"
+            let separator = rawUrl.contains("?") ? "&" : "?"
+            return "\(rawUrl)\(separator)id=\(image.id)"
         }
         // Fallback to API endpoint if needed
         return "\(baseURL)/api/user_image/\(image.id)/serve/?id=\(image.id)"

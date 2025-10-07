@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - UserImage Model
 struct UserImage: Identifiable, Codable, Hashable {
     let id: String
-    let url: String
+    let url: String?
     let imageType: ImageType
     let isPrimary: Bool
     let caption: String

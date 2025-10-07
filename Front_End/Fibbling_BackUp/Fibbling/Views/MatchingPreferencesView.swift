@@ -4,7 +4,7 @@ import PhotosUI
 struct MatchingPreferencesView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var theme = PinItTheme()
-    @StateObject private var imageManager = ImageManager.shared
+    @ObservedObject private var imageManager = ImageManager.shared
     @EnvironmentObject var accountManager: UserAccountManager
 
     // MARK: - App Storage for Matching Preferences
@@ -96,8 +96,8 @@ struct MatchingPreferencesView: View {
                                             .frame(width: 60, height: 60)
                                         
                                         if let primaryImage = imageManager.getPrimaryImage() {
-                                            ImageManager.shared.cachedAsyncImage(
-                                                url: ImageManager.shared.getFullImageURL(primaryImage),
+                                            imageManager.cachedAsyncImage(
+                                                url: imageManager.getFullImageURL(primaryImage),
                                                 contentMode: .fill,
                                                 targetSize: CGSize(width: 120, height: 120)
                                             )
@@ -309,7 +309,7 @@ struct MatchingPreferencesView: View {
         .onAppear {
             if let username = accountManager.currentUser {
                 Task {
-                    await imageManager.loadUserImages(username: username)
+                    await imageManager.loadUserImages(username: username, forceRefresh: true)
                 }
             }
         }

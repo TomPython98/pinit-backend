@@ -4,7 +4,7 @@ import PhotosUI
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var profileManager = UserProfileManager()
-    @StateObject private var imageManager = ImageManager.shared
+    @ObservedObject private var imageManager = ImageManager.shared
     
     // User profile data
     @State private var username = ""
@@ -57,7 +57,7 @@ struct EditProfileView: View {
             .onAppear {
                 loadProfileData()
                 Task {
-                    await imageManager.loadUserImages(username: username)
+                    await imageManager.loadUserImages(username: username, forceRefresh: true)
                 }
             }
             .onReceive(imageManager.$userImages) { _ in
@@ -115,8 +115,8 @@ struct EditProfileView: View {
                         .frame(width: 80, height: 80)
                     
                     if let primaryImage = imageManager.getPrimaryImage() {
-                        ImageManager.shared.cachedAsyncImage(
-                            url: ImageManager.shared.getFullImageURL(primaryImage),
+                        imageManager.cachedAsyncImage(
+                            url: imageManager.getFullImageURL(primaryImage),
                             contentMode: .fill,
                             targetSize: CGSize(width: 160, height: 160)
                         )
@@ -521,10 +521,14 @@ struct EditProfileView: View {
         if success {
             print("✅ Image uploaded successfully, refreshing ImageManager")
             // The uploadImage method already calls loadUserImages, but let's ensure it's refreshed
-            await imageManager.loadUserImages(username: username)
+            await imageManager.loadUserImages(username: username, forceRefresh: true)
             
             // Post notification to refresh other views
-            NotificationCenter.default.post(name: NSNotification.Name("ProfileImageUpdated"), object: nil)
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ProfileImageUpdated"), 
+                object: nil,
+                userInfo: ["username": username]
+            )
         } else {
             print("❌ Image upload failed")
         }

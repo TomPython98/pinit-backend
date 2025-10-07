@@ -8,9 +8,7 @@ struct UserProfileImageView: View {
     let borderColor: Color
     let enableFullScreen: Bool
     
-    @StateObject private var imageManager = ImageManager.shared
-    @State private var userImages: [UserImage] = []
-    @State private var isLoading = false
+    @ObservedObject private var imageManager = ImageManager.shared
     @State private var showFullScreen = false
     @State private var refreshID = UUID() // Force view refresh when images change
     
@@ -25,8 +23,8 @@ struct UserProfileImageView: View {
     var body: some View {
         Group {
             if let primaryImage = getPrimaryImage() {
-                ImageManager.shared.cachedAsyncImage(
-                    url: ImageManager.shared.getFullImageURL(primaryImage),
+                imageManager.cachedAsyncImage(
+                    url: imageManager.getFullImageURL(primaryImage),
                     contentMode: .fill,
                     targetSize: CGSize(width: size * 2, height: size * 2) // 2x for retina
                 )
@@ -37,14 +35,6 @@ struct UserProfileImageView: View {
                         .stroke(showBorder ? borderColor : Color.clear, lineWidth: showBorder ? 2 : 0)
                 )
                 .id(refreshID) // Force SwiftUI to recreate view when ID changes
-            } else if isLoading {
-                Circle()
-                    .fill(Color(.systemGray6))
-                    .frame(width: size, height: size)
-                    .overlay(
-                        ProgressView()
-                            .scaleEffect(0.6)
-                    )
             } else {
                 Circle()
                     .fill(
@@ -83,10 +73,10 @@ struct UserProfileImageView: View {
         .onAppear {
             loadUserImages()
         }
-        .onReceive(imageManager.$userImages) { images in
-            // Update when the image manager's user images change
+        .onReceive(imageManager.$userImages) { _ in
+            // Update refreshID when the image manager's user images change
             if imageManager.currentUsername == username {
-                userImages = images
+                refreshID = UUID() // Force view to refresh with new image
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ProfileImageUpdated"))) { notification in
@@ -94,12 +84,12 @@ struct UserProfileImageView: View {
             if let updatedUsername = notification.userInfo?["username"] as? String {
                 if updatedUsername == username {
                     print("🔄 UserProfileImageView: Received update notification for \(username), reloading...")
-                    loadUserImages()
+                    loadUserImages(forceRefresh: true)
                 }
             } else {
                 // If no specific username, reload for all
                 print("🔄 UserProfileImageView: Received general update notification, reloading...")
-                loadUserImages()
+                loadUserImages(forceRefresh: true)
             }
         }
         .sheet(isPresented: $showFullScreen) {
@@ -107,51 +97,31 @@ struct UserProfileImageView: View {
         }
     }
     
-    private func loadUserImages() {
-        // DON'T use cached images as placeholder - this was causing the bug!
-        // The old cached images would show the old URL, and the view wouldn't refresh
-        
-        // Only load if not already loading
-        guard !isLoading else { return }
-        
-        isLoading = true
+    private func loadUserImages(forceRefresh: Bool = false) {
         Task {
-            // Load images for this specific user (force refresh from server)
-            await imageManager.loadUserImages(username: username)
+            // Load images for this specific user (force refresh from server if needed)
+            await imageManager.loadUserImages(username: username, forceRefresh: forceRefresh)
             
             await MainActor.run {
-                // Get fresh images from cache after reload
-                let freshImages = imageManager.getUserImagesFromCache(username: username)
-                
-                // Only update if data actually changed
-                if freshImages != userImages {
-                    userImages = freshImages
-                    refreshID = UUID() // Force view to refresh with new image
-                    print("✅ UserProfileImageView: Updated with \(userImages.count) fresh images for \(username)")
-                }
-                
-                isLoading = false
+                refreshID = UUID() // Force view to refresh with new image
+                print("✅ UserProfileImageView: Updated with \(imageManager.userImages.count) fresh images for \(username)")
             }
         }
     }
     
     private func getPrimaryImage() -> UserImage? {
-        // First try to find an image marked as primary
-        if let primaryImage = userImages.first(where: { $0.isPrimary }) {
+        // Compute from per-username cache to avoid cross-talk between different users
+        let images = imageManager.getUserImagesFromCache(username: username)
+        if let primaryImage = images.first(where: { $0.isPrimary }) {
             return primaryImage
         }
-        
-        // If no image is marked as primary, use the most recent profile image
-        let profileImages = userImages.filter { $0.imageType == .profile }
+        let profileImages = images.filter { $0.imageType == .profile }
         if let mostRecentProfileImage = profileImages.sorted(by: { $0.uploadedAt > $1.uploadedAt }).first {
             return mostRecentProfileImage
         }
-        
-        // Fallback to most recent image of any type
-        if let mostRecentImage = userImages.sorted(by: { $0.uploadedAt > $1.uploadedAt }).first {
+        if let mostRecentImage = images.sorted(by: { $0.uploadedAt > $1.uploadedAt }).first {
             return mostRecentImage
         }
-        
         return nil
     }
 }

@@ -211,8 +211,11 @@ class ImageUploadManager: ObservableObject {
                             print("🔄 Cleared ALL caches after upload for \(request.username), reloading...")
                         }
                         
-                        // Reload images from server
-                        await ImageManager.shared.loadUserImages(username: request.username)
+                        // Small delay to ensure backend has processed the image
+                        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                        
+                        // Reload images from server (force refresh to get new image)
+                        await ImageManager.shared.loadUserImages(username: request.username, forceRefresh: true)
                         
                         // Post notification to refresh all profile image views
                         await MainActor.run {

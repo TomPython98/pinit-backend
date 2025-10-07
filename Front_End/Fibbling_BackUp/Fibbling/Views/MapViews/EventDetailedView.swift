@@ -4541,21 +4541,19 @@ struct EventsResponse: Codable {
 struct FullScreenImageView: View {
     let username: String
     @Environment(\.dismiss) var dismiss
-    @StateObject private var imageManager = ImageManager.shared
-    @State private var userImages: [UserImage] = []
+    @ObservedObject private var imageManager = ImageManager.shared
     @State private var currentImageIndex = 0
-    @State private var isLoading = true
     
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
-                if isLoading {
+                if imageManager.isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         .scaleEffect(1.5)
-                } else if userImages.isEmpty {
+                } else if imageManager.userImages.isEmpty {
                     VStack(spacing: 20) {
                         Image(systemName: "photo")
                             .font(.system(size: 60))
@@ -4566,9 +4564,9 @@ struct FullScreenImageView: View {
                     }
                 } else {
                     TabView(selection: $currentImageIndex) {
-                        ForEach(Array(userImages.enumerated()), id: \.offset) { index, image in
-                            ImageManager.shared.cachedAsyncImage(
-                                url: ImageManager.shared.getFullImageURL(image),
+                        ForEach(Array(imageManager.userImages.enumerated()), id: \.offset) { index, image in
+                            imageManager.cachedAsyncImage(
+                                url: imageManager.getFullImageURL(image),
                                 contentMode: .fit
                             )
                             .tag(index)
@@ -4587,9 +4585,9 @@ struct FullScreenImageView: View {
                     .foregroundColor(.white)
                 }
                 
-                if !userImages.isEmpty {
+                if !imageManager.userImages.isEmpty {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Text("\(currentImageIndex + 1) of \(userImages.count)")
+                        Text("\(currentImageIndex + 1) of \(imageManager.userImages.count)")
                             .foregroundColor(.white.opacity(0.8))
                     }
                 }
@@ -4601,19 +4599,8 @@ struct FullScreenImageView: View {
     }
     
     private func loadUserImages() {
-        // Check if we already have images for this user
-        if let cachedImages = imageManager.userImageCache[username] {
-            userImages = cachedImages
-            isLoading = false
-            return
-        }
-        
         Task {
-            await imageManager.loadUserImages(username: username)
-            await MainActor.run {
-                userImages = imageManager.getUserImagesFromCache(username: username)
-                isLoading = false
-            }
+            await imageManager.loadUserImages(username: username, forceRefresh: true)
         }
     }
 }
