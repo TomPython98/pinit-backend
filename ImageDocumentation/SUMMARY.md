@@ -263,3 +263,4 @@ find . -name "*Image*" -type f
 ---
 
 This documentation provides everything needed to understand, maintain, and extend the PinIt image system. For specific implementation details, refer to the individual documentation files in this folder.
+

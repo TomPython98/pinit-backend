@@ -89,8 +89,9 @@ class ImageManager: ObservableObject {
                     // Cache the images for this user
                     userImageCache[username] = response.images
                     currentUsername = username
+                    AppLogger.logImage("Loaded \(response.images.count) images for user \(username)")
                 } else {
-                    print("⚠️ ImageManager: HTTP \(httpResponse.statusCode) for user \(username)")
+                    AppLogger.error("HTTP \(httpResponse.statusCode) when loading images for user \(username)", category: AppLogger.image)
                     // Return empty array for non-200 responses
                     userImages = []
                     userImageCache[username] = []
@@ -98,7 +99,7 @@ class ImageManager: ObservableObject {
                 }
             }
         } catch {
-            print("⚠️ ImageManager: Error loading images for \(username): \(error.localizedDescription)")
+            AppLogger.error("Failed to load images for \(username)", error: error, category: AppLogger.image)
             // Return empty array on error
             userImages = []
             userImageCache[username] = []
@@ -246,7 +247,8 @@ class ImageManager: ObservableObject {
     }
     
     func getFullImageURL(_ image: UserImage) -> String {
-        // Use R2 URL directly - the backend now returns R2 URLs
+        // Each upload creates a NEW file with unique filename, so the base URL is already unique
+        // Just append the image ID as cache-busting parameter to ensure SwiftUI sees URL changes
         if image.url.hasPrefix("http") {
             // If it's an R2 endpoint URL, convert to public URL
             if image.url.contains("r2.cloudflarestorage.com") {
@@ -259,14 +261,17 @@ class ImageManager: ObservableObject {
                     // Remove /pinit-images/ prefix and use the rest
                     if fullPath.hasPrefix("/pinit-images/") {
                         let relativePath = String(fullPath.dropFirst("/pinit-images/".count))
-                        return "https://\(publicDomain)/\(relativePath)"
+                        // URL already unique (has timestamp in filename), just add ID for SwiftUI
+                        return "https://\(publicDomain)/\(relativePath)?id=\(image.id)"
                     }
                 }
             }
-            return image.url
+            // URL already contains unique filename, just add ID
+            let separator = image.url.contains("?") ? "&" : "?"
+            return "\(image.url)\(separator)id=\(image.id)"
         }
         // Fallback to API endpoint if needed
-        return "\(baseURL)/api/user_image/\(image.id)/serve/"
+        return "\(baseURL)/api/user_image/\(image.id)/serve/?id=\(image.id)"
     }
     
     func clearError() {
@@ -275,7 +280,7 @@ class ImageManager: ObservableObject {
     
     // MARK: - Cache Management
     func clearAllCaches() {
-        print("🧹 Clearing all caches")
+        AppLogger.logCache("Clearing all caches")
         
         // Clear user image cache
         userImageCache.removeAll()
@@ -297,7 +302,7 @@ class ImageManager: ObservableObject {
     }
     
     func clearUserCache(username: String) {
-        print("🧹 Clearing cache for user: \(username)")
+        AppLogger.logCache("Clearing cache for user: \(username)")
         userImageCache.removeValue(forKey: username)
         
         // If this is the current user, clear current data
@@ -338,7 +343,7 @@ class ImageManager: ObservableObject {
                 return (image, false) // Loaded from network
             }
         } catch {
-            print("❌ Failed to load image from \(url): \(error)")
+            AppLogger.error("Failed to load image from URL", error: error, category: AppLogger.image)
         }
         
         return (nil, false)
@@ -405,7 +410,7 @@ class ImageManager: ObservableObject {
         let uncachedUsers = usernames.filter { userImageCache[$0] == nil }
         guard !uncachedUsers.isEmpty else { return }
         
-        print("🔮 Prefetching images for \(uncachedUsers.count) users...")
+        AppLogger.logImage("Prefetching images for \(uncachedUsers.count) users")
         
         isPrefetching = true
         prefetchQueue = uncachedUsers
@@ -455,7 +460,7 @@ class ImageManager: ObservableObject {
             prefetchQueue.removeAll()
         }
         
-        print("✅ Prefetching complete")
+        AppLogger.logImage("Prefetching complete")
     }
     
     /// Cancel ongoing prefetch operations
@@ -466,12 +471,7 @@ class ImageManager: ObservableObject {
     
     /// Get cache statistics for debugging
     func printCacheStatistics() {
-        print("📊 ImageManager Cache Stats:")
-        print("   User caches: \(userImageCache.count)")
-        print("   Current user: \(currentUsername ?? "none")")
-        print("   User images: \(userImages.count)")
-        print("   Prefetch queue: \(prefetchQueue.count)")
-        
+        AppLogger.logCache("Cache Stats - Users: \(userImageCache.count), Current: \(currentUsername ?? "none"), Images: \(userImages.count), Queue: \(prefetchQueue.count)")
         professionalCache.printCacheStats()
     }
 }

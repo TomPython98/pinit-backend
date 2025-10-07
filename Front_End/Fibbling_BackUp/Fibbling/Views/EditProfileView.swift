@@ -21,6 +21,7 @@ struct EditProfileView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var showingImageGallery = false
+    @State private var refreshID = UUID() // Force view refresh
     
     // Form validation
     @State private var emailIsValid = true
@@ -58,6 +59,11 @@ struct EditProfileView: View {
                 Task {
                     await imageManager.loadUserImages(username: username)
                 }
+            }
+            .onReceive(imageManager.$userImages) { _ in
+                // Force view refresh when images change
+                refreshID = UUID()
+                AppLogger.debug("EditProfileView: Images updated, refreshing view", category: AppLogger.ui)
             }
             .alert("Profile", isPresented: $showAlert) {
                 Button("OK") { }
@@ -109,24 +115,14 @@ struct EditProfileView: View {
                         .frame(width: 80, height: 80)
                     
                     if let primaryImage = imageManager.getPrimaryImage() {
-                        AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(primaryImage))) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 80, height: 80)
-                                    .clipShape(Circle())
-                            case .failure, .empty:
-                                Image(systemName: "person.fill")
-                                    .font(.system(size: 32))
-                                    .foregroundColor(.white)
-                            @unknown default:
-                                Image(systemName: "person.fill")
-                                    .font(.system(size: 32))
-                                    .foregroundColor(.white)
-                            }
-                        }
+                        ImageManager.shared.cachedAsyncImage(
+                            url: ImageManager.shared.getFullImageURL(primaryImage),
+                            contentMode: .fill,
+                            targetSize: CGSize(width: 160, height: 160)
+                        )
+                        .frame(width: 80, height: 80)
+                        .clipShape(Circle())
+                        .id(refreshID) // Force recreation when refreshID changes
                     } else if let profileImage = profileImage {
                         profileImage
                             .resizable()

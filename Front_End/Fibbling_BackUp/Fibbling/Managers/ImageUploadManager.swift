@@ -196,10 +196,32 @@ class ImageUploadManager: ObservableObject {
                     if uploadResponse.success {
                         uploadProgress[uploadId] = 1.0
                         
-                        // Clear cache and reload in background
-                        Task {
-                            await ImageManager.shared.clearUserCache(username: request.username)
-                            await ImageManager.shared.loadUserImages(username: request.username)
+                        // Clear ALL caches immediately to force UI refresh
+                        await MainActor.run {
+                            // Clear ImageManager cache
+                            ImageManager.shared.clearUserCache(username: request.username)
+                            
+                            // CRITICAL: Clear ALL image caches since cache keys are hashes, not URLs
+                            // This ensures the new image is fetched fresh from server
+                            ProfessionalImageCache.shared.clearAll()
+                            
+                            // Also clear URLSession cache to prevent OS-level caching
+                            URLCache.shared.removeAllCachedResponses()
+                            
+                            print("🔄 Cleared ALL caches after upload for \(request.username), reloading...")
+                        }
+                        
+                        // Reload images from server
+                        await ImageManager.shared.loadUserImages(username: request.username)
+                        
+                        // Post notification to refresh all profile image views
+                        await MainActor.run {
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("ProfileImageUpdated"),
+                                object: nil,
+                                userInfo: ["username": request.username]
+                            )
+                            print("✅ Posted ProfileImageUpdated notification")
                         }
                         
                         return true

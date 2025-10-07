@@ -223,7 +223,8 @@ class ImageLoader: ObservableObject {
         
         var request = URLRequest(url: imageURL)
         request.timeoutInterval = timeout
-        request.cachePolicy = .returnCacheDataElseLoad
+        // Use fresh network data when requested to avoid stale local caches
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         
         // Use ImageManager's optimized download session
         let (data, response) = try await ImageManager.shared.downloadImage(from: request)

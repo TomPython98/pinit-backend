@@ -12,6 +12,7 @@ struct UserProfileImageView: View {
     @State private var userImages: [UserImage] = []
     @State private var isLoading = false
     @State private var showFullScreen = false
+    @State private var refreshID = UUID() // Force view refresh when images change
     
     init(username: String, size: CGFloat = 50, showBorder: Bool = true, borderColor: Color = .blue, enableFullScreen: Bool = false) {
         self.username = username
@@ -35,6 +36,7 @@ struct UserProfileImageView: View {
                     Circle()
                         .stroke(showBorder ? borderColor : Color.clear, lineWidth: showBorder ? 2 : 0)
                 )
+                .id(refreshID) // Force SwiftUI to recreate view when ID changes
             } else if isLoading {
                 Circle()
                     .fill(Color(.systemGray6))
@@ -87,29 +89,47 @@ struct UserProfileImageView: View {
                 userImages = images
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ProfileImageUpdated"))) { notification in
+            // Reload images when profile is updated (critical for immediate refresh after upload!)
+            if let updatedUsername = notification.userInfo?["username"] as? String {
+                if updatedUsername == username {
+                    print("🔄 UserProfileImageView: Received update notification for \(username), reloading...")
+                    loadUserImages()
+                }
+            } else {
+                // If no specific username, reload for all
+                print("🔄 UserProfileImageView: Received general update notification, reloading...")
+                loadUserImages()
+            }
+        }
         .sheet(isPresented: $showFullScreen) {
             FullScreenImageView(username: username)
         }
     }
     
     private func loadUserImages() {
-        // Check if we already have images for this user
-        if let cachedImages = imageManager.userImageCache[username] {
-            userImages = cachedImages
-            return
-        }
+        // DON'T use cached images as placeholder - this was causing the bug!
+        // The old cached images would show the old URL, and the view wouldn't refresh
         
-        // Only load if we don't have any cached data and it's not already loading
+        // Only load if not already loading
         guard !isLoading else { return }
         
         isLoading = true
         Task {
-            // Load images for this specific user
+            // Load images for this specific user (force refresh from server)
             await imageManager.loadUserImages(username: username)
             
             await MainActor.run {
-                // Get images from cache
-                userImages = imageManager.getUserImagesFromCache(username: username)
+                // Get fresh images from cache after reload
+                let freshImages = imageManager.getUserImagesFromCache(username: username)
+                
+                // Only update if data actually changed
+                if freshImages != userImages {
+                    userImages = freshImages
+                    refreshID = UUID() // Force view to refresh with new image
+                    print("✅ UserProfileImageView: Updated with \(userImages.count) fresh images for \(username)")
+                }
+                
                 isLoading = false
             }
         }

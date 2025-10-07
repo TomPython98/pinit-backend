@@ -283,6 +283,50 @@ class ProfessionalImageCache: ObservableObject {
         print("🧹 Cleared memory caches")
     }
     
+    // MARK: - Clear User-Specific Images (Critical for Upload Refresh!)
+    
+    /// Clears all cached images for a specific user - ensures profile images refresh immediately after upload
+    func clearImagesForUser(username: String) {
+        print("🧹 ProfessionalImageCache: Clearing all images for user: \(username)")
+        
+        cacheQueue.async(flags: .barrier) {
+            // Clear memory caches for this user
+            // Remove entries where the key contains the username
+            let keysToRemove = self.fullResCache.keys.filter { $0.contains(username) } +
+                              self.thumbnailCache.keys.filter { $0.contains(username) } +
+                              self.blurHashCache.keys.filter { $0.contains(username) }
+            
+            for key in keysToRemove {
+                self.fullResCache.removeValue(forKey: key)
+                self.thumbnailCache.removeValue(forKey: key)
+                self.blurHashCache.removeValue(forKey: key)
+                self.accessOrder.removeAll { $0 == key }
+            }
+            
+            print("✅ ProfessionalImageCache: Cleared \(keysToRemove.count) memory cache entries for \(username)")
+            
+            // Clear disk cache for this user
+            do {
+                let contents = try self.fileManager.contentsOfDirectory(at: self.cacheDirectory, includingPropertiesForKeys: nil, options: [])
+                
+                // Remove files that contain the username in the filename
+                var removedCount = 0
+                for fileURL in contents {
+                    let filename = fileURL.lastPathComponent
+                    // Check if filename contains username or user's image path
+                    if filename.contains(username) || filename.contains("users/\(username)") {
+                        try? self.fileManager.removeItem(at: fileURL)
+                        removedCount += 1
+                    }
+                }
+                
+                print("✅ ProfessionalImageCache: Cleared \(removedCount) disk cache files for \(username)")
+            } catch {
+                print("❌ ProfessionalImageCache: Failed to clear disk cache for user: \(error)")
+            }
+        }
+    }
+    
     private func handleMemoryWarning() {
         print("⚠️ Memory warning - clearing caches")
         clearMemoryCache()

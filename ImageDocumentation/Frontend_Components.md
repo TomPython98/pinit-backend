@@ -492,3 +492,4 @@ func testProfilePictureDisplay() {
 ```
 
 This documentation provides complete details about frontend image components and their usage.
+

@@ -65,9 +65,10 @@ class EventsWebSocketManager: ObservableObject {
     
     /// Connect to the WebSocket server
     func connect() {
-        // Ensure your Django Channels routing uses a URL like:
-        // ws://127.0.0.1:8000/ws/events/<username>/
-        guard let url = URL(string: "ws://127.0.0.1:8000/ws/events/\(username)/") else {
+        // Use API configuration for WebSocket URL
+        let wsBaseURL = APIConfig.websocketURL
+        guard let url = URL(string: "\(wsBaseURL)events/\(username)/") else {
+            AppLogger.error("Invalid WebSocket URL", category: AppLogger.websocket)
             return
         }
         
@@ -78,6 +79,7 @@ class EventsWebSocketManager: ObservableObject {
         webSocketTask = urlSession.webSocketTask(with: url)
         webSocketTask?.resume()
         
+        AppLogger.logWebSocket("Connecting to WebSocket", details: url.absoluteString)
         
         // Start listening for messages
         listenForMessages()
@@ -91,8 +93,8 @@ class EventsWebSocketManager: ObservableObject {
         // Clean up any existing timer
         pingTimer?.invalidate()
         
-        // Create a new ping timer that fires every 30 seconds
-        pingTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
+        // Create a new ping timer that fires every 20 seconds (more frequent for stability)
+        pingTimer = Timer.scheduledTimer(withTimeInterval: 20.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             self.sendPing()
         }
@@ -100,6 +102,7 @@ class EventsWebSocketManager: ObservableObject {
     
     /// Disconnect from the WebSocket server
     func disconnect() {
+        AppLogger.logWebSocket("Disconnecting from WebSocket")
         
         // Cancel timers
         stopTimers()
@@ -119,10 +122,13 @@ class EventsWebSocketManager: ObservableObject {
             self.isConnected = false
         }
         
-        // Calculate backoff time
+        // Calculate backoff time with jitter to prevent thundering herd
         reconnectAttempt += 1
-        let backoffTime = min(reconnectInterval * pow(1.5, Double(reconnectAttempt - 1)), maxReconnectInterval)
+        let baseBackoffTime = min(reconnectInterval * pow(1.5, Double(reconnectAttempt - 1)), maxReconnectInterval)
+        let jitter = Double.random(in: 0.1...0.3) * baseBackoffTime
+        let backoffTime = baseBackoffTime + jitter
         
+        AppLogger.logWebSocket("Connection error, reconnecting in \(Int(backoffTime))s", details: "Attempt \(reconnectAttempt)")
         
         // Schedule reconnect - use weak self to prevent retain cycles
         DispatchQueue.main.async { [weak self] in
@@ -157,6 +163,7 @@ class EventsWebSocketManager: ObservableObject {
             
             switch result {
             case .failure(let error):
+                AppLogger.error("WebSocket receive failed", error: error, category: AppLogger.websocket)
                 self.handleConnectionError()
                 
             case .success(let message):
@@ -203,9 +210,11 @@ class EventsWebSocketManager: ObservableObject {
                 }
             }
         } catch {
+            AppLogger.error("Failed to decode WebSocket message", error: error, category: AppLogger.websocket)
             
             // Log the actual data for debugging
             if let textData = String(data: data, encoding: .utf8) {
+                AppLogger.debug("Raw message: \(textData)", category: AppLogger.websocket)
                 
                 // Try to extract event_id manually from the JSON string if possible
                 if let eventIdIndex = textData.range(of: "\"event_id\":")?.upperBound,
@@ -219,6 +228,7 @@ class EventsWebSocketManager: ObservableObject {
                                           textData.contains("\"type\":\"create\"") ? "create" :
                                           textData.contains("\"type\":\"delete\"") ? "delete" : "unknown"
                         
+                        AppLogger.logWebSocket("Parsed event change", details: "\(typeString) - \(eventId)")
                         
                         // Notify delegate of the event change
                         DispatchQueue.main.async { [weak self] in
@@ -242,8 +252,13 @@ class EventsWebSocketManager: ObservableObject {
         
         webSocketTask?.sendPing { [weak self] error in
             if let error = error {
-                self?.handleConnectionError()
+                AppLogger.error("WebSocket ping failed", error: error, category: AppLogger.websocket)
+                // Only reconnect if it's a connection error, not just a ping failure
+                if let urlError = error as? URLError, urlError.code == .notConnectedToInternet {
+                    self?.handleConnectionError()
+                }
             } else {
+                AppLogger.debug("WebSocket ping successful", category: AppLogger.websocket)
             }
         }
     }

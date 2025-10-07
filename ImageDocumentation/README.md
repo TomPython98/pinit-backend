@@ -473,3 +473,4 @@ let imageQuality: CGFloat = 0.85
 ---
 
 This documentation provides a complete understanding of the image system for AI assistants and developers working on the PinIt app. For specific implementation details, refer to the source code files mentioned in each section.
+

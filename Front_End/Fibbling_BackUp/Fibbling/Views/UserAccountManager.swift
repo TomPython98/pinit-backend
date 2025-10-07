@@ -28,43 +28,61 @@ class UserAccountManager: ObservableObject {
 
     // ✅ REGISTER USER
     func register(username: String, password: String, completion: @escaping (Bool, String) -> Void) {
+        // Validate input
+        let usernameValidation = InputValidator.isValidUsername(username)
+        guard usernameValidation.isValid else {
+            completion(false, usernameValidation.error?.errorDescription ?? "Invalid username")
+            return
+        }
+        
+        let passwordValidation = InputValidator.isValidPassword(password)
+        guard passwordValidation.isValid else {
+            completion(false, passwordValidation.error?.errorDescription ?? "Invalid password")
+            return
+        }
+        
         let registerURL = APIConfig.fullURL(for: "register")
-        print("🔍 Registration URL: \(registerURL)")
+        AppLogger.logRequest(url: registerURL, method: "POST")
         
         guard let url = URL(string: registerURL) else {
-            completion(false, "Invalid URL")
+            AppLogger.error("Invalid registration URL", category: AppLogger.auth)
+            completion(false, AppError.invalidURL.errorDescription ?? "Invalid URL")
             return
         }
         
         let body: [String: String] = ["username": username, "password": password]
-        let jsonData = try? JSONSerialization.data(withJSONObject: body)
-        print("📤 Registration body: \(body)")
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
+            AppLogger.error("Failed to encode registration data", category: AppLogger.auth)
+            completion(false, AppError.encodingError("registration data").errorDescription ?? "Encoding failed")
+            return
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.httpBody = jsonData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            print("📡 Registration response received")
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
             
             if let httpResponse = response as? HTTPURLResponse {
-                print("📊 Registration status code: \(httpResponse.statusCode)")
+                AppLogger.logResponse(url: registerURL, statusCode: httpResponse.statusCode)
             }
             
             if let error = error {
-                print("❌ Registration error: \(error.localizedDescription)")
-            }
-            
-            guard let data = data else {
+                AppLogger.error("Registration network error", error: error, category: AppLogger.auth)
                 DispatchQueue.main.async {
-                    completion(false, "No response from server.")
+                    completion(false, AppError.networkError(error.localizedDescription).errorDescription ?? "Network error")
                 }
                 return
             }
             
-            if let dataString = String(data: data, encoding: .utf8) {
-                print("📄 Registration response data: \(dataString)")
+            guard let data = data else {
+                AppLogger.error("No data received from registration", category: AppLogger.auth)
+                DispatchQueue.main.async {
+                    completion(false, AppError.invalidResponse.errorDescription ?? "No response from server.")
+                }
+                return
             }
 
             do {
@@ -72,7 +90,7 @@ class UserAccountManager: ObservableObject {
                 let success = json?["success"] as? Bool ?? false
                 let message = json?["message"] as? String ?? "Unknown error."
                 
-                print("✅ Registration success: \(success), message: \(message)")
+                AppLogger.logAuth("Registration result: \(success ? "success" : "failed")")
 
                 DispatchQueue.main.async {
                     if success {
@@ -80,14 +98,14 @@ class UserAccountManager: ObservableObject {
                         // Also save to UserDefaults for persistence
                         UserDefaults.standard.set(true, forKey: "isLoggedIn")
                         UserDefaults.standard.set(username, forKey: "username")
-                        print("💾 User data saved to UserDefaults")
+                        AppLogger.logAuth("User data persisted")
                     }
                     completion(success, message)
                 }
             } catch {
-                print("❌ Registration JSON parsing error: \(error.localizedDescription)")
+                AppLogger.error("Failed to parse registration response", error: error, category: AppLogger.auth)
                 DispatchQueue.main.async {
-                    completion(false, "Invalid response from server.")
+                    completion(false, AppError.decodingError("registration response").errorDescription ?? "Invalid response from server.")
                 }
             }
         }.resume()
@@ -96,22 +114,46 @@ class UserAccountManager: ObservableObject {
     // ✅ LOGIN USER & FETCH FRIENDS
     func login(username: String, password: String, completion: @escaping (Bool, String) -> Void) {
         let loginURL = APIConfig.fullURL(for: "login")
+        AppLogger.logRequest(url: loginURL, method: "POST")
+        
         guard let url = URL(string: loginURL) else {
-            completion(false, "Invalid URL")
+            AppLogger.error("Invalid login URL", category: AppLogger.auth)
+            completion(false, AppError.invalidURL.errorDescription ?? "Invalid URL")
             return
         }
         
         let body: [String: String] = ["username": username, "password": password]
-        let jsonData = try? JSONSerialization.data(withJSONObject: body)
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
+            AppLogger.error("Failed to encode login data", category: AppLogger.auth)
+            completion(false, AppError.encodingError("login data").errorDescription ?? "Encoding failed")
+            return
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.httpBody = jsonData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        URLSession.shared.dataTask(with: request) { data, _, _ in
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                AppLogger.logResponse(url: loginURL, statusCode: httpResponse.statusCode)
+            }
+            
+            if let error = error {
+                AppLogger.error("Login network error", error: error, category: AppLogger.auth)
+                DispatchQueue.main.async {
+                    completion(false, AppError.networkError(error.localizedDescription).errorDescription ?? "Network error")
+                }
+                return
+            }
+            
             guard let data = data else {
-                DispatchQueue.main.async { completion(false, "No response from server.") }
+                AppLogger.error("No data received from login", category: AppLogger.auth)
+                DispatchQueue.main.async {
+                    completion(false, AppError.invalidResponse.errorDescription ?? "No response from server.")
+                }
                 return
             }
 
@@ -119,6 +161,8 @@ class UserAccountManager: ObservableObject {
                 let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                 let success = json?["success"] as? Bool ?? false
                 let message = json?["message"] as? String ?? "Unknown error."
+
+                AppLogger.logAuth("Login result: \(success ? "success" : "failed")")
 
                 DispatchQueue.main.async {
                     if success {
@@ -133,46 +177,55 @@ class UserAccountManager: ObservableObject {
                     completion(success, message)
                 }
             } catch {
-                DispatchQueue.main.async { completion(false, "Invalid response from server.") }
+                AppLogger.error("Failed to parse login response", error: error, category: AppLogger.auth)
+                DispatchQueue.main.async {
+                    completion(false, AppError.decodingError("login response").errorDescription ?? "Invalid response from server.")
+                }
             }
-            
-            
         }.resume()
     }
 
     func fetchFriends() {
         guard let username = currentUser,
-              let url = URL(string: "\(baseURL)/get_friends/\(username)/") else { 
+              let url = URL(string: "\(baseURL)/get_friends/\(username)/") else {
+            AppLogger.error("Invalid URL for fetching friends", category: AppLogger.network)
             return 
         }
 
+        AppLogger.logRequest(url: url.absoluteString, method: "GET")
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
             if let error = error {
+                AppLogger.error("Failed to fetch friends", error: error, category: AppLogger.network)
                 return
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
+                AppLogger.error("Invalid response when fetching friends", category: AppLogger.network)
                 return
             }
             
+            AppLogger.logResponse(url: url.absoluteString, statusCode: httpResponse.statusCode)
+            
             guard httpResponse.statusCode == 200 else {
+                AppLogger.error("HTTP \(httpResponse.statusCode) when fetching friends", category: AppLogger.network)
                 return
             }
             
             guard let data = data else {
+                AppLogger.error("No data received when fetching friends", category: AppLogger.network)
                 return
             }
 
             do {
-                // ✅ Print raw response before decoding
-                let rawJSON = String(data: data, encoding: .utf8) ?? "N/A"
-
                 let decodedResponse = try JSONDecoder().decode([String: [String]].self, from: data)
 
                 if let friendsList = decodedResponse["friends"] {
                     DispatchQueue.main.async {
                         self.friends = friendsList
+                        AppLogger.debug("Loaded \(friendsList.count) friends", category: AppLogger.data)
                     }
                 } else {
                     DispatchQueue.main.async {
@@ -180,6 +233,7 @@ class UserAccountManager: ObservableObject {
                     }
                 }
             } catch {
+                AppLogger.error("Failed to decode friends response", error: error, category: AppLogger.data)
                 DispatchQueue.main.async {
                     self.friends = []
                 }
@@ -189,33 +243,45 @@ class UserAccountManager: ObservableObject {
 
     func fetchFriendRequests() {
         guard let username = currentUser,
-              let url = URL(string: "\(baseURL)/get_pending_requests/\(username)/") else { 
+              let url = URL(string: "\(baseURL)/get_pending_requests/\(username)/") else {
+            AppLogger.error("Invalid URL for fetching friend requests", category: AppLogger.network)
             return 
         }
 
+        AppLogger.logRequest(url: url.absoluteString, method: "GET")
 
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
             if let error = error {
+                AppLogger.error("Failed to fetch friend requests", error: error, category: AppLogger.network)
                 return
             }
             
-            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-                return
+            if let httpResponse = response as? HTTPURLResponse {
+                AppLogger.logResponse(url: url.absoluteString, statusCode: httpResponse.statusCode)
+                guard httpResponse.statusCode == 200 else {
+                    return
+                }
             }
             
             guard let data = data else {
+                AppLogger.error("No data received when fetching friend requests", category: AppLogger.network)
                 return
             }
             
+            // Log raw response for debugging
+            if let rawString = String(data: data, encoding: .utf8) {
+                AppLogger.debug("Raw friend requests response: \(rawString)", category: AppLogger.data)
+            }
+            
             do {
-                // Parse the response properly
-                let rawJSON = String(data: data, encoding: .utf8) ?? "N/A"
-                
                 let decodedResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                 
                 if let pendingRequests = decodedResponse?["pending_requests"] as? [String] {
                     DispatchQueue.main.async {
                         self.friendRequests = pendingRequests
+                        AppLogger.debug("Loaded \(pendingRequests.count) friend requests", category: AppLogger.data)
                     }
                 } else {
                     DispatchQueue.main.async {
@@ -223,8 +289,19 @@ class UserAccountManager: ObservableObject {
                     }
                 }
             } catch {
-                DispatchQueue.main.async {
-                    self.friendRequests = []
+                AppLogger.error("Failed to decode friend requests", error: error, category: AppLogger.data)
+                // Try to parse as array directly (in case backend returns array instead of object)
+                do {
+                    let directArray = try JSONSerialization.jsonObject(with: data, options: []) as? [String]
+                    DispatchQueue.main.async {
+                        self.friendRequests = directArray ?? []
+                        AppLogger.debug("Loaded \(directArray?.count ?? 0) friend requests (direct array)", category: AppLogger.data)
+                    }
+                } catch {
+                    AppLogger.error("Failed to parse friend requests as array", error: error, category: AppLogger.data)
+                    DispatchQueue.main.async {
+                        self.friendRequests = []
+                    }
                 }
             }
         }.resume()
@@ -233,27 +310,37 @@ class UserAccountManager: ObservableObject {
     // ✅ SEND FRIEND REQUEST
     func sendFriendRequest(to username: String) {
         guard let currentUser = currentUser, 
-              let url = URL(string: "\(baseURL)/send_friend_request/") else { 
+              let url = URL(string: "\(baseURL)/send_friend_request/") else {
+            AppLogger.error("Invalid URL for sending friend request", category: AppLogger.network)
             return 
         }
         
+        AppLogger.logRequest(url: url.absoluteString, method: "POST")
         
         let body: [String: String] = ["from_user": currentUser, "to_user": username]
-        let jsonData = try? JSONSerialization.data(withJSONObject: body)
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
+            AppLogger.error("Failed to encode friend request data", category: AppLogger.data)
+            return
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.httpBody = jsonData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
             if let error = error {
+                AppLogger.error("Failed to send friend request", error: error, category: AppLogger.network)
                 return
             }
             
-            if let data = data {
-                let responseString = String(data: data, encoding: .utf8) ?? "N/A"
+            if let httpResponse = response as? HTTPURLResponse {
+                AppLogger.logResponse(url: url.absoluteString, statusCode: httpResponse.statusCode)
             }
+            
+            AppLogger.info("Friend request sent to \(username)", category: AppLogger.network)
             
             DispatchQueue.main.async {
                 self.fetchFriendRequests() // ✅ Refresh pending requests after sending one
@@ -326,6 +413,7 @@ class UserAccountManager: ObservableObject {
 
     // ✅ LOGOUT FUNCTION
     func logout(completion: @escaping (Bool, String) -> Void) {
+        AppLogger.logAuth("User logging out")
         
         // Post a notification to let all subscribers know we're about to logout
         // This gives any active managers a chance to clean up resources
@@ -342,6 +430,7 @@ class UserAccountManager: ObservableObject {
             UserDefaults.standard.set(false, forKey: "isLoggedIn")
             UserDefaults.standard.removeObject(forKey: "username")
             
+            AppLogger.logAuth("User logged out successfully")
             completion(true, "Logged out successfully.")
         }
     }
@@ -404,17 +493,35 @@ extension UserAccountManager {
 
     func fetchUserProfile() {
         guard let username = currentUser,
-              let url = URL(string: "\(baseURL)/get_user_profile/\(username)/") else { return }
+              let url = URL(string: "\(baseURL)/get_user_profile/\(username)/") else {
+            AppLogger.error("Invalid URL for fetching user profile", category: AppLogger.network)
+            return
+        }
 
-        URLSession.shared.dataTask(with: url) { data, _, _ in
+        AppLogger.logRequest(url: url.absoluteString, method: "GET")
+
+        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                AppLogger.error("Failed to fetch user profile", error: error, category: AppLogger.network)
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                AppLogger.logResponse(url: url.absoluteString, statusCode: httpResponse.statusCode)
+            }
+            
             if let data = data {
                 do {
                     let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                     let certified = json?["is_certified"] as? Bool ?? false
                     DispatchQueue.main.async {
                         self.isCertified = certified
+                        AppLogger.debug("User certification status: \(certified)", category: AppLogger.data)
                     }
                 } catch {
+                    AppLogger.error("Failed to decode user profile", error: error, category: AppLogger.data)
                 }
             }
         }.resume()

@@ -96,24 +96,13 @@ struct MatchingPreferencesView: View {
                                             .frame(width: 60, height: 60)
                                         
                                         if let primaryImage = imageManager.getPrimaryImage() {
-                                            AsyncImage(url: URL(string: ImageManager.shared.getFullImageURL(primaryImage))) { phase in
-                                                switch phase {
-                                                case .success(let image):
-                                                    image
-                                                        .resizable()
-                                                        .aspectRatio(contentMode: .fill)
-                                                        .frame(width: 60, height: 60)
-                                                        .clipShape(Circle())
-                                                case .failure, .empty:
-                                                    Image(systemName: "person.fill")
-                                                        .font(.title2)
-                                                        .foregroundColor(.white)
-                                                @unknown default:
-                                                    Image(systemName: "person.fill")
-                                                        .font(.title2)
-                                                        .foregroundColor(.white)
-                                                }
-                                            }
+                                            ImageManager.shared.cachedAsyncImage(
+                                                url: ImageManager.shared.getFullImageURL(primaryImage),
+                                                contentMode: .fill,
+                                                targetSize: CGSize(width: 120, height: 120)
+                                            )
+                                            .frame(width: 60, height: 60)
+                                            .clipShape(Circle())
                                         } else if let profileImage = profileImage {
                                             profileImage
                                                 .resizable()
