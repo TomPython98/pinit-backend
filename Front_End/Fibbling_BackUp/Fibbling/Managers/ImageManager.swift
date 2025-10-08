@@ -531,6 +531,15 @@ class ImageManager: ObservableObject {
                     }
                 }
                 
+                // ✅ CRITICAL FIX: Post notification that prefetch is complete
+                await MainActor.run {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ImagesPrefetchCompleted"),
+                        object: nil,
+                        userInfo: ["usernames": usernames]
+                    )
+                }
+                
                 let duration = Date().timeIntervalSince(startTime)
                 AppLogger.logImage("Batch API complete in \(String(format: "%.2f", duration))s for \(usernames.count) users")
                 
@@ -582,6 +591,15 @@ class ImageManager: ObservableObject {
                     _ = await self.professionalCache.loadCachedImage(from: imageURL)
                 }
             }
+        }
+        
+        // ✅ CRITICAL FIX: Post notification that prefetch is complete
+        await MainActor.run {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ImagesPrefetchCompleted"),
+                object: nil,
+                userInfo: ["usernames": usernames]
+            )
         }
         
         let duration = Date().timeIntervalSince(startTime)

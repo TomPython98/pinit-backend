@@ -143,6 +143,11 @@ struct FriendsListView: View {
                 print("🔍 DEBUG: UserProfileSheet is now hidden")
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ImagesPrefetchCompleted"))) { notification in
+            // ✅ CRITICAL FIX: Mark prefetching as complete
+            print("🔄 FriendsListView: Received prefetch completion notification")
+            isPrefetchingImages = false
+        }
     }
     
     // MARK: - Header View

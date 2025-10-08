@@ -97,6 +97,19 @@ struct UserProfileImageView: View {
                 loadUserImages(forceRefresh: true)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ImagesPrefetchCompleted"))) { notification in
+            // ✅ CRITICAL FIX: Refresh when prefetch completes
+            if let prefetchedUsernames = notification.userInfo?["usernames"] as? [String] {
+                if prefetchedUsernames.contains(username) {
+                    print("🔄 UserProfileImageView: Received prefetch completion for \(username), refreshing...")
+                    refreshID = UUID() // Force view refresh with cached data
+                }
+            } else {
+                // If no specific usernames, refresh all
+                print("🔄 UserProfileImageView: Received general prefetch completion, refreshing...")
+                refreshID = UUID()
+            }
+        }
         .sheet(isPresented: $showFullScreen) {
             FullScreenImageView(username: username)
         }
@@ -171,6 +184,11 @@ struct CachedProfileImageView: View {
             }
         }
         .onAppear {
+            loadImage()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ImagesPrefetchCompleted"))) { notification in
+            // ✅ CRITICAL FIX: Refresh when prefetch completes
+            print("🔄 CachedProfileImageView: Received prefetch completion, reloading image...")
             loadImage()
         }
     }
