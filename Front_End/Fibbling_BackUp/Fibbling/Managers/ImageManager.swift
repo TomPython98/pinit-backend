@@ -479,7 +479,7 @@ class ImageManager: ObservableObject {
                             UserImage(
                                 id: imageData.id,
                                 url: imageData.url,
-                                imageType: UserImage.ImageType(rawValue: imageData.imageType) ?? .gallery,
+                                imageType: imageData.imageType,
                                 isPrimary: imageData.isPrimary,
                                 caption: imageData.caption,
                                 uploadedAt: imageData.uploadedAt
@@ -498,7 +498,7 @@ class ImageManager: ObservableObject {
                                     return self.getFullImageURL(UserImage(
                                         id: primaryImage.id,
                                         url: primaryImage.url,
-                                        imageType: UserImage.ImageType(rawValue: primaryImage.imageType) ?? .gallery,
+                                        imageType: primaryImage.imageType,
                                         isPrimary: primaryImage.isPrimary,
                                         caption: primaryImage.caption,
                                         uploadedAt: primaryImage.uploadedAt
@@ -514,7 +514,8 @@ class ImageManager: ObservableObject {
                 AppLogger.logImage("Batch API complete in \(String(format: "%.2f", duration))s for \(usernames.count) users")
                 
             } else {
-                AppLogger.error("Batch API failed with status: \(httpResponse?.statusCode ?? -1)", category: AppLogger.image)
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+                AppLogger.error("Batch API failed with status: \(statusCode)", category: AppLogger.image)
             }
             
         } catch {
