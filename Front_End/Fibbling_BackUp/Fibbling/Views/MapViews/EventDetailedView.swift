@@ -1679,7 +1679,7 @@ extension EventDetailView {
                 
                 // View Feed Button
                 Button(action: {
-                    showFeedView = true
+                    showInteractions = true
                 }) {
                     HStack(spacing: 12) {
                         Image(systemName: "bubble.left.and.bubble.right.fill")
@@ -1687,11 +1687,11 @@ extension EventDetailView {
                             .foregroundColor(.textLight)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("View Event Feed")
+                            Text("Comments & Posts")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundColor(.textLight)
                             
-                            Text("See what others shared")
+                            Text("Join the conversation")
                                 .font(.caption)
                                 .foregroundColor(.textLight.opacity(0.8))
                         }
