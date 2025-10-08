@@ -8,7 +8,8 @@ struct UserProfileImageView: View {
     let borderColor: Color
     let enableFullScreen: Bool
     
-    @ObservedObject private var imageManager = ImageManager.shared
+    // CRITICAL FIX: Don't observe the entire ImageManager singleton!
+    // This was causing ALL 50+ profile views to re-render when ANY image loaded
     @State private var showFullScreen = false
     @State private var refreshID = UUID() // Force view refresh when images change
     
@@ -25,7 +26,7 @@ struct UserProfileImageView: View {
             if let primaryImage = getPrimaryImage() {
                 // Use cached image view for better performance
                 CachedProfileImageView(
-                    url: imageManager.getFullImageURL(primaryImage),
+                    url: ImageManager.shared.getFullImageURL(primaryImage),
                     size: size
                 )
                 .frame(width: size, height: size)
@@ -71,18 +72,16 @@ struct UserProfileImageView: View {
             }
         }
         .onAppear {
-            // Only load if not already cached - prefetch should handle this
-            let cachedImages = imageManager.getUserImagesFromCache(username: username)
+            // ✅ FIXED: Check cache first, only load if truly needed
+            let cachedImages = ImageManager.shared.getUserImagesFromCache(username: username)
             if cachedImages.isEmpty {
-                loadUserImages()
+                // Only load if prefetch hasn't completed yet
+                // This prevents thundering herd when 50+ views appear simultaneously
+                Task.detached(priority: .userInitiated) {
+                    await ImageManager.shared.loadUserImages(username: username, forceRefresh: false)
+                }
             } else {
-                refreshID = UUID() // Just refresh the view
-            }
-        }
-        .onReceive(imageManager.$userImages) { _ in
-            // Update refreshID when the image manager's user images change
-            if imageManager.currentUsername == username {
-                refreshID = UUID() // Force view to refresh with new image
+                refreshID = UUID() // Just refresh the view with cached data
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ProfileImageUpdated"))) { notification in
@@ -105,7 +104,7 @@ struct UserProfileImageView: View {
     
     private func loadUserImages(forceRefresh: Bool = false) {
         // Check if we already have cached images for this user
-        let cachedImages = imageManager.getUserImagesFromCache(username: username)
+        let cachedImages = ImageManager.shared.getUserImagesFromCache(username: username)
         if !cachedImages.isEmpty && !forceRefresh {
             // We already have images, just refresh the view
             refreshID = UUID()
@@ -114,18 +113,18 @@ struct UserProfileImageView: View {
         
         Task {
             // Load images for this specific user (force refresh from server if needed)
-            await imageManager.loadUserImages(username: username, forceRefresh: forceRefresh)
+            await ImageManager.shared.loadUserImages(username: username, forceRefresh: forceRefresh)
             
             await MainActor.run {
                 refreshID = UUID() // Force view to refresh with new image
-                print("✅ UserProfileImageView: Updated with \(imageManager.getUserImagesFromCache(username: username).count) fresh images for \(username)")
+                print("✅ UserProfileImageView: Updated with \(ImageManager.shared.getUserImagesFromCache(username: username).count) fresh images for \(username)")
             }
         }
     }
     
     private func getPrimaryImage() -> UserImage? {
         // Compute from per-username cache to avoid cross-talk between different users
-        let images = imageManager.getUserImagesFromCache(username: username)
+        let images = ImageManager.shared.getUserImagesFromCache(username: username)
         if let primaryImage = images.first(where: { $0.isPrimary }) {
             return primaryImage
         }
@@ -142,7 +141,7 @@ struct UserProfileImageView: View {
 
 // MARK: - Cached Profile Image View
 struct CachedProfileImageView: View {
-    let url: String
+    let url: String  // ✅ CRITICAL: This must be declared
     let size: CGFloat
     
     @State private var image: UIImage?
@@ -177,19 +176,42 @@ struct CachedProfileImageView: View {
     }
     
     private func loadImage() {
-        // Check cache first
-        if let cachedImage = ImageManager.shared.getCachedImage(for: url) {
-            image = cachedImage
-            isLoading = false
-            return
-        }
-        
-        // Load from network
         Task {
-            let result = await ImageManager.shared.loadCachedImage(from: url)
-            await MainActor.run {
-                image = result.image
-                isLoading = false
+            // Check professional cache first (where prefetch stores images)
+            let cachedThumbnail = await MainActor.run {
+                ProfessionalImageCache.shared.getImage(url: url, tier: .thumbnail)
+            }
+            
+            if let cachedImage = cachedThumbnail {
+                await MainActor.run {
+                    image = cachedImage
+                    isLoading = false
+                }
+                return
+            }
+            
+            let cachedFullRes = await MainActor.run {
+                ProfessionalImageCache.shared.getImage(url: url, tier: .fullRes)
+            }
+            
+            if let cachedImage = cachedFullRes {
+                await MainActor.run {
+                    image = cachedImage
+                    isLoading = false
+                }
+                return
+            }
+            
+            // Not in cache, download from network
+            if let downloadedImage = await ProfessionalImageCache.shared.loadCachedImage(from: url) {
+                await MainActor.run {
+                    image = downloadedImage
+                    isLoading = false
+                }
+            } else {
+                await MainActor.run {
+                    isLoading = false
+                }
             }
         }
     }

@@ -9,8 +9,9 @@ struct ProfessionalCachedImageView: View {
     let targetSize: CGSize?
     
     @StateObject private var loader = ImageLoader()
-    @StateObject private var networkMonitor = NetworkMonitor.shared
-    @StateObject private var cache = ProfessionalImageCache.shared
+    // ✅ FIXED: Use direct access to singletons to avoid unnecessary observers
+    private let networkMonitor = NetworkMonitor.shared
+    private let cache = ProfessionalImageCache.shared
     
     init(url: String, contentMode: ContentMode = .fill, targetSize: CGSize? = nil) {
         self.url = url
@@ -223,8 +224,8 @@ class ImageLoader: ObservableObject {
         
         var request = URLRequest(url: imageURL)
         request.timeoutInterval = timeout
-        // Use fresh network data when requested to avoid stale local caches
-        request.cachePolicy = .reloadIgnoringLocalCacheData
+        // ✅ FIXED: Use cache when available, only reload when needed
+        request.cachePolicy = .returnCacheDataElseLoad
         
         // Use ImageManager's optimized download session
         let (data, response) = try await ImageManager.shared.downloadImage(from: request)

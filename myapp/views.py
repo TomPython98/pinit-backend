@@ -3820,52 +3820,67 @@ def upload_user_image(request):
         try:
             from PIL import Image as PILImage
             import os
+            from io import BytesIO
+            
+            # Reset file pointer to beginning
+            image_file.seek(0)
+            
+            # Read image data into memory for PIL processing
+            image_data = image_file.read()
+            image_file.seek(0)  # Reset for later use
             
             # Open image to get metadata
-            with PILImage.open(image_file) as img:
+            with PILImage.open(BytesIO(image_data)) as img:
                 user_image.width = img.width
                 user_image.height = img.height
                 user_image.mime_type = f"image/{img.format.lower()}" if img.format else "image/jpeg"
             
             # Get file size
-            image_file.seek(0, os.SEEK_END)
-            user_image.size_bytes = image_file.tell()
-            image_file.seek(0)  # Reset file pointer
+            user_image.size_bytes = len(image_data)
             
         except Exception as e:
             print(f"Warning: Could not extract image metadata: {e}")
+            # Set defaults if metadata extraction fails
+            user_image.mime_type = "image/jpeg"
+            user_image.size_bytes = image_file.size
         
         # Save will trigger optimization
         user_image.save()
         
-        # After saving, update with object storage info if in production
-        if not settings.DEBUG and user_image.image:
-            try:
-                # Get the storage key and public URL
-                # Only try to set these fields if they exist (migration applied)
+        # Update object storage metadata after saving
+        try:
+            if user_image.image:
+                # Set storage key if field exists
                 if hasattr(user_image, 'storage_key'):
                     user_image.storage_key = user_image.image.name
-                if hasattr(user_image, 'public_url'):
-                    user_image.public_url = user_image.image.url
-                    user_image.save(update_fields=['storage_key', 'public_url'])
+                
+                # Generate the correct public URL using custom domain
+                custom_domain = getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', None)
+                if custom_domain:
+                    # Use custom domain instead of R2 endpoint
+                    public_url = f"https://{custom_domain}/{user_image.image.name}"
                 else:
-                    # Migration not applied, but R2 should still work
-                    print(f"R2 storage working - image stored at: {user_image.image.url}")
-            except Exception as e:
-                print(f"Warning: Could not set object storage metadata: {e}")
-        
-        # Always update public_url field if it exists, regardless of DEBUG mode
-        if hasattr(user_image, 'public_url') and user_image.image:
-            # Generate the correct public URL using custom domain
-            from django.conf import settings
-            custom_domain = getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', None)
-            if custom_domain:
-                # Use custom domain instead of R2 endpoint
-                public_url = f"https://{custom_domain}/{user_image.image.name}"
-            else:
-                public_url = user_image.image.url
-            user_image.public_url = public_url
-            user_image.save(update_fields=['public_url'])
+                    public_url = user_image.image.url
+                
+                # Set public URL if field exists
+                if hasattr(user_image, 'public_url'):
+                    user_image.public_url = public_url
+                
+                # Save the updated metadata
+                update_fields = []
+                if hasattr(user_image, 'storage_key'):
+                    update_fields.append('storage_key')
+                if hasattr(user_image, 'public_url'):
+                    update_fields.append('public_url')
+                
+                if update_fields:
+                    user_image.save(update_fields=update_fields)
+                
+                print(f"Image uploaded successfully: {public_url}")
+                
+        except Exception as e:
+            print(f"Warning: Could not set object storage metadata: {e}")
+            # Don't fail the upload if metadata setting fails
         
         return JsonResponse({
             "success": True,

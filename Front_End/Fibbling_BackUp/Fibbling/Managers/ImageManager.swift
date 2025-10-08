@@ -435,8 +435,91 @@ class ImageManager: ObservableObject {
         AppLogger.logImage("Prefetching images for \(uncachedUsers.count) users")
         
         isPrefetching = true
-        await performBatchPrefetch(usernames: uncachedUsers)
+        
+        // ✅ OPTIMIZED: Use batch API endpoint for much better performance
+        if uncachedUsers.count > 5 {
+            await performBatchAPIRequest(usernames: uncachedUsers)
+        } else {
+            await performBatchPrefetch(usernames: uncachedUsers)
+        }
+        
         isPrefetching = false
+    }
+    
+    /// ✅ NEW: Use batch API endpoint for optimal performance
+    private func performBatchAPIRequest(usernames: [String]) async {
+        AppLogger.logImage("Using batch API for \(usernames.count) users")
+        
+        let startTime = Date()
+        
+        guard let url = URL(string: "\(baseURL)/api/multiple_user_images/") else {
+            AppLogger.error("Invalid batch API URL", category: AppLogger.image)
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            let body = ["usernames": usernames]
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            
+            let (data, response) = try await downloadSession.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse,
+               httpResponse.statusCode == 200 {
+                
+                let batchResponse = try JSONDecoder().decode(BatchUserImagesResponse.self, from: data)
+                
+                // Update cache with all user images at once
+                await MainActor.run {
+                    for (username, userData) in batchResponse.users {
+                        let userImages = userData.images.map { imageData in
+                            UserImage(
+                                id: imageData.id,
+                                url: imageData.url,
+                                imageType: UserImage.ImageType(rawValue: imageData.imageType) ?? .gallery,
+                                isPrimary: imageData.isPrimary,
+                                caption: imageData.caption,
+                                uploadedAt: imageData.uploadedAt
+                            )
+                        }
+                        self.userImageCache[username] = userImages
+                    }
+                }
+                
+                // Now download all primary images in parallel
+                await withTaskGroup(of: Void.self) { group in
+                    for (username, userData) in batchResponse.users {
+                        if let primaryImage = userData.images.first(where: { $0.isPrimary }) {
+                            group.addTask(priority: .userInitiated) {
+                                let imageURL = await MainActor.run {
+                                    return self.getFullImageURL(UserImage(
+                                        id: primaryImage.id,
+                                        url: primaryImage.url,
+                                        imageType: UserImage.ImageType(rawValue: primaryImage.imageType) ?? .gallery,
+                                        isPrimary: primaryImage.isPrimary,
+                                        caption: primaryImage.caption,
+                                        uploadedAt: primaryImage.uploadedAt
+                                    ))
+                                }
+                                _ = await self.professionalCache.loadCachedImage(from: imageURL)
+                            }
+                        }
+                    }
+                }
+                
+                let duration = Date().timeIntervalSince(startTime)
+                AppLogger.logImage("Batch API complete in \(String(format: "%.2f", duration))s for \(usernames.count) users")
+                
+            } else {
+                AppLogger.error("Batch API failed with status: \(httpResponse?.statusCode ?? -1)", category: AppLogger.image)
+            }
+            
+        } catch {
+            AppLogger.error("Batch API request failed", error: error, category: AppLogger.image)
+        }
     }
     
     private func performBatchPrefetch(usernames: [String]) async {
@@ -444,8 +527,10 @@ class ImageManager: ObservableObject {
         
         let startTime = Date()
         
-        // Load all user images concurrently with high priority
+        // ✅ OPTIMIZED: Load ALL metadata first in parallel, then download ALL images
+        // This maximizes network efficiency and reduces total time
         await withTaskGroup(of: Void.self) { group in
+            // Phase 1: Load metadata for all users in parallel
             for username in usernames {
                 group.addTask(priority: .userInitiated) {
                     await self.loadUserImages(username: username, forceRefresh: false)
@@ -453,28 +538,32 @@ class ImageManager: ObservableObject {
             }
         }
         
-        // Prefetch actual image data for immediate display
+        // Phase 2: Collect all primary images and download them in parallel
+        var imageURLs: [String] = []
+        for username in usernames {
+            let images = await MainActor.run {
+                return self.getUserImagesFromCache(username: username)
+            }
+            
+            if let primaryImage = images.first(where: { $0.isPrimary }) {
+                let imageURL = await MainActor.run {
+                    return self.getFullImageURL(primaryImage)
+                }
+                imageURLs.append(imageURL)
+            }
+        }
+        
+        // Phase 3: Download all images in parallel with higher concurrency
         await withTaskGroup(of: Void.self) { group in
-            for username in usernames {
+            for imageURL in imageURLs {
                 group.addTask(priority: .userInitiated) {
-                    let images = await MainActor.run {
-                        return self.getUserImagesFromCache(username: username)
-                    }
-                    
-                    if let primaryImage = images.first(where: { $0.isPrimary }) {
-                        let imageURL = await MainActor.run {
-                            return self.getFullImageURL(primaryImage)
-                        }
-                        
-                        // Prefetch thumbnail for immediate display
-                        _ = await self.professionalCache.loadCachedImage(from: imageURL)
-                    }
+                    _ = await self.professionalCache.loadCachedImage(from: imageURL)
                 }
             }
         }
         
         let duration = Date().timeIntervalSince(startTime)
-        AppLogger.logImage("Batch prefetching complete in \(String(format: "%.2f", duration))s")
+        AppLogger.logImage("Batch prefetching complete in \(String(format: "%.2f", duration))s for \(usernames.count) users")
     }
     
     private func performPrefetch() async {
@@ -537,7 +626,7 @@ class ImageManager: ObservableObject {
 
 // MARK: - Professional Image Cache Helper Extension
 extension ProfessionalImageCache {
-    /// Load image from URL with caching
+    /// Load image from URL with caching using optimized session
     func loadCachedImage(from url: String) async -> UIImage? {
         // Check if we have it in any tier
         if let fullRes = getImage(url: url, tier: .fullRes) {
@@ -548,16 +637,22 @@ extension ProfessionalImageCache {
             return thumbnail
         }
         
-        // Load from network
+        // Load from network using optimized session
         guard let imageURL = URL(string: url) else { return nil }
         
         do {
-            let (data, _) = try await URLSession.shared.data(from: imageURL)
+            var request = URLRequest(url: imageURL)
+            request.timeoutInterval = 10 // Fast timeout
+            request.cachePolicy = .returnCacheDataElseLoad
+            
+            // Use ImageManager's optimized downloadSession (10 concurrent connections)
+            let (data, _) = try await ImageManager.shared.downloadImage(from: request)
+            
             if let image = UIImage(data: data) {
-                // Generate and cache thumbnail
-                let thumbnail = generateThumbnail(from: image)
-                setImage(thumbnail, url: url, tier: .thumbnail)
-                return thumbnail
+                // For small profile images, skip thumbnail generation - use full image directly
+                // This saves significant CPU time during batch loading
+                setImage(image, url: url, tier: .thumbnail)
+                return image
             }
         } catch {
             print("❌ Failed to prefetch image: \(error.localizedDescription)")

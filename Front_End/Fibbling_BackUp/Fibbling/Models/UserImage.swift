@@ -68,6 +68,24 @@ struct ImageUploadResponse: Codable {
     let image: UserImage?
 }
 
+// MARK: - Batch User Images Response
+struct BatchUserImagesResponse: Codable {
+    let success: Bool
+    let users: [String: UserImagesData]
+    let totalUsers: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case users
+        case totalUsers = "total_users"
+    }
+}
+
+struct UserImagesData: Codable {
+    let images: [UserImage]
+    let count: Int
+}
+
 // MARK: - Image Upload Request
 struct ImageUploadRequest {
     let username: String
