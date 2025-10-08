@@ -4133,6 +4133,78 @@ def serve_image(request, image_id):
         return JsonResponse({"error": f"Failed to serve image: {str(e)}"}, status=500)
 
 @csrf_exempt
+def get_multiple_user_images(request):
+    """Get images for multiple users in a single request - OPTIMIZED for lists"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST method allowed"}, status=405)
+    
+    try:
+        # Get usernames from request body
+        data = json.loads(request.body)
+        usernames = data.get('usernames', [])
+        
+        if not usernames:
+            return JsonResponse({"error": "No usernames provided"}, status=400)
+        
+        # Limit to prevent abuse
+        if len(usernames) > 100:
+            return JsonResponse({"error": "Too many usernames (max 100)"}, status=400)
+        
+        # Get all users in one query
+        users = User.objects.filter(username__in=usernames)
+        user_dict = {user.username: user for user in users}
+        
+        # Get all images for these users in one query
+        images = UserImage.objects.filter(user__in=users).order_by('-is_primary', '-uploaded_at')
+        
+        # Group images by username
+        images_by_user = {}
+        for img in images:
+            username = img.user.username
+            if username not in images_by_user:
+                images_by_user[username] = []
+            
+            image_data = {
+                "id": str(img.id),
+                "url": img.url,
+                "image_type": img.image_type,
+                "is_primary": img.is_primary,
+                "caption": img.caption,
+                "uploaded_at": img.uploaded_at.isoformat()
+            }
+            
+            # Add object storage fields if they exist
+            if hasattr(img, 'width') and img.width is not None:
+                image_data["width"] = img.width
+            if hasattr(img, 'height') and img.height is not None:
+                image_data["height"] = img.height
+            if hasattr(img, 'size_bytes') and img.size_bytes is not None:
+                image_data["size_bytes"] = img.size_bytes
+            if hasattr(img, 'mime_type') and img.mime_type:
+                image_data["mime_type"] = img.mime_type
+                
+            images_by_user[username].append(image_data)
+        
+        # Ensure all requested usernames are in response (even if empty)
+        result = {}
+        for username in usernames:
+            result[username] = {
+                "images": images_by_user.get(username, []),
+                "count": len(images_by_user.get(username, []))
+            }
+        
+        return JsonResponse({
+            "success": True,
+            "users": result,
+            "total_users": len(usernames)
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to get images: {str(e)}"}, status=500)
+
+@csrf_exempt
 def update_existing_images(request):
     """Update existing images to use R2 URLs"""
     if request.method != 'POST':

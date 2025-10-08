@@ -16,6 +16,7 @@ urlpatterns = [
     # Professional Image Upload Endpoints
     path('api/upload_user_image/', views.upload_user_image, name='upload_user_image'),
     path('api/user_images/<str:username>/', views.get_user_images, name='get_user_images'),
+    path('api/multiple_user_images/', views.get_multiple_user_images, name='get_multiple_user_images'),
     path('api/user_image/<str:image_id>/delete/', views.delete_user_image, name='delete_user_image'),
     path('api/user_image/<str:image_id>/set_primary/', views.set_primary_image, name='set_primary_image'),
     path('api/user_image/<str:image_id>/serve/', views.serve_image, name='serve_image'),
