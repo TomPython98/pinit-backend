@@ -1239,64 +1239,60 @@ extension EventDetailView {
             if !localEvent.attendees.isEmpty {
                 VStack(spacing: 12) {
                             ForEach(Array(localEvent.attendees.enumerated()), id: \.offset) { index, attendee in
-                        HStack(spacing: 12) {
-                            // Profile Picture
-                            UserProfileImageView(username: attendee, size: 50, borderColor: Color.brandPrimary)
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(spacing: 8) {
-                                    Text(attendee)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundColor(.textPrimary)
-                                        .lineLimit(1)
-                                    
-                                    if attendee == localEvent.host {
-                                        HStack(spacing: 4) {
-                                        Image(systemName: "crown.fill")
-                                            .font(.caption2)
-                                                .foregroundColor(.textLight)
-                                            Text("Host")
-                                                .font(.caption2.weight(.semibold))
-                                                .foregroundColor(.textLight)
-                                        }
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background(
-                                            Capsule()
-                                                .fill(Color.brandWarning)
-                                        )
-                                    }
-                                    
-                                    if localEvent.hostIsCertified && attendee == localEvent.host {
-                                        Image(systemName: "checkmark.seal.fill")
-                                            .font(.caption)
-                                            .foregroundColor(.textLight)
-                                            .padding(2)
+                        Button(action: {
+                            selectedUserProfile = attendee
+                            showUserProfileSheet = true
+                        }) {
+                            HStack(spacing: 12) {
+                                // Profile Picture
+                                UserProfileImageView(username: attendee, size: 50, borderColor: Color.brandPrimary)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(spacing: 8) {
+                                        Text(attendee)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundColor(.textPrimary)
+                                            .lineLimit(1)
+                                        
+                                        if attendee == localEvent.host {
+                                            HStack(spacing: 4) {
+                                            Image(systemName: "crown.fill")
+                                                .font(.caption2)
+                                                    .foregroundColor(.textLight)
+                                                Text("Host")
+                                                    .font(.caption2.weight(.semibold))
+                                                    .foregroundColor(.textLight)
+                                            }
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
                                             .background(
-                                                Circle()
-                                                    .fill(Color.brandPrimary)
+                                                Capsule()
+                                                    .fill(Color.brandWarning)
                                             )
+                                        }
+                                        
+                                        if localEvent.hostIsCertified && attendee == localEvent.host {
+                                            Image(systemName: "checkmark.seal.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.textLight)
+                                                .padding(2)
+                                                .background(
+                                                    Circle()
+                                                        .fill(Color.brandPrimary)
+                                                )
+                                        }
                                     }
+                                    
+                                    Text("Tap to view profile")
+                                        .font(.caption)
+                                        .foregroundColor(.textSecondary)
                                 }
                                 
-                                Text("Tap to view profile")
-                                    .font(.caption)
-                                    .foregroundColor(.textSecondary)
-                            }
-                            
-                            Spacer()
-                            
-                            // Action buttons
-                            HStack(spacing: 8) {
-                                // Profile button
-                                Button(action: {
-                                    selectedUserProfile = attendee
-                                    showUserProfileSheet = true
-                                }) {
-                                    UserProfileImageView(username: attendee, size: 20, borderColor: .brandPrimary)
-                                }
+                                Spacer()
                                 
-                                // Rate button (if event completed and not self)
+                                // Action buttons
+                                HStack(spacing: 8) {
+                                    // Rate button (if event completed and not self)
                                     if attendee != accountManager.currentUser, isEventCompleted {
                                         Button(action: {
                                             selectedUserToRate = attendee
@@ -1306,9 +1302,16 @@ extension EventDetailView {
                                             .font(.system(size: 20))
                                             .foregroundColor(.brandWarning)
                                     }
+                                    }
+                                    
+                                    // Chevron to indicate clickable
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.textMuted)
                                 }
                             }
                         }
+                        .buttonStyle(PlainButtonStyle()) // Prevent default button styling
                         .padding(16)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
@@ -3592,68 +3595,48 @@ struct UserProfileView: View {
     
     // MARK: - Backend Integration
     private func fetchUserProfile() {
-        print("🔍 DEBUG: fetchUserProfile called for username: \(username)")
-        print("🔍 DEBUG: Setting isLoading = true")
         isLoading = true
         errorMessage = nil
         
-        let urlString = "\(baseURL)/get_user_profile/\(username)/"
-        print("🔍 DEBUG: Fetching profile from URL: \(urlString)")
-        
-        guard let url = URL(string: urlString) else {
-            print("🔍 DEBUG: ERROR - Invalid URL: \(urlString)")
+        guard let url = URL(string: "\(baseURL)/get_user_profile/\(username)/") else {
             errorMessage = "Invalid URL"
             isLoading = false
             showError = true
             return
         }
         
-        print("🔍 DEBUG: Starting URLSession request")
         URLSession.shared.dataTask(with: url) { data, response, error in
-            print("🔍 DEBUG: URLSession response received")
-            
             DispatchQueue.main.async {
-                print("🔍 DEBUG: Setting isLoading = false")
                 isLoading = false
                 
                 if let error = error {
-                    print("🔍 DEBUG: ERROR - Network error: \(error.localizedDescription)")
+                    print("Network Error: \(error.localizedDescription)")
                     self.alertMessage = "Failed to load profile: \(error.localizedDescription)"
                     self.showAlert = true
                     return
                 }
                 
                 guard let data = data else {
-                    print("🔍 DEBUG: ERROR - No data received")
                     errorMessage = "No data received"
                     showError = true
                     return
                 }
                 
-                print("🔍 DEBUG: Data received, length: \(data.count) bytes")
-                
                 do {
                     // First, let's see what the actual response looks like
                     if let jsonString = String(data: data, encoding: .utf8) {
-                        print("🔍 DEBUG: Raw profile response: \(jsonString)")
                         print("Raw API response: \(jsonString)")
                     }
                     
-                    print("🔍 DEBUG: Attempting to decode UserProfile")
                     let profile = try JSONDecoder().decode(UserProfile.self, from: data)
-                    print("🔍 DEBUG: Successfully decoded UserProfile: \(profile.username)")
                     self.userProfile = profile
-                    print("🔍 DEBUG: userProfile set successfully")
                     
                     // Fetch additional data in parallel
-                    print("🔍 DEBUG: Starting additional data fetches")
                     self.fetchReputationData()
                     self.fetchFriendsData()
                     self.fetchRecentEvents()
-                    print("🔍 DEBUG: Additional data fetches initiated")
                 } catch {
-                    print("🔍 DEBUG: ERROR - JSON Decoding failed: \(error)")
-                    print("🔍 DEBUG: Error details: \(error.localizedDescription)")
+                    print("JSON Decoding Error: \(error)")
                     self.alertMessage = "Failed to parse profile data: \(error.localizedDescription)"
                     self.showAlert = true
                 }
