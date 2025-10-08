@@ -2957,15 +2957,8 @@ def invite_to_event(request):
             except ValueError:
                 return JsonResponse({"error": "Invalid event ID format"}, status=400)
             
-            # Use the convenience method to invite
+            # Use the convenience method to invite (this already creates the EventInvitation)
             event.invite_user(user, is_auto_matched)
-            
-            # Create invitation
-            invitation = EventInvitation.objects.create(
-                event=event,
-                user=user,
-                inviter=request.user
-            )
             
             # Send a push notification about the invitation
             try:
