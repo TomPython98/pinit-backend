@@ -16,6 +16,7 @@ This is the complete documentation suite for the PinIt social study platform. Al
 
 ### 3. **Frontend Documentation**
 - **[COMPREHENSIVE_IMAGE_ARCHITECTURE.md](./COMPREHENSIVE_IMAGE_ARCHITECTURE.md)** - Image management system
+- **[SOCIAL_INTERACTIONS_SYSTEM.md](./SOCIAL_INTERACTIONS_SYSTEM.md)** - Comments, likes, shares system
 - **[Frontend_Architecture.md](./Frontend_Architecture.md)** - Frontend architecture details
 
 ### 4. **Data & Testing**
@@ -45,8 +46,9 @@ This is the complete documentation suite for the PinIt social study platform. Al
 
 ### For Frontend Developers
 1. **Image System**: [COMPREHENSIVE_IMAGE_ARCHITECTURE.md](./COMPREHENSIVE_IMAGE_ARCHITECTURE.md)
-2. **Frontend Architecture**: [Frontend_Architecture.md](./Frontend_Architecture.md)
-3. **API Integration**: [BACKEND_API_DOCUMENTATION.md](./BACKEND_API_DOCUMENTATION.md)
+2. **Social Interactions**: [SOCIAL_INTERACTIONS_SYSTEM.md](./SOCIAL_INTERACTIONS_SYSTEM.md)
+3. **Frontend Architecture**: [Frontend_Architecture.md](./Frontend_Architecture.md)
+4. **API Integration**: [BACKEND_API_DOCUMENTATION.md](./BACKEND_API_DOCUMENTATION.md)
 
 ## 🔧 Key Features Documented
 
@@ -61,6 +63,7 @@ This is the complete documentation suite for the PinIt social study platform. Al
 - **Real-time Features**: WebSocket communication
 
 ### 🐛 **Recently Fixed Issues**
+- **Social Interactions**: Fixed EventDetailedView navigation to access comments/posts
 - **Invitation Bug**: Removed duplicate EventInvitation creation
 - **Image Upload**: Fixed R2 storage compatibility
 - **Rating Detection**: Corrected success response parsing
