@@ -202,17 +202,36 @@ struct CachedProfileImageView: View {
                 return
             }
             
-            // Not in cache, download from network
-            if let downloadedImage = await ProfessionalImageCache.shared.loadCachedImage(from: url) {
+            // Not in cache, download from network using URLSession
+            await downloadImage(from: url)
+        }
+    }
+    
+    private func downloadImage(from urlString: String) async {
+        guard let url = URL(string: urlString) else {
+            await MainActor.run { isLoading = false }
+            return
+        }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let downloadedImage = UIImage(data: data) {
+                // Store in professional cache for future use
                 await MainActor.run {
+                    ProfessionalImageCache.shared.setImage(downloadedImage, url: urlString, tier: .fullRes)
+                    // Also create and store thumbnail
+                    let thumbnail = ProfessionalImageCache.shared.generateThumbnail(from: downloadedImage)
+                    ProfessionalImageCache.shared.setImage(thumbnail, url: urlString, tier: .thumbnail)
+                    
                     image = downloadedImage
                     isLoading = false
                 }
             } else {
-                await MainActor.run {
-                    isLoading = false
-                }
+                await MainActor.run { isLoading = false }
             }
+        } catch {
+            print("❌ Failed to download image from \(urlString): \(error)")
+            await MainActor.run { isLoading = false }
         }
     }
 }

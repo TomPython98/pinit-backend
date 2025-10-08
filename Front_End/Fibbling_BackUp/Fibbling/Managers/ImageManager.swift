@@ -299,6 +299,26 @@ class ImageManager: ObservableObject {
         errorMessage = nil
     }
     
+    // MARK: - Helper Methods
+    private func downloadAndCacheImage(from urlString: String) async {
+        guard let url = URL(string: urlString) else { return }
+        
+        do {
+            let (data, _) = try await downloadSession.data(from: url)
+            if let image = UIImage(data: data) {
+                await MainActor.run {
+                    // Store in professional cache
+                    self.professionalCache.setImage(image, url: urlString, tier: .fullRes)
+                    // Also create and store thumbnail
+                    let thumbnail = self.professionalCache.generateThumbnail(from: image)
+                    self.professionalCache.setImage(thumbnail, url: urlString, tier: .thumbnail)
+                }
+            }
+        } catch {
+            print("❌ Failed to download image from \(urlString): \(error)")
+        }
+    }
+    
     // MARK: - Cache Management
     func clearAllCaches() {
         AppLogger.logCache("Clearing all caches")
@@ -504,7 +524,8 @@ class ImageManager: ObservableObject {
                                         uploadedAt: primaryImage.uploadedAt
                                     ))
                                 }
-                                _ = await self.professionalCache.loadCachedImage(from: imageURL)
+                                // Download and cache the image
+                                await self.downloadAndCacheImage(from: imageURL)
                             }
                         }
                     }

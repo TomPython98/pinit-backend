@@ -3592,48 +3592,68 @@ struct UserProfileView: View {
     
     // MARK: - Backend Integration
     private func fetchUserProfile() {
+        print("🔍 DEBUG: fetchUserProfile called for username: \(username)")
+        print("🔍 DEBUG: Setting isLoading = true")
         isLoading = true
         errorMessage = nil
         
-        guard let url = URL(string: "\(baseURL)/get_user_profile/\(username)/") else {
+        let urlString = "\(baseURL)/get_user_profile/\(username)/"
+        print("🔍 DEBUG: Fetching profile from URL: \(urlString)")
+        
+        guard let url = URL(string: urlString) else {
+            print("🔍 DEBUG: ERROR - Invalid URL: \(urlString)")
             errorMessage = "Invalid URL"
             isLoading = false
             showError = true
             return
         }
         
+        print("🔍 DEBUG: Starting URLSession request")
         URLSession.shared.dataTask(with: url) { data, response, error in
+            print("🔍 DEBUG: URLSession response received")
+            
             DispatchQueue.main.async {
+                print("🔍 DEBUG: Setting isLoading = false")
                 isLoading = false
                 
                 if let error = error {
-                    print("Network Error: \(error.localizedDescription)")
+                    print("🔍 DEBUG: ERROR - Network error: \(error.localizedDescription)")
                     self.alertMessage = "Failed to load profile: \(error.localizedDescription)"
                     self.showAlert = true
                     return
                 }
                 
                 guard let data = data else {
+                    print("🔍 DEBUG: ERROR - No data received")
                     errorMessage = "No data received"
                     showError = true
                     return
                 }
                 
+                print("🔍 DEBUG: Data received, length: \(data.count) bytes")
+                
                 do {
                     // First, let's see what the actual response looks like
                     if let jsonString = String(data: data, encoding: .utf8) {
+                        print("🔍 DEBUG: Raw profile response: \(jsonString)")
                         print("Raw API response: \(jsonString)")
                     }
                     
+                    print("🔍 DEBUG: Attempting to decode UserProfile")
                     let profile = try JSONDecoder().decode(UserProfile.self, from: data)
+                    print("🔍 DEBUG: Successfully decoded UserProfile: \(profile.username)")
                     self.userProfile = profile
+                    print("🔍 DEBUG: userProfile set successfully")
                     
                     // Fetch additional data in parallel
+                    print("🔍 DEBUG: Starting additional data fetches")
                     self.fetchReputationData()
                     self.fetchFriendsData()
                     self.fetchRecentEvents()
+                    print("🔍 DEBUG: Additional data fetches initiated")
                 } catch {
-                    print("JSON Decoding Error: \(error)")
+                    print("🔍 DEBUG: ERROR - JSON Decoding failed: \(error)")
+                    print("🔍 DEBUG: Error details: \(error.localizedDescription)")
                     self.alertMessage = "Failed to parse profile data: \(error.localizedDescription)"
                     self.showAlert = true
                 }

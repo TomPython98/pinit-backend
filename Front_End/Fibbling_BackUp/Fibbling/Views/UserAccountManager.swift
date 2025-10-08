@@ -186,56 +186,94 @@ class UserAccountManager: ObservableObject {
     }
 
     func fetchFriends() {
-        guard let username = currentUser,
-              let url = URL(string: "\(baseURL)/get_friends/\(username)/") else {
+        print("🔍 DEBUG: UserAccountManager.fetchFriends called")
+        print("🔍 DEBUG: currentUser = \(currentUser ?? "nil")")
+        
+        guard let username = currentUser else {
+            print("🔍 DEBUG: ERROR - currentUser is nil")
+            AppLogger.error("Invalid URL for fetching friends", category: AppLogger.network)
+            return 
+        }
+        
+        let urlString = "\(baseURL)/get_friends/\(username)/"
+        print("🔍 DEBUG: Fetching friends from URL: \(urlString)")
+        
+        guard let url = URL(string: urlString) else {
+            print("🔍 DEBUG: ERROR - Invalid URL: \(urlString)")
             AppLogger.error("Invalid URL for fetching friends", category: AppLogger.network)
             return 
         }
 
         AppLogger.logRequest(url: url.absoluteString, method: "GET")
+        print("🔍 DEBUG: Starting URLSession request")
 
         URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self else { return }
+            print("🔍 DEBUG: URLSession response received")
+            guard let self = self else { 
+                print("🔍 DEBUG: ERROR - self is nil")
+                return 
+            }
             
             if let error = error {
+                print("🔍 DEBUG: ERROR - Network error: \(error.localizedDescription)")
                 AppLogger.error("Failed to fetch friends", error: error, category: AppLogger.network)
                 return
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
+                print("🔍 DEBUG: ERROR - Invalid response type")
                 AppLogger.error("Invalid response when fetching friends", category: AppLogger.network)
                 return
             }
             
+            print("🔍 DEBUG: HTTP status code: \(httpResponse.statusCode)")
             AppLogger.logResponse(url: url.absoluteString, statusCode: httpResponse.statusCode)
             
             guard httpResponse.statusCode == 200 else {
+                print("🔍 DEBUG: ERROR - HTTP \(httpResponse.statusCode)")
                 AppLogger.error("HTTP \(httpResponse.statusCode) when fetching friends", category: AppLogger.network)
                 return
             }
             
             guard let data = data else {
+                print("🔍 DEBUG: ERROR - No data received")
                 AppLogger.error("No data received when fetching friends", category: AppLogger.network)
                 return
             }
 
+            print("🔍 DEBUG: Data received, length: \(data.count) bytes")
+            
+            // Log raw response for debugging
+            if let rawString = String(data: data, encoding: .utf8) {
+                print("🔍 DEBUG: Raw friends response: \(rawString)")
+            }
+            
             do {
+                print("🔍 DEBUG: Attempting to decode friends response")
                 let decodedResponse = try JSONDecoder().decode([String: [String]].self, from: data)
+                print("🔍 DEBUG: Successfully decoded response: \(decodedResponse)")
 
                 if let friendsList = decodedResponse["friends"] {
+                    print("🔍 DEBUG: Found friends list with \(friendsList.count) friends: \(friendsList)")
                     DispatchQueue.main.async {
                         self.friends = friendsList
+                        print("🔍 DEBUG: Updated self.friends to: \(self.friends)")
                         AppLogger.debug("Loaded \(friendsList.count) friends", category: AppLogger.data)
                     }
                 } else {
+                    print("🔍 DEBUG: No 'friends' key found in response")
                     DispatchQueue.main.async {
                         self.friends = []
+                        print("🔍 DEBUG: Set self.friends to empty array")
                     }
                 }
             } catch {
+                print("🔍 DEBUG: ERROR - JSON decoding failed: \(error)")
+                print("🔍 DEBUG: Error details: \(error.localizedDescription)")
                 AppLogger.error("Failed to decode friends response", error: error, category: AppLogger.data)
                 DispatchQueue.main.async {
                     self.friends = []
+                    print("🔍 DEBUG: Set self.friends to empty array due to error")
                 }
             }
         }.resume()
