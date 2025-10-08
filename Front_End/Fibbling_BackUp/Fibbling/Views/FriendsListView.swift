@@ -83,13 +83,22 @@ struct FriendsListView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
+            print("🔍 DEBUG: FriendsListView onAppear called")
+            print("🔍 DEBUG: accountManager.friends.count = \(accountManager.friends.count)")
+            print("🔍 DEBUG: isLoading = \(isLoading)")
+            print("🔍 DEBUG: isPrefetchingImages = \(isPrefetchingImages)")
+            print("🔍 DEBUG: selectedTab = \(selectedTab)")
+            
             Task {
+                print("🔍 DEBUG: Starting data fetch tasks")
                 fetchAllUsers()
                 fetchFriendRequests()
                 fetchCurrentUserFriends()
                 
                 // Wait for prefetch to complete before showing content
+                print("🔍 DEBUG: Starting prefetchVisibleImages")
                 await prefetchVisibleImages()
+                print("🔍 DEBUG: prefetchVisibleImages completed")
             }
         }
         .onChange(of: selectedTab) { _ in
@@ -115,11 +124,23 @@ struct FriendsListView: View {
         }
         .sheet(isPresented: $showUserProfileSheet) {
             if let username = selectedUserProfile {
-                NavigationStack {
-                    UserProfileView(username: username)
-                        .environmentObject(accountManager)
-                        .environmentObject(chatManager)
-                }
+                UserProfileView(username: username)
+                    .environmentObject(accountManager)
+                    .environmentObject(chatManager)
+            }
+        }
+        .onChange(of: selectedUserProfile) { newValue in
+            print("🔍 DEBUG: selectedUserProfile changed to: \(newValue ?? "nil")")
+            if newValue != nil {
+                print("🔍 DEBUG: About to show UserProfileSheet for: \(newValue!)")
+            }
+        }
+        .onChange(of: showUserProfileSheet) { newValue in
+            print("🔍 DEBUG: showUserProfileSheet changed to: \(newValue)")
+            if newValue {
+                print("🔍 DEBUG: UserProfileSheet is now showing")
+            } else {
+                print("🔍 DEBUG: UserProfileSheet is now hidden")
             }
         }
     }
@@ -351,8 +372,12 @@ struct FriendsListView: View {
     // MARK: - Friend Card
     private func friendCard(username: String) -> some View {
         Button(action: {
+            print("🔍 DEBUG: friendCard tapped for username: \(username)")
+            print("🔍 DEBUG: Setting selectedUserProfile to: \(username)")
             selectedUserProfile = username
+            print("🔍 DEBUG: Setting showUserProfileSheet to true")
             showUserProfileSheet = true
+            print("🔍 DEBUG: Friend card action completed")
         }) {
             HStack(spacing: 16) {
                 // Profile Picture
@@ -458,8 +483,12 @@ struct FriendsListView: View {
     // MARK: - Discover User Card
     private func discoverUserCard(username: String) -> some View {
         Button(action: {
+            print("🔍 DEBUG: discoverUserCard tapped for username: \(username)")
+            print("🔍 DEBUG: Setting selectedUserProfile to: \(username)")
             selectedUserProfile = username
+            print("🔍 DEBUG: Setting showUserProfileSheet to true")
             showUserProfileSheet = true
+            print("🔍 DEBUG: Discover user card action completed")
         }) {
             HStack(spacing: 16) {
                 // Profile Picture
@@ -747,23 +776,51 @@ struct FriendsListView: View {
     }
     
     private func fetchCurrentUserFriends() {
-        guard let currentUser = accountManager.currentUser,
-              let url = URL(string: "\(baseURL)/get_friends/\(currentUser)/") else { return }
+        print("🔍 DEBUG: fetchCurrentUserFriends called")
+        guard let currentUser = accountManager.currentUser else {
+            print("🔍 DEBUG: ERROR - currentUser is nil")
+            return
+        }
         
+        let urlString = "\(baseURL)/get_friends/\(currentUser)/"
+        print("🔍 DEBUG: Fetching friends from URL: \(urlString)")
+        
+        guard let url = URL(string: urlString) else {
+            print("🔍 DEBUG: ERROR - Invalid URL: \(urlString)")
+            return
+        }
+        
+        print("🔍 DEBUG: Starting URLSession request")
         URLSession.shared.dataTask(with: url) { data, response, error in
+            print("🔍 DEBUG: URLSession response received")
+            
             DispatchQueue.main.async {
                 if let error = error {
-                    print("Error fetching friends: \(error.localizedDescription)")
+                    print("🔍 DEBUG: ERROR - Network error: \(error.localizedDescription)")
                     return
                 }
                 
-                guard let data = data else { return }
+                guard let data = data else {
+                    print("🔍 DEBUG: ERROR - No data received")
+                    return
+                }
+                
+                print("🔍 DEBUG: Data received, length: \(data.count) bytes")
+                
+                // Log raw response for debugging
+                if let rawString = String(data: data, encoding: .utf8) {
+                    print("🔍 DEBUG: Raw friends response: \(rawString)")
+                }
                 
                 do {
                     let response = try JSONDecoder().decode(FriendsData.self, from: data)
+                    print("🔍 DEBUG: Successfully decoded friends: \(response.friends)")
+                    print("🔍 DEBUG: Friends count: \(response.friends.count)")
                     self.accountManager.friends = response.friends
+                    print("🔍 DEBUG: accountManager.friends updated")
                 } catch {
-                    print("Error parsing friends: \(error.localizedDescription)")
+                    print("🔍 DEBUG: ERROR - JSON parsing failed: \(error.localizedDescription)")
+                    print("🔍 DEBUG: Error details: \(error)")
                 }
             }
         }.resume()
