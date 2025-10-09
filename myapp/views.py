@@ -14,6 +14,18 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from push_notifications.models import APNSDevice
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from django_ratelimit.decorators import ratelimit
+import logging
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+# Security logger
+security_logger = logging.getLogger('myapp.security')
+
+# Failed login tracking
+failed_login_attempts = defaultdict(list)
 
 
 
@@ -42,13 +54,30 @@ def register_user(request):
     return JsonResponse({"success": False, "message": "Invalid request method."}, status=405)
 
 # ✅ Login User
-@csrf_exempt  # Remove in production
+@ratelimit(key='ip', rate='5/h', method='POST', block=True)
+@csrf_exempt  # Keep for initial login
 def login_user(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
             username = data.get("username")
             password = data.get("password")
+            
+            # Get client IP for security tracking
+            ip = request.META.get('REMOTE_ADDR', 'unknown')
+            
+            # Check failed attempts
+            recent_failures = [
+                t for t in failed_login_attempts[ip]
+                if datetime.now() - t < timedelta(minutes=15)
+            ]
+            
+            if len(recent_failures) >= 5:
+                security_logger.warning(f"Too many failed login attempts from IP: {ip}")
+                return JsonResponse({
+                    "success": False,
+                    "message": "Too many failed attempts. Try again in 15 minutes."
+                }, status=429)
 
             if not username or not password:
                 return JsonResponse({"success": False, "message": "Username and password are required."}, status=400)
@@ -56,8 +85,22 @@ def login_user(request):
             user = authenticate(username=username, password=password)
 
             if user is not None:
-                return JsonResponse({"success": True, "message": "Login successful."}, status=200)
+                # Clear failed attempts on successful login
+                failed_login_attempts[ip] = []
+                security_logger.info(f"Successful login for user: {username} from IP: {ip}")
+                
+                refresh = RefreshToken.for_user(user)
+                return JsonResponse({
+                    "success": True,
+                    "message": "Login successful.",
+                    "access_token": str(refresh.access_token),
+                    "refresh_token": str(refresh),
+                    "username": username
+                }, status=200)
             else:
+                # Track failed attempt
+                failed_login_attempts[ip].append(datetime.now())
+                security_logger.warning(f"Failed login attempt for user: {username} from IP: {ip}")
                 return JsonResponse({"success": False, "message": "Invalid credentials."}, status=401)
 
         except json.JSONDecodeError:

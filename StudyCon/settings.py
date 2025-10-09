@@ -1,14 +1,25 @@
 """
-Minimal Django settings for Railway deployment
+Django settings for Railway deployment with security enhancements
 """
 from pathlib import Path
 import os
+from datetime import timedelta
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-g241opytiwg*n5loc&_n)8nro2hdxd==#qus9s@u9v&9mvyz%6'
+# ✅ SECURITY: Use environment variable for SECRET_KEY
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '&i+0_qgk943=xr&!fdh519l6h7xjm1w_%@t9i^p%eo%cz6elef')
+
 DEBUG = False
-ALLOWED_HOSTS = ['*', 'healthcheck.railway.app']
+
+# ✅ SECURITY: Restrict ALLOWED_HOSTS to specific domains
+ALLOWED_HOSTS = [
+    'pinit-backend-production.up.railway.app',
+    'healthcheck.railway.app',
+    'localhost',
+    '127.0.0.1',
+]
 
 INSTALLED_APPS = [
     "daphne",  # Django Channels
@@ -23,6 +34,7 @@ INSTALLED_APPS = [
     "corsheaders", 
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',  # ✅ JWT Authentication
     'channels',
     'push_notifications',
 ]
@@ -154,7 +166,84 @@ MAX_IMAGES_PER_USER = 20
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# ✅ SECURITY: CORS Configuration
+CORS_ALLOWED_ORIGINS = [
+    "http://10.0.0.30",
+    "http://localhost:3000",
+    "https://pinit-backend-production.up.railway.app",
+]
+CORS_ALLOW_CREDENTIALS = True
+
+# ✅ SECURITY: REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+# ✅ SECURITY: JWT Configuration
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+}
+
+# ✅ SECURITY: Database Configuration
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# ✅ SECURITY: Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'security_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'security.log',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'myapp.security': {
+            'handlers': ['security_file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
 
 # Push Notifications Settings
 PUSH_NOTIFICATIONS_SETTINGS = {
