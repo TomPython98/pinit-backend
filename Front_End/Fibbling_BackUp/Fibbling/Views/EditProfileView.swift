@@ -218,6 +218,7 @@ struct EditProfileView: View {
             }
             
             TextEditor(text: $bio)
+                .scrollContentBackground(.hidden)
                 .frame(minHeight: 100)
                 .padding(12)
                 .background(

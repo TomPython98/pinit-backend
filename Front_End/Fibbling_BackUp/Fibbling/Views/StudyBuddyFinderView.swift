@@ -69,7 +69,10 @@ struct StudyBuddyFinderView: View {
                             Text("🧠 Learning Style: \(buddy.learningStyle)")
                         }
                         .padding()
+                        .listRowBackground(Color.bgCard)
                     }
+                    .scrollContentBackground(.hidden)
+                    .background(Color.bgSurface)
                 }
             }
             .navigationTitle("Study Buddy Finder")

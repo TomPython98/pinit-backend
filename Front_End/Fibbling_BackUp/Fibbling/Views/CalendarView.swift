@@ -620,8 +620,11 @@ struct DayEventsView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .listRowBackground(Color.bgCard)
                 .buttonStyle(PlainButtonStyle())
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.bgSurface)
         }
         .sheet(item: $selectedEvent) { event in
             NavigationStack {

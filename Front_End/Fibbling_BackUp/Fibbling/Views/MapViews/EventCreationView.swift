@@ -1122,10 +1122,10 @@ struct ModernTextFieldStyle: TextFieldStyle {
             .padding()
             .background(Color.bgSecondary)
             .cornerRadius(12)
-            .foregroundColor(.black) // Ensure text is black for visibility
-        .overlay(
+            .foregroundColor(.textPrimary)
+            .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.bgSecondary, lineWidth: 1)
+                    .stroke(Color.cardStroke, lineWidth: 1)
             )
     }
 }
@@ -1192,10 +1192,13 @@ struct FriendPickerView: View {
                     }
                     .padding(.vertical, 4)
                     .contentShape(Rectangle())
+                    .listRowBackground(Color.bgCard)
                     .onTapGesture {
                         toggleFriend(friend)
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .background(Color.bgSurface)
                 .listStyle(PlainListStyle())
             }
             .navigationTitle("Invite Friends")

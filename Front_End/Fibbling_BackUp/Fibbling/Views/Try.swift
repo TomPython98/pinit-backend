@@ -172,6 +172,7 @@ struct StudyGroupCreationView: View {
                     TextField("Group Name", text: $groupName)
                     TextField("Subject", text: $subject)
                     TextEditor(text: $groupDescription)
+                        .scrollContentBackground(.hidden)
                         .frame(height: 100)
                 }
                 Section(header: Text("Meeting Time (optional)")) {

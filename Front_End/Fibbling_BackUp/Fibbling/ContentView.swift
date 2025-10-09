@@ -2142,6 +2142,7 @@ struct ProfileView: View {
                 
                 if editMode {
                     TextEditor(text: $bio)
+                        .scrollContentBackground(.hidden)
                         .foregroundColor(.textPrimary)
                         .frame(minHeight: 100)
                         .padding(12)

@@ -425,6 +425,7 @@ struct ReportContentView: View {
                         .foregroundColor(.textPrimary)
                     
                     TextEditor(text: $description)
+                        .scrollContentBackground(.hidden)
                         .frame(minHeight: 100)
                         .padding(12)
                         .background(Color.bgCard)
@@ -486,6 +487,7 @@ struct ReportContentView: View {
         contentId: "test_user"
     )
 }
+
 
 
 

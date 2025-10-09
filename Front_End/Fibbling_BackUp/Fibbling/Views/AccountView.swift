@@ -61,7 +61,10 @@ struct AccountView: View {
                                             .foregroundColor(.blue)
                                         Text(friend)
                                     }
+                                    .listRowBackground(Color.bgCard)
                                 }
+                                .scrollContentBackground(.hidden)
+                                .background(Color.bgSurface)
                                 .frame(height: 150)
                             }
                         }

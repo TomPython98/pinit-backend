@@ -1860,6 +1860,8 @@ struct EventSocialFeedView: View {
                     TextField("What's happening at this event?", text: $newPostText, axis: .vertical)
                         .lineLimit(3...6)
                         .textFieldStyle(PlainTextFieldStyle())
+                        .foregroundColor(.textPrimary)
+                        .tint(.brandPrimary)
                     
                     // Image preview grid
                     if !selectedImages.isEmpty {

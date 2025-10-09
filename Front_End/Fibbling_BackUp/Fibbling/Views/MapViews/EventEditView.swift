@@ -218,6 +218,7 @@ struct EventEditView: View {
                         Text("Description").font(.headline).foregroundColor(Color.textPrimary)
                     }
                     TextEditor(text: $eventDescription)
+                        .scrollContentBackground(.hidden)
                         .frame(minHeight: 100)
                         .padding(4)
                         .background(Color.bgSecondary)
