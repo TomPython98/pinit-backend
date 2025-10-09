@@ -89,18 +89,37 @@ env/
 test_*.txt
 *_test.txt
 
-# User credentials
-user_credentials.txt
-
-# Environment variables
+# Environment variables and secrets
 .env
 .env.local
+.env.production
+*.env
+*_SECRET*
+credentials.json
+secrets.json
 
-# Build artifacts
-*.ipa
-*.app
-*.dSYM.zip
-*.dSYM
+# Database files
+db.sqlite3
+db.sqlite3-journal
+*.db
+
+# Log files
+*.log
+security.log
+access.log
+error.log
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.dummy
+*.swp
+*.swo
+*~
+
+# User credentials
+user_credentials.txt
 
 
 

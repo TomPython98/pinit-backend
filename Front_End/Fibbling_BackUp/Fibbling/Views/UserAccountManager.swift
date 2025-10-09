@@ -6,16 +6,25 @@ class UserAccountManager: ObservableObject {
     @Published var friends: [String] = []
     @Published var friendRequests: [String] = [] // ✅ Stores incoming friend requests
     @Published var isCertified: Bool = false
+    @Published var accessToken: String?
+    @Published var refreshToken: String?
     
     // MARK: - Configuration
     // 🔧 FIX: Use consistent backend URL
     private let baseURL = APIConfig.primaryBaseURL
+    
+    private let accessTokenKey = "access_token"
+    private let refreshTokenKey = "refresh_token"
 
     init() {
         // Check if user is logged in at startup by reading from UserDefaults
         if UserDefaults.standard.bool(forKey: "isLoggedIn"),
            let savedUsername = UserDefaults.standard.string(forKey: "username") {
             self.currentUser = savedUsername
+            
+            // Load saved tokens
+            self.accessToken = UserDefaults.standard.string(forKey: accessTokenKey)
+            self.refreshToken = UserDefaults.standard.string(forKey: refreshTokenKey)
             
             // Fetch friends and requests on init if user is logged in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -24,6 +33,27 @@ class UserAccountManager: ObservableObject {
             }
         } else {
         }
+    }
+    
+    // MARK: - Token Management
+    func saveTokens(access: String, refresh: String) {
+        accessToken = access
+        refreshToken = refresh
+        UserDefaults.standard.set(access, forKey: accessTokenKey)
+        UserDefaults.standard.set(refresh, forKey: refreshTokenKey)
+    }
+    
+    func addAuthHeader(to request: inout URLRequest) {
+        if let token = accessToken {
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+    }
+    
+    func clearTokens() {
+        accessToken = nil
+        refreshToken = nil
+        UserDefaults.standard.removeObject(forKey: accessTokenKey)
+        UserDefaults.standard.removeObject(forKey: refreshTokenKey)
     }
 
     // ✅ REGISTER USER
@@ -161,12 +191,20 @@ class UserAccountManager: ObservableObject {
                 let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                 let success = json?["success"] as? Bool ?? false
                 let message = json?["message"] as? String ?? "Unknown error."
+                
+                // Extract JWT tokens if login successful
+                let accessToken = json?["access_token"] as? String
+                let refreshToken = json?["refresh_token"] as? String
 
                 AppLogger.logAuth("Login result: \(success ? "success" : "failed")")
 
                 DispatchQueue.main.async {
                     if success {
                         self.currentUser = username
+                        // Save tokens if provided
+                        if let access = accessToken, let refresh = refreshToken {
+                            self.saveTokens(access: access, refresh: refresh)
+                        }
                         // Also save to UserDefaults for persistence
                         UserDefaults.standard.set(true, forKey: "isLoggedIn")
                         UserDefaults.standard.set(username, forKey: "username")
@@ -355,7 +393,7 @@ class UserAccountManager: ObservableObject {
         
         AppLogger.logRequest(url: url.absoluteString, method: "POST")
         
-        let body: [String: String] = ["from_user": currentUser, "to_user": username]
+        let body: [String: String] = ["to_user": username]  // Remove from_user since it's now from authenticated user
         guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
             AppLogger.error("Failed to encode friend request data", category: AppLogger.data)
             return
@@ -365,6 +403,7 @@ class UserAccountManager: ObservableObject {
         request.httpMethod = "POST"
         request.httpBody = jsonData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addAuthHeader(to: &request)  // Add JWT authentication
 
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
@@ -463,6 +502,9 @@ class UserAccountManager: ObservableObject {
             self.currentUser = nil
             self.friends = []
             self.friendRequests = []
+            
+            // Clear tokens
+            self.clearTokens()
             
             // Clear user data from UserDefaults
             UserDefaults.standard.set(false, forKey: "isLoggedIn")

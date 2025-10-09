@@ -744,10 +744,10 @@ class R2Storage(S3Boto3Storage):
 ### Cloudflare R2 Configuration
 ```python
 # Production settings
-AWS_ACCESS_KEY_ID = '7a4467aff561cea6f89a877a6ad9fc58'
-AWS_SECRET_ACCESS_KEY = '5e6345fc231451d46694d10e90e8e1d85d9110a27f0860019a47b4eb005705b8'
-AWS_STORAGE_BUCKET_NAME = 'pinit-images'
-AWS_S3_ENDPOINT_URL = 'https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com'
+AWS_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', 'pinit-images')
+AWS_S3_ENDPOINT_URL = os.environ.get('R2_ENDPOINT_URL')
 AWS_S3_REGION_NAME = 'auto'
 AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_DEFAULT_ACL = 'public-read'

@@ -23,12 +23,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-g241opytiwg*n5loc&_n)8nro2hdxd==#qus9s@u9v&9mvyz%6'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '&i+0_qgk943=xr&!fdh519l6h7xjm1w_%@t9i^p%eo%cz6elef')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*', 'healthcheck.railway.app']
+ALLOWED_HOSTS = [
+    'pinit-backend-production.up.railway.app',
+    'healthcheck.railway.app',
+    'localhost',
+    '127.0.0.1',
+]
 
 
 
@@ -50,6 +55,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',
     'channels',
     'push_notifications',  # Add push notifications app
 ]
@@ -98,14 +104,29 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# Force SQLite database for Railway deployment
-# This prevents PostgreSQL connection issues
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+import dj_database_url
+
+# Use PostgreSQL for production, SQLite for local development
+if os.environ.get('DATABASE_URL'):
+    # Production - PostgreSQL
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
-}
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
+else:
+    # Development - SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -151,16 +172,71 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 CORS_ALLOWED_ORIGINS = [
     "http://10.0.0.30",  # ✅ Add "http://" before the IP
     "http://localhost:3000",
+    "https://pinit-backend-production.up.railway.app",
 ]
+CORS_ALLOW_CREDENTIALS = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-CORS_ALLOW_ALL_ORIGINS = True  # ⚠️ Use specific allowed origins in production
 
 # Set Django Channels as the ASGI server
 ASGI_APPLICATION = "StudyCon.asgi.application"
+
+# REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+# JWT Configuration
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+}
 
 # Push Notifications Settings
 PUSH_NOTIFICATIONS_SETTINGS = {
     "APNS_CERTIFICATE": "/path/to/your/certificate.pem",  # Replace with actual path for production
     "APNS_TOPIC": "com.yourdomain.studycon",  # Replace with your app bundle ID
     "APNS_USE_SANDBOX": True,  # Set to False for production
+}
+
+# Security Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'WARNING',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'security.log'),
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.security': {
+            'handlers': ['file', 'console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'myapp.security': {
+            'handlers': ['file', 'console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
 }
