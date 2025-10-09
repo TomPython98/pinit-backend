@@ -29,6 +29,7 @@ failed_login_attempts = defaultdict(list)
 
 
 
+@ratelimit(key='ip', rate='3/h', method='POST', block=True)
 @csrf_exempt
 def register_user(request):
     if request.method == "POST":
@@ -112,18 +113,20 @@ def login_user(request):
 
 
 # ✅ Send Friend Request
-@csrf_exempt  # Remove in production
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def send_friend_request(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            from_username = data.get("from_user")
+            from_user = request.user  # Use authenticated user
             to_username = data.get("to_user")
 
-            if not from_username or not to_username:
-                return JsonResponse({"success": False, "message": "Both usernames required"}, status=400)
+            if not to_username:
+                return JsonResponse({"success": False, "message": "Target username required"}, status=400)
 
-            from_user = User.objects.get(username=from_username)
             to_user = User.objects.get(username=to_username)
 
             if from_user == to_user:
@@ -327,13 +330,16 @@ from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .models import StudyEvent
 
-@csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def create_study_event(request):
     """Modified to include intelligent auto-matching in the same transaction"""
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            host = get_object_or_404(User, username=data.get("host"))
+            host = request.user  # Use authenticated user
 
             # Extract fields for auto-matching
             interest_tags = data.get("interest_tags", [])
