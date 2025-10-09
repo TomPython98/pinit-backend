@@ -258,7 +258,10 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from myapp.models import FriendRequest, UserProfile
 
-@csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def accept_friend_request(request):
     """
     🔧 IMPROVED: Better error handling and reliability
@@ -266,18 +269,16 @@ def accept_friend_request(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
+            to_user = request.user  # Use authenticated user
             from_username = data.get("from_user")
-            to_username = data.get("to_user")
-
 
             # Validate input
-            if not from_username or not to_username:
-                return JsonResponse({"success": False, "message": "Both usernames are required"}, status=400)
+            if not from_username:
+                return JsonResponse({"success": False, "message": "From username is required"}, status=400)
 
-            # Get users
+            # Get the user who sent the request
             try:
                 from_user = User.objects.get(username=from_username)
-                to_user = User.objects.get(username=to_username)
             except User.DoesNotExist as e:
                 return JsonResponse({"success": False, "message": "User not found"}, status=404)
 
@@ -1012,12 +1013,15 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import StudyEvent, User
 
-@csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def rsvp_study_event(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get("username")
+            user = request.user  # Use authenticated user
             event_id = data.get("event_id")
 
             # Convert the event_id to lowercase and ensure it's a valid UUID
@@ -1032,8 +1036,7 @@ def rsvp_study_event(request):
             except StudyEvent.DoesNotExist:
                 return JsonResponse({"error": "Event not found"}, status=404)
 
-            # Fetch user
-            user = User.objects.get(username=username)
+            # User is already authenticated via JWT
 
             # Check if the user is already an attendee
             if user in event.attendees.all():
@@ -1101,19 +1104,21 @@ def rsvp_study_event(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-@csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def delete_study_event(request):
     """
     POST request with JSON:
     {
-      "username": "Alice",
       "event_id": "<UUID-string>"
     }
     Only the host of the event can delete it.
     """
     if request.method == "POST":
         data = json.loads(request.body)
-        username = data.get("username")
+        user = request.user  # Use authenticated user
         event_id = data.get("event_id")
 
         try:
@@ -1127,7 +1132,7 @@ def delete_study_event(request):
             return JsonResponse({"error": "Event not found"}, status=404)
 
         # Check if the user is actually the host
-        if event.host.username != username:
+        if event.host != user:
             return JsonResponse({"error": "Only the host can delete this event"}, status=403)
 
         # Store attendees and invited friends before deleting the event
@@ -1352,17 +1357,25 @@ def enhanced_search_events(request):
         return JsonResponse({"events": data}, safe=False)
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-@csrf_exempt
+@ratelimit(key='user', rate='5/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def certify_user(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get("username")
+            target_username = data.get("username")
+            
+            # Only allow admin users to certify others, or users to certify themselves
+            if not request.user.is_staff and request.user.username != target_username:
+                return JsonResponse({"success": False, "message": "Only admins can certify other users"}, status=403)
+            
             # You can add extra verification here (like an admin secret or document verification)
-            user = User.objects.get(username=username)
+            user = User.objects.get(username=target_username)
             user.userprofile.is_certified = True
             user.userprofile.save()
-            return JsonResponse({"success": True, "message": f"User {username} certified."}, status=200)
+            return JsonResponse({"success": True, "message": f"User {target_username} certified."}, status=200)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "Invalid request method."}, status=405)
@@ -1373,24 +1386,24 @@ def certify_user(request):
 # Invitation Endpoints
 # -----------------------------
 
-@csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def decline_invitation(request):
     """
     Declines an invitation and records it in the DeclinedInvitation model.
     Expected JSON:
     {
-      "username": "invitedUser",
       "event_id": "<UUID-string>"
     }
     """
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get("username")
+            user = request.user  # Use authenticated user
             event_id = data.get("event_id")
             
-            
-            user = User.objects.get(username=username)
             event = StudyEvent.objects.get(id=event_id)
             
             # First, remove the user from invited_friends
@@ -1500,7 +1513,10 @@ import traceback
 from django.contrib.auth.models import User
 from .models import StudyEvent, EventComment
 
-@csrf_exempt
+@ratelimit(key='user', rate='30/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def add_event_comment(request):
     """
     Simplified comment endpoint with extensive error tracking
@@ -1517,27 +1533,22 @@ def add_event_comment(request):
                 return JsonResponse({"error": f"Invalid JSON: {str(e)}"}, status=400)
                 
             # Extract and validate required fields
-            username = data.get("username")
+            user = request.user  # Use authenticated user
             event_id = data.get("event_id")
             text = data.get("text")
             parent_id = data.get("parent_id")
             
             
-            if not all([username, event_id, text]):
+            if not all([event_id, text]):
                 return JsonResponse({
                     "error": "Missing required fields",
                     "fields": {
-                        "username": bool(username),
                         "event_id": bool(event_id),
                         "text": bool(text)
                     }
                 }, status=400)
             
-            # Find user
-            try:
-                user = User.objects.get(username=username)
-            except User.DoesNotExist:
-                return JsonResponse({"error": f"User '{username}' not found"}, status=404)
+            # User is already authenticated via JWT
             
             # Parse event UUID
             try:
@@ -1596,7 +1607,10 @@ def add_event_comment(request):
     # Handle non-POST requests
     return JsonResponse({"error": f"Method {request.method} not allowed"}, status=405)
 
-@csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def toggle_event_like(request):
     """
     Like or unlike an event or post with comprehensive error handling and logging
@@ -1607,28 +1621,26 @@ def toggle_event_like(request):
         
         try:
             data = json.loads(raw_body)
-            username = data.get("username")
+            user = request.user  # Use authenticated user
             event_id = data.get("event_id")
             post_id = data.get("post_id")  # Optional
 
             # Comprehensive input validation
-            if not username or not event_id:
+            if not event_id:
                 return JsonResponse({
                     "error": "Missing required fields", 
                     "details": {
-                        "username": bool(username),
                         "event_id": bool(event_id)
                     }
                 }, status=400)
 
-            # Fetch user and event with error handling
+            # Fetch event with error handling
             try:
-                user = User.objects.get(username=username)
                 event = StudyEvent.objects.get(id=uuid.UUID(event_id))
-            except User.DoesNotExist:
-                return JsonResponse({"error": "User not found"}, status=404)
             except StudyEvent.DoesNotExist:
                 return JsonResponse({"error": "Event not found"}, status=404)
+            except ValueError:
+                return JsonResponse({"error": "Invalid event ID format"}, status=400)
 
             # Like/Unlike Logic
             if post_id:
@@ -1709,13 +1721,15 @@ def toggle_event_like(request):
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-@csrf_exempt
+@ratelimit(key='user', rate='30/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def record_event_share(request):
     """
     Record an event share
     Expected JSON:
     {
-        "username": "johndoe",
         "event_id": "<event-uuid>",
         "platform": "whatsapp"  # whatsapp, facebook, twitter, instagram, other
     }
@@ -1723,16 +1737,15 @@ def record_event_share(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get("username")
+            user = request.user  # Use authenticated user
             event_id = data.get("event_id")
             platform = data.get("platform", "other")
 
             # Validate input
-            if not username or not event_id:
+            if not event_id:
                 return JsonResponse({"error": "Missing required fields"}, status=400)
 
-            # Fetch user and event
-            user = User.objects.get(username=username)
+            # Fetch event
             event = StudyEvent.objects.get(id=uuid.UUID(event_id))
 
             # Create share record
@@ -2331,7 +2344,10 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     
     return r * c
 
-@csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def advanced_auto_match(request):
     """
     🔧 ENHANCED: Sophisticated auto-matching system using all available user data
@@ -2938,6 +2954,10 @@ def send_push_notification(user_id, notification_type, **kwargs):
 
 # Update the accept_invitation function to send notification to event host
 
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def accept_invitation(request, invitation_id):
     try:
         invitation = EventInvitation.objects.get(id=invitation_id)
@@ -2985,7 +3005,10 @@ def accept_invitation(request, invitation_id):
             'message': str(e)
         }, status=400)
 
-@csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def invite_to_event(request):
     if request.method == "POST":
         try:
@@ -2994,10 +3017,12 @@ def invite_to_event(request):
             username = data.get("username")
             is_auto_matched = data.get("mark_as_auto_matched", False)  # Get auto-matched flag
             
-            
-            # Get the event and user
+            # Verify the authenticated user is the event host
             try:
                 event = StudyEvent.objects.get(id=uuid.UUID(event_id))
+                if event.host != request.user:
+                    return JsonResponse({"error": "Only the event host can invite users"}, status=403)
+                
                 user = User.objects.get(username=username)
             except StudyEvent.DoesNotExist:
                 return JsonResponse({"error": "Event not found"}, status=404)
@@ -3034,7 +3059,10 @@ def invite_to_event(request):
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-@csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def update_user_interests(request):
     """
     Update a user's profile with basic info, interests, skills, and preferences
@@ -3056,7 +3084,7 @@ def update_user_interests(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get("username")
+            user = request.user  # Use authenticated user
             
             # Basic profile information
             full_name = data.get("full_name", "")
@@ -3073,11 +3101,7 @@ def update_user_interests(request):
             preferred_radius = data.get("preferred_radius", 10.0)
             
             
-            # Find the user
-            try:
-                user = User.objects.get(username=username)
-            except User.DoesNotExist:
-                return JsonResponse({"error": "User not found"}, status=404)
+            # User is already authenticated via JWT
             
             # Get or create the user profile
             profile, created = UserProfile.objects.get_or_create(user=user)
@@ -3121,7 +3145,10 @@ def update_user_interests(request):
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-@csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def submit_user_rating(request):
     """
     Submit a rating for another user based on Bandura's social learning theory.
@@ -3138,7 +3165,7 @@ def submit_user_rating(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            from_username = data.get("from_username")
+            from_user = request.user  # Use authenticated user
             to_username = data.get("to_username")
             event_id = data.get("event_id")
             rating = data.get("rating")
@@ -3146,7 +3173,7 @@ def submit_user_rating(request):
             
             
             # Validate required fields
-            if not from_username or not to_username or rating is None:
+            if not to_username or rating is None:
                 return JsonResponse({"error": "Missing required fields"}, status=400)
             
             # Validate rating value
@@ -3158,8 +3185,8 @@ def submit_user_rating(request):
                 return JsonResponse({"error": "Rating must be a number between 1 and 5"}, status=400)
             
             # Find the users
+            # Get the user being rated
             try:
-                from_user = User.objects.get(username=from_username)
                 to_user = User.objects.get(username=to_username)
             except User.DoesNotExist:
                 return JsonResponse({"error": "User not found"}, status=404)
@@ -3594,7 +3621,10 @@ def get_user_preferences(request, username):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-@csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def update_user_preferences(request, username):
     """
     Update user preferences and settings for PinIt
@@ -3800,23 +3830,18 @@ def update_matching_preferences(request, username):
 # PROFESSIONAL IMAGE UPLOAD ENDPOINTS
 # =============================================================================
 
-@csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def upload_user_image(request):
     """Upload a new user image with proper validation and optimization"""
     if request.method != 'POST':
         return JsonResponse({"error": "Only POST method allowed"}, status=405)
     
     try:
-        # Get username from request
-        username = request.POST.get('username')
-        if not username:
-            return JsonResponse({"error": "Username required"}, status=400)
-        
-        # Find user
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            return JsonResponse({"error": "User not found"}, status=404)
+        # Use authenticated user
+        user = request.user
         
         # Check if user has reached image limit
         current_count = UserImage.objects.filter(user=user).count()
@@ -3988,7 +4013,10 @@ def get_user_images(request, username):
     except Exception as e:
         return JsonResponse({"error": f"Failed to get images: {str(e)}"}, status=500)
 
-@csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def delete_user_image(request, image_id):
     """Delete a user image"""
     if request.method != 'DELETE':
@@ -4001,6 +4029,10 @@ def delete_user_image(request, image_id):
         except UserImage.DoesNotExist:
             return JsonResponse({"error": "Image not found"}, status=404)
         
+        # Verify ownership
+        if user_image.user != request.user:
+            return JsonResponse({"error": "You can only delete your own images"}, status=403)
+        
         # Delete the image (this will also delete the file)
         user_image.delete()
         
@@ -4012,7 +4044,10 @@ def delete_user_image(request, image_id):
     except Exception as e:
         return JsonResponse({"error": f"Failed to delete image: {str(e)}"}, status=500)
 
-@csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def set_primary_image(request, image_id):
     """Set an image as the primary profile picture"""
     if request.method != 'POST':
@@ -4024,6 +4059,10 @@ def set_primary_image(request, image_id):
             user_image = UserImage.objects.get(id=image_id)
         except UserImage.DoesNotExist:
             return JsonResponse({"error": "Image not found"}, status=404)
+        
+        # Verify ownership
+        if user_image.user != request.user:
+            return JsonResponse({"error": "You can only set your own images as primary"}, status=403)
         
         # Set as primary (this will automatically unset others)
         user_image.is_primary = True

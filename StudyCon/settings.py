@@ -115,17 +115,17 @@ if DEBUG:
 else:
     # Production: use Cloudflare R2 with S3-compatible credentials
     print("🔧 Configuring R2 storage with S3-compatible credentials...")
-    AWS_ACCESS_KEY_ID = '7a4467aff561cea6f89a877a6ad9fc58'
-    AWS_SECRET_ACCESS_KEY = '5e6345fc231451d46694d10e90e8e1d85d9110a27f0860019a47b4eb005705b8'
-    AWS_STORAGE_BUCKET_NAME = 'pinit-images'
-    AWS_S3_ENDPOINT_URL = 'https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com'
+    AWS_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', '5bc85e1cd49529516bf4f1e62cd662a3')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '6dbdbab1d5a91cc0e0693a3921eb1b74904f78569f44fa347f4e9ace47a7ce15')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', 'pinit-images')
+    AWS_S3_ENDPOINT_URL = os.environ.get('R2_ENDPOINT_URL', 'https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com')
     AWS_S3_REGION_NAME = 'auto'
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_DEFAULT_ACL = 'public-read'
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
-    AWS_S3_CUSTOM_DOMAIN = 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev'
+    AWS_S3_CUSTOM_DOMAIN = os.environ.get('R2_CUSTOM_DOMAIN', 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev')
     AWS_QUERYSTRING_AUTH = False  # public URLs
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     
@@ -134,7 +134,7 @@ else:
     
     class R2Storage(S3Boto3Storage):
         bucket_name = AWS_STORAGE_BUCKET_NAME
-        custom_domain = 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev'
+        custom_domain = AWS_S3_CUSTOM_DOMAIN
         file_overwrite = False
         default_acl = 'public-read'
         querystring_auth = False
@@ -148,7 +148,7 @@ else:
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
-    MEDIA_URL = 'https://pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev/'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
     print(f"✅ R2 configured with S3-compatible credentials")
     print(f"✅ Endpoint: {AWS_S3_ENDPOINT_URL}")
     print(f"✅ Bucket: {AWS_STORAGE_BUCKET_NAME}")
