@@ -1,1 +1,0 @@
-Direct S3Storage test from local
