@@ -1248,6 +1248,103 @@ def delete_study_event(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def update_study_event(request):
+    """
+    Update an existing study event. Only the host can update their event.
+    
+    Expected JSON payload:
+    {
+        "event_id": "uuid-string",
+        "title": "Updated Title",
+        "description": "Updated description",
+        "latitude": 40.7128,
+        "longitude": -74.0060,
+        "time": "2025-01-01T10:00:00Z",
+        "end_time": "2025-01-01T12:00:00Z",
+        "is_public": true,
+        "event_type": "study",
+        "interest_tags": ["programming", "study"]
+    }
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            user = request.user  # Use authenticated user
+            event_id = data.get("event_id")
+            
+            if not event_id:
+                return JsonResponse({"error": "Event ID is required"}, status=400)
+            
+            try:
+                event_uuid = uuid.UUID(event_id)
+            except ValueError:
+                return JsonResponse({"error": "Invalid event ID format"}, status=400)
+            
+            try:
+                event = StudyEvent.objects.get(id=event_uuid)
+            except StudyEvent.DoesNotExist:
+                return JsonResponse({"error": "Event not found"}, status=404)
+            
+            # Check if the user is the host
+            if event.host != user:
+                return JsonResponse({"error": "Only the host can update this event"}, status=403)
+            
+            # Update event fields
+            if "title" in data:
+                event.title = data["title"]
+            if "description" in data:
+                event.description = data["description"]
+            if "latitude" in data:
+                event.latitude = data["latitude"]
+            if "longitude" in data:
+                event.longitude = data["longitude"]
+            if "time" in data:
+                event.time = datetime.fromisoformat(data["time"])
+            if "end_time" in data:
+                event.end_time = datetime.fromisoformat(data["end_time"])
+            if "is_public" in data:
+                event.is_public = data["is_public"]
+            if "event_type" in data:
+                event.event_type = data["event_type"]
+            
+            # Update interest tags if provided
+            if "interest_tags" in data:
+                interest_tags = data["interest_tags"]
+                if hasattr(event, 'set_interest_tags'):
+                    event.set_interest_tags(interest_tags)
+            
+            event.save()
+            
+            # Broadcast event update to WebSocket clients
+            attendees = [u.username for u in event.attendees.all()]
+            invited_friends = [u.username for u in event.invited_friends.all()]
+            all_users = list(set(attendees + invited_friends + [event.host.username]))
+            
+            broadcast_event_updated(
+                event_id=event_uuid,
+                event_type="update",
+                usernames=all_users
+            )
+            
+            return JsonResponse({
+                "success": True,
+                "message": "Event updated successfully",
+                "event_id": str(event.id)
+            }, status=200)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
 
 def get_user_profile(request, username):
     try:
@@ -1297,8 +1394,10 @@ def get_user_profile(request, username):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-@csrf_exempt
 @ratelimit(key='ip', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def search_events(request):
     if request.method == "GET":
         query = request.GET.get("query", "")
@@ -1397,8 +1496,10 @@ def get_event_embedding(event):
         cache.set(cache_key, embedding, timeout=3600)  # Cache for 1 hour
     return embedding
 
-@csrf_exempt
 @ratelimit(key='ip', rate='50/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def enhanced_search_events(request):
     if request.method == "GET":
         query = request.GET.get("query", "")
@@ -2092,8 +2193,10 @@ def get_event_feed(request, event_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-# Update the add_event_comment function to support post creation with images
-@csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def add_event_comment(request):
     """
     Add a comment/post to an event, possibly with images
@@ -2173,8 +2276,10 @@ def add_event_comment(request):
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-# Update the event like function to handle post likes
-@csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def toggle_event_like(request):
     """
     Like or unlike an event or post
@@ -3501,8 +3606,10 @@ def schedule_rating_reminder(request):
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-@csrf_exempt
 @ratelimit(key='ip', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_profile_completion(request, username):
     """
     Get detailed profile completion information for a user
@@ -3836,7 +3943,10 @@ def update_user_preferences(request, username):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-@csrf_exempt
+@ratelimit(key='ip', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_matching_preferences(request, username):
     """
     Get detailed matching preferences for PinIt auto-matching

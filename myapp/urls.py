@@ -20,5 +20,14 @@ urlpatterns = [
     path('api/user_image/<str:image_id>/delete/', views.delete_user_image, name='delete_user_image'),
     path('api/user_image/<str:image_id>/set_primary/', views.set_primary_image, name='set_primary_image'),
     path('api/update-existing-images/', views.update_existing_images, name='update_existing_images'),
+    
+    # Event Management Endpoints
+    path('api/create_study_event/', views.create_study_event, name='create_study_event'),
+    path('api/update_study_event/', views.update_study_event, name='update_study_event'),
+    path('api/delete_study_event/', views.delete_study_event, name='delete_study_event'),
+    path('api/get_study_events/<str:username>/', views.get_study_events, name='get_study_events'),
+    path('api/rsvp_study_event/', views.rsvp_study_event, name='rsvp_study_event'),
+    path('api/search_events/', views.search_events, name='search_events'),
+    path('api/enhanced_search_events/', views.enhanced_search_events, name='enhanced_search_events'),
 ]
 
