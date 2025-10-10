@@ -13,4 +13,4 @@ gunicorn==21.2.0
 whitenoise==6.6.0
 python-dotenv==1.0.0
 bleach==6.1.0
-dj-database-url==2.1.0# Force requirements deployment - Thu Oct  9 15:02:22 -03 2025
+dj-database-url==2.1.0
