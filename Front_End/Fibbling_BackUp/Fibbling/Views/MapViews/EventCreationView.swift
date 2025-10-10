@@ -2,6 +2,8 @@ import SwiftUI
 import MapKit
 import PhotosUI
 import CoreLocation
+import MapboxMaps
+import Combine
 
 // MARK: - Redesigned EventCreationView
 struct EventCreationView: View {
@@ -30,11 +32,13 @@ struct EventCreationView: View {
     @State private var showFriendPicker = false
     @State private var selectedFriends: [String] = []
     @State private var locationSuggestions: [String] = []
+    @State private var locationSuggestionsCoords: [String: CLLocationCoordinate2D] = [:] // Map suggestion to coordinate
     @State private var showLocationSuggestions = false
     @State private var isGeocoding = false
     @State private var showSuccessAnimation = false
     @State private var isSearchingSuggestions = false
     @State private var isLocationSelected = false
+    @State private var suppressLocationOnChange = false // prevent TextField onChange from clearing selection when set programmatically
     
     var onSave: (StudyEvent) -> Void
     
@@ -305,9 +309,11 @@ struct EventCreationView: View {
                         HStack {
                             TextField("Enter location (e.g., Brandenburger Tor, Berlin)", text: $locationName)
                                 .textFieldStyle(ModernTextFieldStyle())
-                                .onChange(of: locationName) { _, newValue in
-                                    // Reset location selected state when user types
-                                    if !newValue.isEmpty {
+                                .onChange(of: locationName) { oldValue, newValue in
+                                    // If the change was triggered programmatically, do not reset selection
+                                    if suppressLocationOnChange {
+                                        suppressLocationOnChange = false
+                                    } else if !oldValue.isEmpty && oldValue != newValue {
                                         isLocationSelected = false
                                     }
                                     
@@ -326,55 +332,67 @@ struct EventCreationView: View {
                                     }
                                 }
                             
-                            // Find Location button
-                            Button(action: {
-                                if !locationName.isEmpty {
-                                    geocodeLocation(locationName)
-                                }
-                            }) {
-                                Image(systemName: "magnifyingglass")
-                                    .foregroundColor(.orange)
-                                    .font(.system(size: 16, weight: .medium))
-                            }
-                            .disabled(locationName.isEmpty || isGeocoding)
-                            
-                            // Geocoding/Searching indicator with smooth animation
-                            if isGeocoding || isSearchingSuggestions {
+                            // Dynamic indicator: checkmark, loading, or search button
+                            if isLocationSelected && !isGeocoding {
+                                // Green checkmark when location is selected
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .transition(.scale.combined(with: .opacity))
+                            } else if isGeocoding || isSearchingSuggestions {
+                                // Loading indicator
                                 ProgressView()
                                     .scaleEffect(0.8)
                                     .foregroundColor(.orange)
                                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                            } else {
+                                // Search button when no location selected
+                                Button(action: {
+                                    if !locationName.isEmpty {
+                                        geocodeLocation(locationName)
+                                    }
+                                }) {
+                                    Image(systemName: "magnifyingglass")
+                                        .foregroundColor(.orange)
+                                        .font(.system(size: 16, weight: .medium))
+                                }
+                                .disabled(locationName.isEmpty)
                             }
                         }
                         
-                        // Location Suggestions - Simplified
+                        // Enhanced Location Suggestions with Map Preview
                         if showLocationSuggestions && !locationSuggestions.isEmpty {
                             VStack(spacing: 0) {
-                                ForEach(locationSuggestions.prefix(3), id: \.self) { suggestion in
-                                    Button(action: {
-                                        locationName = suggestion
-                                        showLocationSuggestions = false
-                                        locationSuggestions = []
-                                        geocodeLocation(suggestion)
-                                    }) {
-                                HStack {
-                                            Image(systemName: "location")
-                                                .foregroundColor(.orange)
-                                                        .font(.caption)
+                                ForEach(Array(locationSuggestions.prefix(3).enumerated()), id: \.element) { index, suggestion in
+                                    LocationSuggestionRow(
+                                        suggestion: suggestion,
+                                        coordinate: locationSuggestionsCoords[suggestion],
+                                        isSelected: false
+                                    )
+                                    .contentShape(Rectangle()) // Make entire area tappable
+                                    .onTapGesture {
+                                        // Force immediate state update
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            suppressLocationOnChange = true
+                                            locationName = suggestion
+                                            showLocationSuggestions = false
+                                            locationSuggestions = []
                                             
-                                            Text(suggestion)
-                                                .font(.subheadline)
-                                                .foregroundColor(.textPrimary)
-                                            
-                                                Spacer()
+                                            // Use stored coordinates if available (faster and more accurate)
+                                            if let coord = locationSuggestionsCoords[suggestion] {
+                                                selectedCoordinate = coord
+                                                isLocationSelected = true
+                                                print("✅ Location selected immediately: \(suggestion)")
+                                            } else {
+                                                // Still set as selected while geocoding
+                                                isLocationSelected = true
+                                                geocodeLocation(suggestion)
+                                                print("⏳ Geocoding: \(suggestion)")
+                                            }
                                         }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
-                                        .background(Color.bgCard)
                                     }
-                                    .buttonStyle(PlainButtonStyle())
                                     
-                                    if suggestion != locationSuggestions.prefix(3).last {
+                                    if index < min(2, locationSuggestions.count - 1) {
                                         Divider()
                                             .padding(.horizontal, 16)
                                     }
@@ -384,6 +402,43 @@ struct EventCreationView: View {
                             .cornerRadius(12)
                             .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
                             .padding(.top, 4)
+                        }
+                        
+                        // Mini Map Preview - Show selected location
+                        if isLocationSelected {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "map")
+                                        .foregroundColor(.blue)
+                                        .font(.caption)
+                                    Text("Location Preview")
+                                        .font(.caption.weight(.medium))
+                                        .foregroundColor(.textSecondary)
+                                    Spacer()
+                                }
+                                
+                                MiniMapPreview(coordinate: selectedCoordinate)
+                                    .frame(height: 200)
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                    )
+                                
+                                HStack {
+                                    Image(systemName: "location.fill")
+                                        .foregroundColor(.blue)
+                                        .font(.caption2)
+                                    Text("\(String(format: "%.4f", selectedCoordinate.latitude)), \(String(format: "%.4f", selectedCoordinate.longitude))")
+                                        .font(.caption2)
+                                        .foregroundColor(.textSecondary)
+                                    Spacer()
+                                }
+                            }
+                            .padding(12)
+                            .background(Color.blue.opacity(0.05))
+                            .cornerRadius(12)
+                            .padding(.top, 8)
                         }
                     }
                     
@@ -826,59 +881,197 @@ struct EventCreationView: View {
     private func searchLocationSuggestions(query: String) {
         isSearchingSuggestions = true
         
+        // Search both Apple Maps (MKLocalSearch) and Mapbox in parallel
+        // Apple Maps has excellent POI data for restaurants, bars, cafes, etc.
+        let group = DispatchGroup()
+        var appleResults: [(String, CLLocationCoordinate2D)] = []
+        var mapboxResults: [(String, CLLocationCoordinate2D)] = []
+        
+        // APPLE MAPS SEARCH (MKLocalSearch) - Best for POIs like restaurants, bars, cafes
+        group.enter()
+        searchAppleMaps(query: query) { results in
+            appleResults = results
+            group.leave()
+        }
+        
+        // MAPBOX SEARCH - Good for addresses and international locations
+        group.enter()
+        searchMapbox(query: query) { results in
+            mapboxResults = results
+            group.leave()
+        }
+        
+        // Combine results when both searches complete
+        group.notify(queue: .main) {
+            self.isSearchingSuggestions = false
+            
+            // Prioritize Apple Maps results (better for POIs), then add unique Mapbox results
+            var combinedResults = appleResults
+            
+            // Add Mapbox results that aren't already in Apple results
+            for (mbResult, mbCoord) in mapboxResults {
+                let mbName = mbResult.components(separatedBy: " - ").first ?? mbResult
+                let isDuplicate = appleResults.contains { (appleResult, _) in
+                    let appleName = appleResult.components(separatedBy: " - ").first ?? appleResult
+                    // Check if names are similar
+                    return appleName.lowercased().contains(mbName.lowercased()) || 
+                           mbName.lowercased().contains(appleName.lowercased())
+                }
+                if !isDuplicate {
+                    combinedResults.append((mbResult, mbCoord))
+                }
+            }
+            
+            // Store results and their coordinates
+            self.locationSuggestions = combinedResults.prefix(10).map { $0.0 }
+            self.locationSuggestionsCoords = Dictionary(uniqueKeysWithValues: combinedResults.prefix(10).map { ($0.0, $0.1) })
+            self.showLocationSuggestions = !self.locationSuggestions.isEmpty
+            
+            print("🔍 Search '\(query)' found \(appleResults.count) Apple + \(mapboxResults.count) Mapbox = \(combinedResults.count) total results")
+        }
+    }
+    
+    private func searchMapbox(query: String, completion: @escaping ([(String, CLLocationCoordinate2D)]) -> Void) {
         let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
         let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=5&types=poi,place,locality,neighborhood,address"
+        
+        // Add proximity parameter and bbox for better local results
+        let proximityParam = "\(selectedCoordinate.longitude),\(selectedCoordinate.latitude)"
+        
+        // Create a bounding box around the location (approximately 50km radius)
+        let bboxDelta = 0.5 // Roughly 50km at most latitudes
+        let minLon = selectedCoordinate.longitude - bboxDelta
+        let minLat = selectedCoordinate.latitude - bboxDelta
+        let maxLon = selectedCoordinate.longitude + bboxDelta
+        let maxLat = selectedCoordinate.latitude + bboxDelta
+        let bboxParam = "\(minLon),\(minLat),\(maxLon),\(maxLat)"
+        
+        // Enhanced parameters for better POI search
+        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=5&types=poi,address&proximity=\(proximityParam)&bbox=\(bboxParam)&fuzzyMatch=true&language=en"
         
         guard let url = URL(string: urlString) else {
-            DispatchQueue.main.async {
-                self.isSearchingSuggestions = false
-                self.locationSuggestions = []
-                self.showLocationSuggestions = false
-            }
+            completion([])
             return
         }
         
         URLSession.shared.dataTask(with: url) { data, response, error in
-            DispatchQueue.main.async {
-                self.isSearchingSuggestions = false
+            if let error = error {
+                print("Mapbox search error: \(error.localizedDescription)")
+                completion([])
+                return
+            }
+            
+            guard let data = data else {
+                completion([])
+                return
+            }
+            
+            do {
+                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
                 
-                if let error = error {
-                    self.locationSuggestions = []
-                    self.showLocationSuggestions = false
-                    return
-                }
-                
-                guard let data = data else {
-                    self.locationSuggestions = []
-                    self.showLocationSuggestions = false
-                    return
-                }
-                
-                do {
-                    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                if let json = json,
+                   let features = json["features"] as? [[String: Any]] {
                     
-                    if let json = json,
-                       let features = json["features"] as? [[String: Any]] {
+                    let results = features.compactMap { feature -> (String, CLLocationCoordinate2D)? in
+                        guard let placeName = feature["place_name"] as? String,
+                              let geometry = feature["geometry"] as? [String: Any],
+                              let coordinates = geometry["coordinates"] as? [Double],
+                              coordinates.count >= 2 else {
+                            return nil
+                        }
                         
-                        self.locationSuggestions = features.compactMap { feature in
-                            guard let placeName = feature["place_name"] as? String else {
-                                return nil
+                        let coord = CLLocationCoordinate2D(latitude: coordinates[1], longitude: coordinates[0])
+                        
+                        let displayName: String
+                        if let text = feature["text"] as? String {
+                            let placeType = feature["place_type"] as? [String] ?? []
+                            if placeType.contains("poi") {
+                                displayName = "\(text) - \(placeName)"
+                            } else {
+                                displayName = placeName
                             }
-                            return placeName
-                        }.filter { !$0.isEmpty }
+                        } else {
+                            displayName = placeName
+                        }
                         
-                        self.showLocationSuggestions = !self.locationSuggestions.isEmpty
-                    } else {
-                        self.locationSuggestions = []
-                        self.showLocationSuggestions = false
-                    }
-                } catch {
-                    self.locationSuggestions = []
-                    self.showLocationSuggestions = false
+                        return (displayName, coord)
+                    }.filter { !$0.0.isEmpty }
+                    
+                    completion(results)
+                } else {
+                    completion([])
                 }
+            } catch {
+                print("Mapbox JSON parsing error: \(error.localizedDescription)")
+                completion([])
             }
         }.resume()
+    }
+    
+    private func searchAppleMaps(query: String, completion: @escaping ([(String, CLLocationCoordinate2D)]) -> Void) {
+        guard !query.isEmpty else {
+            completion([])
+            return
+        }
+        
+        // Create search request with natural language query
+        let searchRequest = MKLocalSearch.Request()
+        searchRequest.naturalLanguageQuery = query
+        
+        // Set region to search around the current/selected location (50km radius)
+        let regionRadius: CLLocationDistance = 50000 // 50km
+        let region = MKCoordinateRegion(
+            center: selectedCoordinate,
+            latitudinalMeters: regionRadius,
+            longitudinalMeters: regionRadius
+        )
+        searchRequest.region = region
+        
+        // Only show results within this region
+        searchRequest.resultTypes = [.pointOfInterest, .address]
+        
+        let search = MKLocalSearch(request: searchRequest)
+        search.start { response, error in
+            if let error = error {
+                print("Apple Maps search error: \(error.localizedDescription)")
+                completion([])
+                return
+            }
+            
+            guard let response = response else {
+                completion([])
+                return
+            }
+            
+            let results = response.mapItems.prefix(8).compactMap { item -> (String, CLLocationCoordinate2D)? in
+                guard let name = item.name else { return nil }
+                
+                let coordinate = item.placemark.coordinate
+                
+                // Build display string
+                var displayParts: [String] = [name]
+                
+                // Add address context
+                var addressParts: [String] = []
+                if let thoroughfare = item.placemark.thoroughfare {
+                    addressParts.append(thoroughfare)
+                }
+                if let locality = item.placemark.locality {
+                    addressParts.append(locality)
+                }
+                
+                if !addressParts.isEmpty {
+                    displayParts.append(addressParts.joined(separator: ", "))
+                }
+                
+                let displayName = displayParts.joined(separator: " - ")
+                
+                return (displayName, coordinate)
+            }
+            
+            print("🍎 Apple Maps found \(results.count) results for '\(query)'")
+            completion(Array(results))
+        }
     }
     
     private func geocodeLocation(_ address: String) {
@@ -888,7 +1081,10 @@ struct EventCreationView: View {
         // Use Mapbox Geocoding REST API directly for much better worldwide results
         let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
         let encodedQuery = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? address
-        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=1&types=poi,place,locality,neighborhood,address"
+        
+        // Add proximity bias for better local results
+        let proximityParam = "\(selectedCoordinate.longitude),\(selectedCoordinate.latitude)"
+        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=1&types=poi,address,place,locality,neighborhood&proximity=\(proximityParam)"
         
         guard let url = URL(string: urlString) else {
             DispatchQueue.main.async {
@@ -1213,6 +1409,295 @@ struct FriendPickerView: View {
             selectedFriends.removeAll { $0 == friend }
         } else {
             selectedFriends.append(friend)
+        }
+    }
+}
+
+// MARK: - Location Suggestion Row Component
+struct LocationSuggestionRow: View {
+    let suggestion: String
+    let coordinate: CLLocationCoordinate2D?
+    let isSelected: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Location icon with category
+            VStack {
+                Image(systemName: locationIcon)
+                    .foregroundColor(locationColor)
+                    .font(.title3)
+                
+                if let coord = coordinate {
+                    Text(distanceText(from: coord))
+                        .font(.caption2)
+                        .foregroundColor(.textSecondary)
+                }
+            }
+            .frame(width: 40)
+            
+            // Location details
+            VStack(alignment: .leading, spacing: 2) {
+                Text(primaryName)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.textPrimary)
+                    .lineLimit(1)
+                
+                Text(addressDetails)
+                    .font(.caption)
+                    .foregroundColor(.textSecondary)
+                    .lineLimit(2)
+                
+                if let category = categoryName {
+                    Text(category)
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(4)
+                }
+            }
+            
+            Spacer()
+            
+            // Selection indicator
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+            } else {
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.textSecondary)
+                    .font(.caption)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(isSelected ? Color.blue.opacity(0.05) : Color.clear)
+    }
+    
+    private var primaryName: String {
+        let components = suggestion.components(separatedBy: " - ")
+        return components.first ?? suggestion
+    }
+    
+    private var addressDetails: String {
+        let components = suggestion.components(separatedBy: " - ")
+        if components.count > 1 {
+            return components[1]
+        }
+        return ""
+    }
+    
+    private var categoryName: String? {
+        let name = primaryName.lowercased()
+        
+        // Restaurant categories
+        if name.contains("restaurant") || name.contains("cafe") || name.contains("coffee") {
+            return "Restaurant"
+        }
+        if name.contains("bar") || name.contains("pub") || name.contains("club") {
+            return "Bar/Club"
+        }
+        if name.contains("hotel") || name.contains("hostel") {
+            return "Accommodation"
+        }
+        if name.contains("museum") || name.contains("gallery") {
+            return "Culture"
+        }
+        if name.contains("park") || name.contains("plaza") {
+            return "Public Space"
+        }
+        if name.contains("university") || name.contains("school") {
+            return "Education"
+        }
+        
+        return nil
+    }
+    
+    private var locationIcon: String {
+        let name = primaryName.lowercased()
+        
+        if name.contains("restaurant") || name.contains("cafe") || name.contains("coffee") {
+            return "fork.knife"
+        }
+        if name.contains("bar") || name.contains("pub") || name.contains("club") {
+            return "wineglass"
+        }
+        if name.contains("hotel") || name.contains("hostel") {
+            return "bed.double"
+        }
+        if name.contains("museum") || name.contains("gallery") {
+            return "building.columns"
+        }
+        if name.contains("park") || name.contains("plaza") {
+            return "tree"
+        }
+        if name.contains("university") || name.contains("school") {
+            return "graduationcap"
+        }
+        
+        return "location"
+    }
+    
+    private var locationColor: Color {
+        let name = primaryName.lowercased()
+        
+        if name.contains("restaurant") || name.contains("cafe") || name.contains("coffee") {
+            return .orange
+        }
+        if name.contains("bar") || name.contains("pub") || name.contains("club") {
+            return .purple
+        }
+        if name.contains("hotel") || name.contains("hostel") {
+            return .green
+        }
+        if name.contains("museum") || name.contains("gallery") {
+            return .blue
+        }
+        if name.contains("park") || name.contains("plaza") {
+            return .green
+        }
+        if name.contains("university") || name.contains("school") {
+            return .indigo
+        }
+        
+        return .blue
+    }
+    
+    private func distanceText(from coordinate: CLLocationCoordinate2D) -> String {
+        // This would need the user's current location to calculate distance
+        // For now, just show coordinates
+        return "📍"
+    }
+}
+
+// MARK: - Mapbox Mini Map Preview Component
+struct MiniMapPreview: View {
+    let coordinate: CLLocationCoordinate2D
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Interactive map with pan enabled
+            MapboxMapView(coordinate: coordinate)
+            
+            // Info bar
+            HStack {
+                Image(systemName: "hand.point.up.left")
+                    .font(.caption2)
+                    .foregroundColor(.blue)
+                Text("Tap & drag to explore")
+                    .font(.caption2)
+                    .foregroundColor(.textSecondary)
+                Spacer()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.blue.opacity(0.05))
+        }
+    }
+}
+
+// MARK: - Mapbox Map View Wrapper for Mini Preview
+struct MapboxMapView: UIViewRepresentable {
+    let coordinate: CLLocationCoordinate2D
+    
+    func makeUIView(context: Context) -> MapView {
+        let mapView = MapView(frame: .zero)
+        
+        // Configure map style
+        mapView.mapboxMap.styleURI = .streets
+        
+        // Enable pan gestures, disable zoom/rotate for better UX
+        mapView.gestures.options.panEnabled = true
+        mapView.gestures.options.pinchZoomEnabled = true // Allow zoom for verification
+        mapView.gestures.options.rotateEnabled = false
+        mapView.gestures.options.pitchEnabled = false
+        mapView.gestures.options.doubleTapToZoomInEnabled = true
+        mapView.gestures.options.doubleTouchToZoomOutEnabled = true
+        
+        // Set camera to the location with zoom level 15
+        let cameraOptions = CameraOptions(
+            center: coordinate,
+            zoom: 15.0,
+            bearing: 0,
+            pitch: 0
+        )
+        mapView.mapboxMap.setCamera(to: cameraOptions)
+        
+        // Add annotation immediately (no need to wait for style)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.addAnnotation(to: mapView, context: context)
+        }
+        
+        return mapView
+    }
+    
+    func updateUIView(_ mapView: MapView, context: Context) {
+        // Update annotation if coordinate changed (with more precision)
+        let lastCoord = context.coordinator.lastCoordinate
+        let latDiff = abs(lastCoord.latitude - coordinate.latitude)
+        let lonDiff = abs(lastCoord.longitude - coordinate.longitude)
+        
+        // Only update if coordinates actually changed (threshold: 0.0001 degrees ≈ 11 meters)
+        if latDiff > 0.0001 || lonDiff > 0.0001 {
+            context.coordinator.lastCoordinate = coordinate
+            
+            // Update camera with smooth animation
+            let cameraOptions = CameraOptions(
+                center: coordinate,
+                zoom: 15.0,
+                bearing: 0,
+                pitch: 0
+            )
+            mapView.camera.ease(to: cameraOptions, duration: 0.5)
+            
+            // Update annotation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.addAnnotation(to: mapView, context: context)
+            }
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(coordinate: coordinate)
+    }
+    
+    private func addAnnotation(to mapView: MapView, context: Context) {
+        // Store or reuse the annotation manager
+        if context.coordinator.annotationManager == nil {
+            context.coordinator.annotationManager = mapView.annotations.makePointAnnotationManager()
+        }
+        
+        guard let annotationManager = context.coordinator.annotationManager else { return }
+        
+        // Create a point annotation with custom pin like the main map
+        var pointAnnotation = PointAnnotation(coordinate: coordinate)
+        
+        // Use the destination pin image (same as main map)
+        if let pinImage = UIImage(named: "dest-pin")?.withTintColor(.systemBlue, renderingMode: .alwaysOriginal) {
+            pointAnnotation.image = .init(image: pinImage, name: "event-pin")
+            pointAnnotation.iconAnchor = .bottom
+            pointAnnotation.iconSize = 0.8
+        } else {
+            // Fallback to system icon
+            if let markerImage = UIImage(systemName: "mappin.circle.fill")?.withTintColor(.systemBlue, renderingMode: .alwaysOriginal) {
+                pointAnnotation.image = .init(image: markerImage, name: "blue-marker")
+                pointAnnotation.iconSize = 1.2
+            }
+        }
+        
+        // Add the annotation
+        annotationManager.annotations = [pointAnnotation]
+    }
+    
+    // Coordinator to manage state
+    class Coordinator {
+        var annotationManager: PointAnnotationManager?
+        var lastCoordinate: CLLocationCoordinate2D
+        
+        init(coordinate: CLLocationCoordinate2D) {
+            self.lastCoordinate = coordinate
         }
     }
 }

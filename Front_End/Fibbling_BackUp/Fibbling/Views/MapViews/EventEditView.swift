@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 import PhotosUI
 import CoreLocation
+import MapboxMaps
 
 // MARK: - EventEditView
 struct EventEditView: View {
@@ -43,6 +44,7 @@ struct EventEditView: View {
     @State private var isGeocoding = false
     @State private var isLocationSelected = true // Start as true since we have existing location
     @State private var searchTask: Task<Void, Never>? // For debouncing location search
+    @State private var suppressLocationOnChange = false // prevent TextField onChange from clearing selection when set programmatically
     
     // MARK: - Init
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>) {
@@ -342,13 +344,15 @@ struct EventEditView: View {
                             
                             VStack(spacing: 0) {
                                 HStack {
-                                    TextField("Enter location (e.g., Brandenburger Tor, Berlin)", text: $locationName)
+                                TextField("Enter location (e.g., Brandenburger Tor, Berlin)", text: $locationName)
                                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                                        .onChange(of: locationName) { _, newValue in
-                                            // Reset location selected state when user types
-                                            if !newValue.isEmpty {
-                                                isLocationSelected = false
-                                            }
+                                    .onChange(of: locationName) { oldValue, newValue in
+                                        // Reset location selected state when user types, unless programmatic
+                                        if suppressLocationOnChange {
+                                            suppressLocationOnChange = false
+                                        } else if !newValue.isEmpty && oldValue != newValue {
+                                            isLocationSelected = false
+                                        }
                                             
                                             // Cancel previous search task
                                             searchTask?.cancel()
@@ -402,34 +406,30 @@ struct EventEditView: View {
                                     .padding(.top, 8)
                                 }
                                 
-                                // Location Suggestions
+                                // Enhanced Location Suggestions
                                 if showLocationSuggestions && !locationSuggestions.isEmpty {
                                     VStack(spacing: 0) {
-                                        ForEach(locationSuggestions.prefix(3), id: \.self) { suggestion in
-                                            Button(action: {
-                                                locationName = suggestion
-                                                showLocationSuggestions = false
-                                                locationSuggestions = []
-                                                geocodeLocation(suggestion)
-                                            }) {
-                                                HStack {
-                                                    Image(systemName: "location")
-                                                        .foregroundColor(.orange)
-                                                        .font(.caption)
-                                                    
-                                                    Text(suggestion)
-                                                        .font(.subheadline)
-                                                        .foregroundColor(.textPrimary)
-                                                    
-                                                    Spacer()
+                                        ForEach(Array(locationSuggestions.prefix(3).enumerated()), id: \.element) { index, suggestion in
+                                            LocationSuggestionRow(
+                                                suggestion: suggestion,
+                                                coordinate: nil, // EventEditView doesn't store coordinates yet
+                                                isSelected: false
+                                            )
+                                            .contentShape(Rectangle()) // Make entire area tappable
+                                            .onTapGesture {
+                                                // Force immediate state update
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    suppressLocationOnChange = true
+                                                    locationName = suggestion
+                                                    showLocationSuggestions = false
+                                                    locationSuggestions = []
+                                                    isLocationSelected = true // Set immediately
+                                                    geocodeLocation(suggestion)
+                                                    print("✅ Location selected: \(suggestion)")
                                                 }
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 12)
-                                                .background(Color.bgCard)
                                             }
-                                            .buttonStyle(PlainButtonStyle())
                                             
-                                            if suggestion != locationSuggestions.prefix(3).last {
+                                            if index < min(2, locationSuggestions.count - 1) {
                                                 Divider()
                                                     .padding(.horizontal, 16)
                                             }
@@ -438,6 +438,43 @@ struct EventEditView: View {
                                     .background(Color.bgCard)
                                     .cornerRadius(12)
                                     .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                    .padding(.top, 8)
+                                }
+                                
+                                // Mini Map Preview for EventEditView
+                                if isLocationSelected {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
+                                            Image(systemName: "map")
+                                                .foregroundColor(.blue)
+                                                .font(.caption)
+                                            Text("Event Location")
+                                                .font(.caption.weight(.medium))
+                                                .foregroundColor(.textSecondary)
+                                            Spacer()
+                                        }
+                                        
+                                        MiniMapPreview(coordinate: selectedCoordinate)
+                                            .frame(height: 200)
+                                            .cornerRadius(8)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                            )
+                                        
+                                        HStack {
+                                            Image(systemName: "location.fill")
+                                                .foregroundColor(.blue)
+                                                .font(.caption2)
+                                            Text("\(String(format: "%.4f", selectedCoordinate.latitude)), \(String(format: "%.4f", selectedCoordinate.longitude))")
+                                                .font(.caption2)
+                                                .foregroundColor(.textSecondary)
+                                            Spacer()
+                                        }
+                                    }
+                                    .padding(12)
+                                    .background(Color.blue.opacity(0.05))
+                                    .cornerRadius(12)
                                     .padding(.top, 8)
                                 }
                             }
@@ -696,18 +733,60 @@ struct EventEditView: View {
     private func searchLocationSuggestions(query: String) {
         guard !query.isEmpty else { return }
         
+        // Use Apple Maps (MKLocalSearch) which has excellent POI data
         let searchRequest = MKLocalSearch.Request()
         searchRequest.naturalLanguageQuery = query
+        
+        // Set region to search around the event's current location (50km radius)
+        let regionRadius: CLLocationDistance = 50000 // 50km
+        let region = MKCoordinateRegion(
+            center: selectedCoordinate,
+            latitudinalMeters: regionRadius,
+            longitudinalMeters: regionRadius
+        )
+        searchRequest.region = region
+        searchRequest.resultTypes = [.pointOfInterest, .address]
         
         let search = MKLocalSearch(request: searchRequest)
         search.start { response, error in
             DispatchQueue.main.async {
-                if let response = response {
-                    self.locationSuggestions = response.mapItems.prefix(5).map { item in
-                        return item.name ?? item.placemark.title ?? "Unknown Location"
-                    }
-                    self.showLocationSuggestions = true
+                if let error = error {
+                    print("Location search error: \(error.localizedDescription)")
+                    self.locationSuggestions = []
+                    self.showLocationSuggestions = false
+                    return
                 }
+                
+                guard let response = response else {
+                    self.locationSuggestions = []
+                    self.showLocationSuggestions = false
+                    return
+                }
+                
+                self.locationSuggestions = response.mapItems.prefix(8).compactMap { item in
+                    guard let name = item.name else { return nil }
+                    
+                    // Build display string
+                    var displayParts: [String] = [name]
+                    
+                    // Add address context
+                    var addressParts: [String] = []
+                    if let thoroughfare = item.placemark.thoroughfare {
+                        addressParts.append(thoroughfare)
+                    }
+                    if let locality = item.placemark.locality {
+                        addressParts.append(locality)
+                    }
+                    
+                    if !addressParts.isEmpty {
+                        displayParts.append(addressParts.joined(separator: ", "))
+                    }
+                    
+                    return displayParts.joined(separator: " - ")
+                }
+                
+                self.showLocationSuggestions = !self.locationSuggestions.isEmpty
+                print("🔍 EventEdit search '\(query)' found \(self.locationSuggestions.count) results")
             }
         }
     }
@@ -715,13 +794,77 @@ struct EventEditView: View {
     private func geocodeLocation(_ address: String) {
         isGeocoding = true
         
-        let geocoder = CLGeocoder()
-        geocoder.geocodeAddressString(address) { placemarks, error in
+        // Use Mapbox Geocoding for better POI and international location support
+        let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
+        let encodedQuery = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? address
+        
+        // Add proximity bias for better local results
+        let proximityParam = "\(selectedCoordinate.longitude),\(selectedCoordinate.latitude)"
+        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=1&types=poi,address,place,locality,neighborhood&proximity=\(proximityParam)"
+        
+        guard let url = URL(string: urlString) else {
+            DispatchQueue.main.async {
+                self.isGeocoding = false
+                self.fallbackGeocode(address)
+            }
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
             DispatchQueue.main.async {
                 self.isGeocoding = false
                 
                 if let error = error {
-                    print("Geocoding error: \(error.localizedDescription)")
+                    print("Mapbox geocoding error: \(error.localizedDescription)")
+                    self.fallbackGeocode(address)
+                    return
+                }
+                
+                guard let data = data else {
+                    self.fallbackGeocode(address)
+                    return
+                }
+                
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let features = json["features"] as? [[String: Any]],
+                       let firstFeature = features.first,
+                       let geometry = firstFeature["geometry"] as? [String: Any],
+                       let coordinates = geometry["coordinates"] as? [Double],
+                       coordinates.count >= 2 {
+                        
+                        // Mapbox returns [longitude, latitude]
+                        let longitude = coordinates[0]
+                        let latitude = coordinates[1]
+                        
+                        self.selectedCoordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                        self.isLocationSelected = true
+                        self.showLocationSuggestions = false
+                        self.locationSuggestions = []
+                        
+                        // Optionally update the location name with the full place name
+                        if let placeName = firstFeature["place_name"] as? String {
+                            self.locationName = placeName
+                        }
+                    } else {
+                        print("Failed to parse Mapbox geocoding response")
+                        self.fallbackGeocode(address)
+                    }
+                } catch {
+                    print("Mapbox geocoding JSON error: \(error.localizedDescription)")
+                    self.fallbackGeocode(address)
+                }
+            }
+        }.resume()
+    }
+    
+    // Fallback to Apple's geocoder if Mapbox fails
+    private func fallbackGeocode(_ address: String) {
+        let geocoder = CLGeocoder()
+        geocoder.geocodeAddressString(address) { placemarks, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Fallback geocoding error: \(error.localizedDescription)")
                     return
                 }
                 
