@@ -177,7 +177,6 @@ struct ImageGalleryView: View {
             .onAppear {
                 Task {
                     await imageManager.loadUserImages(username: username, forceRefresh: true)
-                    print("🖼️ Loaded \(imageManager.userImages.count) images for \(username)")
                 }
             }
         }

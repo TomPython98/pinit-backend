@@ -92,5 +92,3 @@ class ImageRetryManager {
         return baseDelay * pow(2.0, Double(attempt))
     }
 }
-
-

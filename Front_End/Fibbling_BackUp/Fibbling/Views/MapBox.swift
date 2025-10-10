@@ -7,8 +7,6 @@ import UIKit
 
 // MARK: - Dummy Model Definitions
 
-
-
 // For simplicity, extend CLLocationCoordinate2D to conform to Codable.
 extension CLLocationCoordinate2D: Codable {
     public func encode(to encoder: Encoder) throws {
@@ -106,8 +104,6 @@ fileprivate struct HotPostsButton: View {
         .padding(.trailing, 8)
     }
 }
-
-
 // MARK: - Networking Response Structures
 
 struct EventPost: Codable {
@@ -136,8 +132,6 @@ struct EventShares: Codable {
     let total: Int
     let breakdown: [String: Int]
 }
-
-
 
 // MARK: - HotPostTapHandler (Helper for tap gesture on hot posts)
 private class HotPostTapHandler: NSObject {
@@ -1759,8 +1753,6 @@ extension String {
 struct MapUserProfile: Codable {
     let is_certified: Bool
 }
-
-
 extension StudyMapView {
     // Method to fetch hot posts for the map
     func fetchHotPostsForMap() -> [EventHotPost] {
@@ -1887,7 +1879,3 @@ struct EventSearchView: View {
         }
     }
 }
-
-
-
-

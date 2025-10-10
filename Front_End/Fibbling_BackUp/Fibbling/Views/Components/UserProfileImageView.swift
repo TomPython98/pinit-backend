@@ -88,12 +88,10 @@ struct UserProfileImageView: View {
             // Reload images when profile is updated (critical for immediate refresh after upload!)
             if let updatedUsername = notification.userInfo?["username"] as? String {
                 if updatedUsername == username {
-                    print("🔄 UserProfileImageView: Received update notification for \(username), reloading...")
                     loadUserImages(forceRefresh: true)
                 }
             } else {
                 // If no specific username, reload for all
-                print("🔄 UserProfileImageView: Received general update notification, reloading...")
                 loadUserImages(forceRefresh: true)
             }
         }
@@ -101,12 +99,10 @@ struct UserProfileImageView: View {
             // ✅ CRITICAL FIX: Refresh when prefetch completes
             if let prefetchedUsernames = notification.userInfo?["usernames"] as? [String] {
                 if prefetchedUsernames.contains(username) {
-                    print("🔄 UserProfileImageView: Received prefetch completion for \(username), refreshing...")
                     refreshID = UUID() // Force view refresh with cached data
                 }
             } else {
                 // If no specific usernames, refresh all
-                print("🔄 UserProfileImageView: Received general prefetch completion, refreshing...")
                 refreshID = UUID()
             }
         }
@@ -130,7 +126,6 @@ struct UserProfileImageView: View {
             
             await MainActor.run {
                 refreshID = UUID() // Force view to refresh with new image
-                print("✅ UserProfileImageView: Updated with \(ImageManager.shared.getUserImagesFromCache(username: username).count) fresh images for \(username)")
             }
         }
     }
@@ -188,7 +183,6 @@ struct CachedProfileImageView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ImagesPrefetchCompleted"))) { notification in
             // ✅ CRITICAL FIX: Refresh when prefetch completes
-            print("🔄 CachedProfileImageView: Received prefetch completion, reloading image...")
             loadImage()
         }
     }
@@ -248,7 +242,6 @@ struct CachedProfileImageView: View {
                 await MainActor.run { isLoading = false }
             }
         } catch {
-            print("❌ Failed to download image from \(urlString): \(error)")
             await MainActor.run { isLoading = false }
         }
     }

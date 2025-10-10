@@ -1068,7 +1068,6 @@ struct ProfileView: View {
                         }
                     } else {
                         // No JWT token available - user needs to log in again
-                        print("⚠️ No JWT token available for profile loading")
                     }
                 }
             }
@@ -1115,7 +1114,6 @@ struct ProfileView: View {
                         // Upload to backend
                         let uploadSuccess = await uploadProfilePicture()
                         if uploadSuccess {
-                            print("Profile picture uploaded successfully")
                             // Small delay to ensure backend has processed the image
                             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                             
@@ -1130,7 +1128,6 @@ struct ProfileView: View {
                                         object: nil,
                                         userInfo: ["username": username]
                                     )
-                                    print("✅ Posted ProfileImageUpdated notification for \(username)")
                                 }
                                 
                                 // Update the profile image with the newly uploaded image
@@ -1151,7 +1148,6 @@ struct ProfileView: View {
                                 }
                             }
                         } else {
-                            print("Failed to upload profile picture")
                         }
                     }
                 }
@@ -2536,14 +2532,11 @@ struct ProfileView: View {
                     do {
                         let friendsData = try JSONDecoder().decode(FriendsData.self, from: data)
                         self.friendsCount = friendsData.friends.count
-                        print("✅ Loaded friends count: \(self.friendsCount) for user: \(username)")
                     } catch {
-                        print("❌ Error parsing friends data: \(error)")
                         // Fallback to account manager friends count
                         self.friendsCount = self.accountManager.friends.count
                     }
                 } else {
-                    print("❌ No data received for friends count for user: \(username)")
                     // Fallback to account manager friends count
                     self.friendsCount = self.accountManager.friends.count
                 }
@@ -2573,12 +2566,9 @@ struct ProfileView: View {
                         
                         self.eventsHosted = hostedCount
                         self.eventsAttended = attendedCount
-                        print("✅ Loaded events data - Hosted: \(self.eventsHosted), Attended: \(self.eventsAttended) for user: \(username)")
                     } catch {
-                        print("❌ Error parsing events data: \(error)")
                     }
                 } else {
-                    print("❌ No data received for events data for user: \(username)")
                 }
             }
         }.resume()
@@ -3116,7 +3106,6 @@ struct SocialActivityFeedView: View {
                     color: .brandPrimary
                 ) {
                     // Navigate to event creation - would need navigation state
-                    print("Navigate to event creation")
                 }
                 
                 QuickActionCard(
@@ -3126,7 +3115,6 @@ struct SocialActivityFeedView: View {
                     color: .brandSecondary
                 ) {
                     // Navigate to friends - would need navigation state
-                    print("Navigate to friends")
                 }
                 
                 QuickActionCard(
@@ -3136,7 +3124,6 @@ struct SocialActivityFeedView: View {
                     color: .brandSuccess
                 ) {
                     // Navigate to map - would need navigation state
-                    print("Navigate to map")
                 }
                 
                 QuickActionCard(
@@ -3146,7 +3133,6 @@ struct SocialActivityFeedView: View {
                     color: .brandWarning
                 ) {
                     // Navigate to ratings - would need navigation state
-                    print("Navigate to ratings")
                 }
             }
         }

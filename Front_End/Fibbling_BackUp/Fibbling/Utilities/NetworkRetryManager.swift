@@ -70,5 +70,3 @@ class NetworkRetryManager {
         return false
     }
 }
-
-

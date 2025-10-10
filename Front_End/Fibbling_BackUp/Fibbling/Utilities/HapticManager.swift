@@ -201,7 +201,6 @@ enum HapticStyle {
  
  // Simple button with haptic
  Button("Tap Me") {
-     print("Tapped!")
  }
  .hapticButton(.medium)
  
@@ -229,4 +228,3 @@ enum HapticStyle {
      }
  }
  */
-

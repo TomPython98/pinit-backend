@@ -117,4 +117,3 @@ extension Error {
         AppLogger.error(context, error: self, category: category)
     }
 }
-

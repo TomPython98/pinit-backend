@@ -222,7 +222,6 @@ class ProfessionalImageCache: ObservableObject {
         do {
             try data.write(to: fileURL)
         } catch {
-            print("❌ Failed to write image to disk cache: \(error)")
         }
     }
     
@@ -269,7 +268,6 @@ class ProfessionalImageCache: ObservableObject {
             try? self.fileManager.createDirectory(at: self.cacheDirectory, withIntermediateDirectories: true)
         }
         
-        print("🧹 Cleared all image caches")
     }
     
     func clearMemoryCache() {
@@ -280,14 +278,12 @@ class ProfessionalImageCache: ObservableObject {
             self.accessOrder.removeAll()
         }
         
-        print("🧹 Cleared memory caches")
     }
     
     // MARK: - Clear User-Specific Images (Critical for Upload Refresh!)
     
     /// Clears all cached images for a specific user - ensures profile images refresh immediately after upload
     func clearImagesForUser(username: String) {
-        print("🧹 ProfessionalImageCache: Clearing all images for user: \(username)")
         
         cacheQueue.async(flags: .barrier) {
             // Clear memory caches for this user
@@ -303,7 +299,6 @@ class ProfessionalImageCache: ObservableObject {
                 self.accessOrder.removeAll { $0 == key }
             }
             
-            print("✅ ProfessionalImageCache: Cleared \(keysToRemove.count) memory cache entries for \(username)")
             
             // Clear disk cache for this user
             do {
@@ -320,15 +315,12 @@ class ProfessionalImageCache: ObservableObject {
                     }
                 }
                 
-                print("✅ ProfessionalImageCache: Cleared \(removedCount) disk cache files for \(username)")
             } catch {
-                print("❌ ProfessionalImageCache: Failed to clear disk cache for user: \(error)")
             }
         }
     }
     
     private func handleMemoryWarning() {
-        print("⚠️ Memory warning - clearing caches")
         clearMemoryCache()
     }
     
@@ -371,9 +363,7 @@ class ProfessionalImageCache: ObservableObject {
     
     func printCacheStats() {
         let stats = getCacheSize()
-        print("📊 Cache Stats:")
         print("   Memory: \(stats.memory) images")
         print("   Disk: \(stats.disk / 1024 / 1024) MB")
     }
 }
-

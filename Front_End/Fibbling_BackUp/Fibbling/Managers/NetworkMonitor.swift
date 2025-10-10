@@ -85,7 +85,6 @@ class NetworkMonitor: ObservableObject {
                     self.connectionSpeed = .fair
                 }
                 
-                print("📡 Network: \(self.connectionSpeed) - Connected: \(self.isConnected)")
             }
         }
         
@@ -103,4 +102,3 @@ class NetworkMonitor: ObservableObject {
         return connectionSpeed
     }
 }
-

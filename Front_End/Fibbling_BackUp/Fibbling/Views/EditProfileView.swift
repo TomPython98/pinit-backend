@@ -528,7 +528,6 @@ struct EditProfileView: View {
         let success = await imageManager.uploadImage(request)
         
         if success {
-            print("✅ Image uploaded successfully, refreshing ImageManager")
             // The uploadImage method already calls loadUserImages, but let's ensure it's refreshed
             await imageManager.loadUserImages(username: username, forceRefresh: true)
             
@@ -539,7 +538,6 @@ struct EditProfileView: View {
                 userInfo: ["username": username]
             )
         } else {
-            print("❌ Image upload failed")
         }
     }
     

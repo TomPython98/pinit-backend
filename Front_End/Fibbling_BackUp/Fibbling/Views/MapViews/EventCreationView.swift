@@ -964,9 +964,7 @@ struct EventCreationView: View {
             DispatchQueue.main.async {
                 if let placemark = placemarks?.first {
                     self.selectedCoordinate = placemark.location?.coordinate ?? self.selectedCoordinate
-                    print("📍 Fallback geocoded '\(address)' to: \(self.selectedCoordinate)")
                 } else {
-                    print("❌ Complete geocoding failure for '\(address)'")
                     // Keep current coordinate as last resort
                 }
             }
@@ -1070,23 +1068,19 @@ struct EventCreationView: View {
                 self.isLoading = false
                 
                 if let error = error {
-                    print("❌ Event creation error: \(error.localizedDescription)")
                     return
                 }
                 
                 if let httpResponse = response as? HTTPURLResponse {
-                    print("📊 Event creation status code: \(httpResponse.statusCode)")
                     
                     if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
                         // Success - parse response
                         if let data = data {
                             do {
                                 let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                                print("✅ Event created successfully: \(json ?? [:])")
                                 
                                 // Create local event for UI using the backend event ID
                                 let eventId = json?["event_id"] as? String ?? UUID().uuidString
-                                print("🔍 EventCreationView: Backend returned event_id: \(eventId)")
                                 
                                 let newEvent = StudyEvent(
                                     id: UUID(uuidString: eventId) ?? UUID(),
@@ -1106,15 +1100,12 @@ struct EventCreationView: View {
                                     matchedUsers: []
                                 )
                                 
-                                print("🔍 EventCreationView: Created StudyEvent with ID: \(newEvent.id.uuidString)")
                                 self.onSave(newEvent)
                                 self.dismiss()
                             } catch {
-                                print("❌ JSON parsing error: \(error.localizedDescription)")
                             }
                         }
                         } else {
-                        print("❌ Server error: HTTP \(httpResponse.statusCode)")
                                 }
                             }
             }
@@ -1136,8 +1127,6 @@ struct ModernTextFieldStyle: TextFieldStyle {
             )
     }
 }
-
-
 extension View {
     func cardStyle() -> some View {
         self
@@ -1147,8 +1136,6 @@ extension View {
             .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
     }
 }
-
-
 // MARK: - Friend Picker View
 struct FriendPickerView: View {
     @Binding var selectedFriends: [String]
@@ -1229,4 +1216,3 @@ struct FriendPickerView: View {
         }
     }
 }
-

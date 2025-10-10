@@ -332,7 +332,6 @@ class ImageManager: ObservableObject {
                 }
             }
         } catch {
-            print("❌ Failed to download image from \(urlString): \(error)")
         }
     }
     
@@ -385,13 +384,17 @@ class ImageManager: ObservableObject {
     
     // MARK: - Cached Image Loading
     func loadCachedImage(from url: String) async -> (image: UIImage?, fromCache: Bool) {
+        
         // Check cache first
         if let cachedImage = getCachedImage(for: url) {
             return (cachedImage, true) // Loaded from cache
         }
         
+        
         // Load from URL if not in cache
-        guard let imageURL = URL(string: url) else { return (nil, false) }
+        guard let imageURL = URL(string: url) else { 
+            return (nil, false) 
+        }
         
         do {
             let (data, _) = try await URLSession.shared.data(from: imageURL)
@@ -399,6 +402,8 @@ class ImageManager: ObservableObject {
                 // Cache the image
                 setCachedImage(image, for: url)
                 return (image, false) // Loaded from network
+            } else {
+                return (nil, false)
             }
         } catch {
             AppLogger.error("Failed to load image from URL", error: error, category: AppLogger.image)
@@ -712,7 +717,6 @@ extension ProfessionalImageCache {
                 return image
             }
         } catch {
-            print("❌ Failed to prefetch image: \(error.localizedDescription)")
         }
         
         return nil

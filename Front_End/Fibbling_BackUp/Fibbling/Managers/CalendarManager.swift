@@ -308,28 +308,20 @@ class CalendarManager: ObservableObject {
                         let include = !isExpired && (isUserEvent || isAutoMatchedEvent || isInvitedEvent || isPublicEvent)
                         
                         if include {
-                            print("✅ Including event: \(event.title)")
                             
                             // Debug output to identify different event types
                             if event.attendees.contains(self.username) {
-                                print("  📍 User is attendee")
                             }
                             if event.host == self.username {
-                                print("  👑 User is host")
                             }
                             if isAutoMatchedEvent {
-                                print("  🤖 Auto-matched event")
                             }
                             if isInvitedEvent {
-                                print("  📨 Invited event")
                             }
                             if isPublicEvent {
-                                print("  🌍 Public event")
                             }
                         } else {
-                            print("❌ Excluding event: \(event.title)")
                             if isExpired {
-                                print("  ⏰ Event expired")
                             }
                         }
                         

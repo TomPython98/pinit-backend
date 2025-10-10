@@ -204,13 +204,11 @@ class ImageLoader: ObservableObject {
                     // Max retries reached
                     self.error = error
                     isLoading = false
-                    print("❌ Failed to load image after \(maxRetries) attempts: \(error.localizedDescription)")
                     return
                 }
                 
                 // Wait before retrying (exponential backoff)
                 let delay = Double(attempt) * 2.0
-                print("⏳ Retrying image load (attempt \(attempt)/\(maxRetries)) in \(delay)s...")
                 
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }
@@ -330,4 +328,3 @@ struct ProfessionalCachedImageView_Previews: PreviewProvider {
         .padding()
     }
 }
-

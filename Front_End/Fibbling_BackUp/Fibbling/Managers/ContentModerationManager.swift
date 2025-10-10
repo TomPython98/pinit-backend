@@ -487,14 +487,3 @@ struct ReportContentView: View {
         contentId: "test_user"
     )
 }
-
-
-
-
-
-
-
-
-
-
-

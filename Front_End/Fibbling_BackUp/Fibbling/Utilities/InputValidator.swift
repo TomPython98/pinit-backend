@@ -234,6 +234,3 @@ extension String {
         InputValidator.sanitizeText(self, maxLength: maxLength)
     }
 }
-
-
-

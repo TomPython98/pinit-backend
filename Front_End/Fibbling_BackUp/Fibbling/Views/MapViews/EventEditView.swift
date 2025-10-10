@@ -564,7 +564,6 @@ struct EventEditView: View {
             return
         }
         
-        print("🔍 EventEditView: Event ID: \(event.id.uuidString)")
         
         // Try updating with URL fallback mechanism
         tryUpdateEvent(index: 0, username: username)
@@ -587,7 +586,6 @@ struct EventEditView: View {
         let endpointPath = APIConfig.endpoints["updateEvent"] ?? "updateEvent"
         let updateURL = "\(baseURL)\(endpointPath)"
         
-        print("🔍 EventEditView: Trying URL \(index + 1)/\(baseURLs.count): \(updateURL)")
         
         guard let url = URL(string: updateURL) else {
             // Skip to next URL if this one can't be constructed
@@ -608,7 +606,6 @@ struct EventEditView: View {
         let formattedEndDate = isoFormatter.string(from: eventEndDate)
         
         // Prepare the request body
-        print("🔍 EventEditView: Using event ID for update: \(event.id.uuidString)")
         let jsonBody: [String: Any] = [
             "username": username,
             "event_id": event.id.uuidString,
@@ -625,7 +622,6 @@ struct EventEditView: View {
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: jsonBody)
-            print("🔍 EventEditView: Request body: \(jsonBody)")
         } catch {
             alertMessage = "Error preparing request: \(error.localizedDescription)"
             showAlert = true
@@ -636,22 +632,18 @@ struct EventEditView: View {
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("🔍 EventEditView: Network error on URL \(index + 1): \(error.localizedDescription)")
                     // Try the next URL
                     self.tryUpdateEvent(index: index + 1, username: username)
                     return
                 }
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    print("🔍 EventEditView: Invalid response on URL \(index + 1)")
                     // Try the next URL
                     self.tryUpdateEvent(index: index + 1, username: username)
                     return
                 }
                 
-                print("🔍 EventEditView: Response status: \(httpResponse.statusCode)")
                 if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                    print("🔍 EventEditView: Response body: \(responseString)")
                 }
                 
                 if httpResponse.statusCode == 200 {

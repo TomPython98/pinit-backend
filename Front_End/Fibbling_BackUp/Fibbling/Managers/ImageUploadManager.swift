@@ -54,7 +54,6 @@ class ImageUploadManager: ObservableObject {
             
             uploadProgress[uploadId] = 0.3
             
-            print("📤 Uploading: Original \(request.imageData.count / 1024)KB → Optimized \(optimizedData.count / 1024)KB")
             
             // Step 2: Perform upload
             let success = await performUpload(
@@ -218,7 +217,6 @@ class ImageUploadManager: ObservableObject {
                             // Also clear URLSession cache to prevent OS-level caching
                             URLCache.shared.removeAllCachedResponses()
                             
-                            print("🔄 Cleared ALL caches after upload for \(request.username), reloading...")
                         }
                         
                         // Small delay to ensure backend has processed the image
@@ -234,7 +232,6 @@ class ImageUploadManager: ObservableObject {
                                 object: nil,
                                 userInfo: ["username": request.username]
                             )
-                            print("✅ Posted ProfileImageUpdated notification")
                         }
                         
                         return true
@@ -247,7 +244,6 @@ class ImageUploadManager: ObservableObject {
             }
         } catch {
             uploadError = "Upload failed: \(error.localizedDescription)"
-            print("❌ Upload error: \(error)")
         }
         
         return false
@@ -284,9 +280,7 @@ class ImageUploadManager: ObservableObject {
                 await processUploadQueue()
                 
                 if success {
-                    print("✅ Background upload completed: \(task.request.filename)")
                 } else {
-                    print("❌ Background upload failed: \(task.request.filename)")
                 }
             }
         }
@@ -328,4 +322,3 @@ private extension Data {
         }
     }
 }
-

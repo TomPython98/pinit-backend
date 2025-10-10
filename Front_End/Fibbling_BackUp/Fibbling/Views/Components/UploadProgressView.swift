@@ -274,7 +274,6 @@ extension View {
         Text("Upload Progress Components").font(.title.bold())
         
         UploadProgressView(progress: 0.65, fileName: "profile.jpg", showCancel: true, onCancel: {
-            print("Cancel upload")
         })
         
         UploadProgressView(progress: 1.0, fileName: "photo.jpg", showCancel: false)
@@ -290,4 +289,3 @@ extension View {
     .padding()
     .background(Color.bgSurface)
 }
-

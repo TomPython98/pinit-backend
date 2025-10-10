@@ -850,8 +850,6 @@ struct SimpleEventRow: View {
     }
 }
 
-
-
 // Interest tag component for the UI
 struct InterestTag: View {
     let interest: String

@@ -128,10 +128,8 @@ struct EventDetailView: View {
             ($0.title == event.title && $0.host == event.host && abs($0.time.timeIntervalSince(event.time)) < 60)
         }) {
             // Found event in array (by ID or by matching title/host/time), use it for any additional data
-            print("🔍 EventDetailedView: Found updated event in array with ID: \(updatedEventInArray.id.uuidString)")
             self._localEvent = State(initialValue: updatedEventInArray)
         } else {
-            print("🔍 EventDetailedView: No matching event found in array, using passed event ID: \(event.id.uuidString)")
         }
     }
     
@@ -2165,7 +2163,10 @@ struct EventSocialFeedView: View {
     // MARK: - Update the addPost function
 
     private func addPost() {
-        guard isPostButtonEnabled else { return }
+        
+        guard isPostButtonEnabled else { 
+            return 
+        }
         
         // Show loading state
         _ = "Posting..." // Loading message available for future use if needed
@@ -2173,7 +2174,9 @@ struct EventSocialFeedView: View {
         isRefreshing = true
         
         // API endpoint
-        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/events/comment/") else {
+        let urlString = "\(APIConfig.primaryBaseURL)/events/comment/"
+        
+        guard let url = URL(string: urlString) else {
             errorMessage = "Invalid API URL"
             isRefreshing = false
             return
@@ -2182,6 +2185,9 @@ struct EventSocialFeedView: View {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Add JWT authentication header
+        accountManager.addAuthHeader(to: &request)
         
         // Prepare post data
         let imageURLs = selectedImages.isEmpty ? nil : selectedImages.map { _ in "placeholder" }
@@ -2458,6 +2464,9 @@ struct EventSocialFeedView: View {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Add JWT authentication header
+        accountManager.addAuthHeader(to: &request)
         
         // Prepare reply data
         let username = accountManager.currentUser ?? "Guest"
@@ -3045,8 +3054,6 @@ struct SocialImagePicker: UIViewControllerRepresentable {
 }
 
 // MARK: - Group Chat Stub
-
-
 // MARK: - Preview
 struct EventDetailAndInteractions_Previews: PreviewProvider {
     static var previews: some View {
@@ -3082,8 +3089,6 @@ struct EventDetailAndInteractions_Previews: PreviewProvider {
         }
     }
 }
-
-
 // Enhanced EventPostView with better visual feedback for likes
 struct EnhancedEventPostView: View {
     let post: EventInteractions.Post

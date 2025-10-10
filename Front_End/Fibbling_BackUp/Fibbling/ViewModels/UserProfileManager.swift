@@ -77,26 +77,20 @@ class UserProfileManager: ObservableObject {
             guard let self = self else { return }
             
             if let httpResponse = response as? HTTPURLResponse {
-                print("🔍 Profile fetch attempt \(index + 1): \(profileURL)")
-                print("📊 Status code: \(httpResponse.statusCode)")
                 
                 // If we got a valid response (even an error), log it
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {
-                    print("📄 Response data: \(dataString)")
                 }
                 
                 // If we got a successful response, parse it
                 if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
-                    print("✅ Successfully fetched profile data")
                     self.parseProfileData(data: data, completion: completion)
                     return
                 } else {
-                    print("❌ HTTP Error: \(httpResponse.statusCode)")
                 }
             }
             
             if let error = error {
-                print("❌ Network error: \(error.localizedDescription)")
             }
             
             // Try the next URL
@@ -118,59 +112,44 @@ class UserProfileManager: ObservableObject {
         
         do {
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-            print("📋 Parsing profile data: \(json ?? [:])")
             
             DispatchQueue.main.async {
                 // Parse basic profile information
                 if let fullName = json?["full_name"] as? String {
                     self.fullName = fullName
-                    print("✅ Parsed full_name: \(fullName)")
                 } else {
-                    print("⚠️ No full_name found")
                 }
                 
                 if let university = json?["university"] as? String {
                     self.university = university
-                    print("✅ Parsed university: \(university)")
                 } else {
-                    print("⚠️ No university found")
                 }
                 
                 if let degree = json?["degree"] as? String {
                     self.degree = degree
-                    print("✅ Parsed degree: \(degree)")
                 } else {
-                    print("⚠️ No degree found")
                 }
                 
                 if let year = json?["year"] as? String {
                     self.year = year
-                    print("✅ Parsed year: \(year)")
                 } else {
-                    print("⚠️ No year found")
                 }
                 
                 if let bio = json?["bio"] as? String {
                     self.bio = bio
-                    print("✅ Parsed bio: \(bio)")
                 } else {
-                    print("⚠️ No bio found")
                 }
                 
                 // Parse interests
                 if let interestsArray = json?["interests"] as? [String] {
                     self.interests = interestsArray
-                    print("✅ Parsed interests: \(interestsArray)")
                 } else {
-                    print("⚠️ No interests found")
                 }
                 
                 // Parse skills
                 if let skillsDict = json?["skills"] as? [String: String] {
                     self.skills = skillsDict
-                    print("✅ Parsed skills: \(skillsDict)")
                 } else {
-                    print("⚠️ No skills found")
                 }
                 
                 // Parse auto-matching preferences
@@ -320,7 +299,6 @@ class UserProfileManager: ObservableObject {
                 
                 // If we got a valid response (even an error), log it
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {
-                    print("📡 Profile Update Response (\(httpResponse.statusCode)): \(dataString)")
                 }
                 
                 // If we got a successful response, return success
@@ -391,7 +369,12 @@ class UserProfileManager: ObservableObject {
             tryNextCompletionURL(index: index + 1, username: username, completion: completion)
             return
         }
-        let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+        
+        var request = URLRequest(url: url)
+        // Add JWT authentication header
+        accountManager?.addAuthHeader(to: &request)
+        
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
             if let httpResponse = response as? HTTPURLResponse {
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {

@@ -267,4 +267,3 @@ struct LoginView: View {
             return "Enter \(title.lowercased())"
         }
     }
-    

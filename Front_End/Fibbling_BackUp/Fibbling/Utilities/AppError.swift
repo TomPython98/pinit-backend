@@ -235,6 +235,3 @@ extension Result where Failure == AppError {
         return nil
     }
 }
-
-
-
