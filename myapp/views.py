@@ -1322,12 +1322,12 @@ def update_study_event(request):
             # Broadcast event update to WebSocket clients
             attendees = [u.username for u in event.attendees.all()]
             invited_friends = [u.username for u in event.invited_friends.all()]
-            all_users = list(set(attendees + invited_friends + [event.host.username]))
             
             broadcast_event_updated(
                 event_id=event_uuid,
-                event_type="update",
-                usernames=all_users
+                host_username=event.host.username,
+                attendees=attendees,
+                invited_friends=invited_friends
             )
             
             return JsonResponse({
