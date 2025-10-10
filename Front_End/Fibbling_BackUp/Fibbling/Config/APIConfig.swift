@@ -36,6 +36,7 @@ struct APIConfig {
     static let endpoints = [
         "register": "/register/",
         "login": "/login/",
+        "token/refresh/": "/token/refresh/",
         "getUserProfile": "/get_user_profile/",
         "updateProfile": "/update_user_profile/",
         "getEvents": "/get_study_events/",

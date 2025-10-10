@@ -212,7 +212,7 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 
-@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@ratelimit(key='user', rate='500/h', method='GET', block=True)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -833,7 +833,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone  # Add this import
 from .models import StudyEvent, DeclinedInvitation  # Add DeclinedInvitation
 
-@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@ratelimit(key='user', rate='1000/h', method='GET', block=True)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -1397,7 +1397,7 @@ def get_user_profile(request, username):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-@ratelimit(key='ip', rate='100/h', method='GET', block=True)
+@ratelimit(key='ip', rate='500/h', method='GET', block=True)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -1499,7 +1499,7 @@ def get_event_embedding(event):
         cache.set(cache_key, embedding, timeout=3600)  # Cache for 1 hour
     return embedding
 
-@ratelimit(key='ip', rate='50/h', method='GET', block=True)
+@ratelimit(key='ip', rate='500/h', method='GET', block=True)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -3604,7 +3604,7 @@ def schedule_rating_reminder(request):
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-@ratelimit(key='ip', rate='100/h', method='GET', block=True)
+@ratelimit(key='ip', rate='500/h', method='GET', block=True)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -4201,7 +4201,7 @@ def upload_user_image(request):
     except Exception as e:
         return JsonResponse({"error": f"Upload failed: {str(e)}"}, status=500)
 
-@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@ratelimit(key='user', rate='500/h', method='GET', block=True)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])

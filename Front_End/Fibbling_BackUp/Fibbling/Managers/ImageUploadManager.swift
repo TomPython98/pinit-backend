@@ -154,8 +154,8 @@ class ImageUploadManager: ObservableObject {
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = networkMonitor.connectionSpeed.timeout
         
-        // Add JWT authentication header
-        accountManager?.addAuthHeader(to: &urlRequest)
+        // Add JWT authentication header with automatic refresh
+        await accountManager?.addAuthHeaderWithRefresh(to: &urlRequest)
         
         // Create multipart form data with progress tracking
         let boundary = "Boundary-\(UUID().uuidString)"

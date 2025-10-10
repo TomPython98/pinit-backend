@@ -26,10 +26,12 @@ class UserAccountManager: ObservableObject {
             self.accessToken = UserDefaults.standard.string(forKey: accessTokenKey)
             self.refreshToken = UserDefaults.standard.string(forKey: refreshTokenKey)
             
-            // Fetch friends and requests on init if user is logged in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.fetchFriends()
-                self.fetchFriendRequests()
+            // Only fetch data if we have valid tokens
+            if self.accessToken != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.fetchFriends()
+                    self.fetchFriendRequests()
+                }
             }
         } else {
         }
@@ -46,6 +48,65 @@ class UserAccountManager: ObservableObject {
     func addAuthHeader(to request: inout URLRequest) {
         if let token = accessToken {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            print("🔍 🔐 DEBUG: Added JWT token to request: \(String(token.prefix(20)))...")
+        } else {
+            print("❌ 🔐 DEBUG: No JWT token available for request!")
+        }
+    }
+    
+    // MARK: - Token Refresh
+    func refreshAccessToken() async -> Bool {
+        guard let refreshToken = refreshToken else {
+            return false
+        }
+        
+        let refreshURL = APIConfig.fullURL(for: "token/refresh/")
+        guard let url = URL(string: refreshURL) else {
+            return false
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["refresh": refreshToken]
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            return false
+        }
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse,
+               httpResponse.statusCode == 200,
+               let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let newAccessToken = json["access"] as? String {
+                
+                // Update the access token
+                DispatchQueue.main.async {
+                    self.accessToken = newAccessToken
+                    UserDefaults.standard.set(newAccessToken, forKey: self.accessTokenKey)
+                }
+                return true
+            }
+        } catch {
+            // Token refresh failed
+        }
+        
+        return false
+    }
+    
+    func addAuthHeaderWithRefresh(to request: inout URLRequest) async {
+        if let token = accessToken {
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            // Try to refresh token if we don't have one
+            let refreshed = await refreshAccessToken()
+            if refreshed, let token = accessToken {
+                request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
         }
     }
     
@@ -195,6 +256,11 @@ class UserAccountManager: ObservableObject {
                 // Extract JWT tokens if login successful
                 let accessToken = json?["access_token"] as? String
                 let refreshToken = json?["refresh_token"] as? String
+                
+                // Debug: Log token extraction
+                print("🔍 🔐 DEBUG: Login response JSON: \(json ?? [:])")
+                print("🔍 🔐 DEBUG: Access token extracted: \(accessToken != nil ? "YES (\(String(accessToken!.prefix(20)))...)" : "NO")")
+                print("🔍 🔐 DEBUG: Refresh token extracted: \(refreshToken != nil ? "YES (\(String(refreshToken!.prefix(20)))...)" : "NO")")
 
                 AppLogger.logAuth("Login result: \(success ? "success" : "failed")")
 
@@ -203,14 +269,21 @@ class UserAccountManager: ObservableObject {
                         self.currentUser = username
                         // Save tokens if provided
                         if let access = accessToken, let refresh = refreshToken {
+                            print("🔍 🔐 DEBUG: Saving tokens to UserDefaults")
                             self.saveTokens(access: access, refresh: refresh)
+                            print("🔍 🔐 DEBUG: Tokens saved. Current accessToken: \(self.accessToken != nil ? "Present" : "Nil")")
+                            
+                            // Only fetch data AFTER tokens are saved
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                self.fetchFriends()
+                                self.fetchFriendRequests()
+                            }
+                        } else {
+                            print("❌ 🔐 DEBUG: No JWT tokens received from login response!")
                         }
                         // Also save to UserDefaults for persistence
                         UserDefaults.standard.set(true, forKey: "isLoggedIn")
                         UserDefaults.standard.set(username, forKey: "username")
-                        
-                        self.fetchFriends()
-                        self.fetchFriendRequests()
                     }
                     completion(success, message)
                 }
