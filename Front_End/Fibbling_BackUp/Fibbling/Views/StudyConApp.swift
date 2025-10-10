@@ -36,6 +36,9 @@ struct PinItApp: App {
                     .environmentObject(notificationManager)
                     .onAppear {
                         
+                        // Initialize ImageManager with account manager for JWT authentication
+                        ImageManager.shared.setAccountManager(accountManager)
+                        
                         // When app appears while logged in, refresh calendar events
                         if let username = accountManager.currentUser, !username.isEmpty {
                             // calendarManager.fetchEvents() // Removed - WebSocket will handle updates
@@ -50,6 +53,8 @@ struct PinItApp: App {
                     .environmentObject(chatManager)
                     .environmentObject(notificationManager)
                     .onAppear {
+                        // Initialize ImageManager with account manager for JWT authentication
+                        ImageManager.shared.setAccountManager(accountManager)
                     }
             }
         }

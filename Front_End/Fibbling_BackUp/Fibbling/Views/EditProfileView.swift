@@ -3,8 +3,13 @@ import PhotosUI
 
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var profileManager = UserProfileManager()
+    @EnvironmentObject var accountManager: UserAccountManager
+    @StateObject private var profileManager: UserProfileManager
     @ObservedObject private var imageManager = ImageManager.shared
+    
+    init() {
+        _profileManager = StateObject(wrappedValue: UserProfileManager())
+    }
     
     // User profile data
     @State private var username = ""
@@ -55,6 +60,9 @@ struct EditProfileView: View {
                 }
             }
             .onAppear {
+                // Initialize profile manager with account manager for JWT authentication
+                profileManager.setAccountManager(accountManager)
+                
                 loadProfileData()
                 Task {
                     await imageManager.loadUserImages(username: username, forceRefresh: true)

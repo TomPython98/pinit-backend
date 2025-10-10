@@ -62,6 +62,11 @@ struct CustomCalendarView: View {
                         // Add the event to calendar manager
                         calendarManager.addEvent(newEvent)
                         showEventCreation = false
+                        
+                        // 🔧 FIX: Refresh events from backend to ensure we have the correct backend ID
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            calendarManager.fetchEvents()
+                        }
                     }
                 )
             }

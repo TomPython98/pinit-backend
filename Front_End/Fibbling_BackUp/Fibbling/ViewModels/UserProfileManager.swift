@@ -27,6 +27,17 @@ class UserProfileManager: ObservableObject {
 
     // Use APIConfig for consistent URL management
     private let baseURLs = APIConfig.baseURLs
+    private var accountManager: UserAccountManager? // Reference to account manager for auth
+    
+    // MARK: - Initialization
+    
+    init(accountManager: UserAccountManager? = nil) {
+        self.accountManager = accountManager
+    }
+    
+    func setAccountManager(_ accountManager: UserAccountManager) {
+        self.accountManager = accountManager
+    }
     
     // MARK: - API Methods
     
@@ -59,7 +70,10 @@ class UserProfileManager: ObservableObject {
             return
         }
         
-        let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+        var request = URLRequest(url: url)
+        accountManager?.addAuthHeader(to: &request)
+        
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
             
             if let httpResponse = response as? HTTPURLResponse {
@@ -247,7 +261,7 @@ class UserProfileManager: ObservableObject {
         
         let baseURL = baseURLs[index]
         
-        guard let url = URL(string: "\(baseURL)/update_user_interests/") else {
+        guard let url = URL(string: "\(baseURL)/update_user_preferences/\(username)/") else {
             // Skip to next URL if this one can't be constructed
             tryUpdateWithNextURL(index: index + 1, 
                                username: username,
@@ -267,18 +281,23 @@ class UserProfileManager: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager?.addAuthHeader(to: &request)
+        
+        // Convert skills dictionary to list format expected by backend
+        let skillsList = Array(skills.keys)
         
         let parameters: [String: Any] = [
-            "username": username,
-            "full_name": fullName,
-            "university": university,
-            "degree": degree,
-            "year": year,
-            "bio": bio,
-            "interests": interests,
-            "skills": skills,
-            "auto_invite_preference": autoInviteEnabled,
-            "preferred_radius": preferredRadius
+            "matching_preferences": [
+                "allow_auto_matching": autoInviteEnabled,
+                "preferred_radius": preferredRadius,
+                "interests": interests,
+                "skills": skillsList,
+                "university": university,
+                "degree": degree,
+                "year": year,
+                "bio": bio,
+                "full_name": fullName
+            ]
         ]
         
         
@@ -301,6 +320,7 @@ class UserProfileManager: ObservableObject {
                 
                 // If we got a valid response (even an error), log it
                 if let data = data, let dataString = String(data: data, encoding: .utf8) {
+                    print("📡 Profile Update Response (\(httpResponse.statusCode)): \(dataString)")
                 }
                 
                 // If we got a successful response, return success
@@ -308,6 +328,22 @@ class UserProfileManager: ObservableObject {
                     DispatchQueue.main.async {
                         self.isLoading = false
                         completion(true)
+                    }
+                    return
+                } else if httpResponse.statusCode == 401 {
+                    // JWT token expired or invalid
+                    DispatchQueue.main.async {
+                        self.isLoading = false
+                        self.errorMessage = "Authentication expired. Please log in again."
+                        completion(false)
+                    }
+                    return
+                } else if httpResponse.statusCode == 403 {
+                    // Forbidden - user doesn't have permission
+                    DispatchQueue.main.async {
+                        self.isLoading = false
+                        self.errorMessage = "Permission denied. Please check your login."
+                        completion(false)
                     }
                     return
                 }

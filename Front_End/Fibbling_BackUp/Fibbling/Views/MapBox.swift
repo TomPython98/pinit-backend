@@ -1468,10 +1468,16 @@ struct StudyMapView: View {
             DispatchQueue.main.async {
                 self.calendarManager.events.append(localEvent)
                 
-                // Show a toast or alert to instruct user to tap refresh button if needed
+                // Show success message
                 self.alertTitle = "Event Created"
-                self.alertMessage = "Your event has been added. Use the refresh button if you need to update with server data."
+                self.alertMessage = "Your event has been created successfully!"
                 self.showAlert = true
+                
+                // 🔧 FIX: Refresh events from backend to ensure we have the correct backend ID
+                // This ensures the event list is synchronized with the backend
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.calendarManager.fetchEvents()
+                }
             }
         }
     }
@@ -1647,7 +1653,11 @@ extension StudyMapView {
         guard let url = components?.url else {
             return
         }
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 return
             }

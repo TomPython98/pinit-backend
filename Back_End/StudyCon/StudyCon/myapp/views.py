@@ -110,6 +110,10 @@ def login_user(request):
 
 # ✅ Change Password
 @csrf_exempt  # Remove in production
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def change_password(request):
     if request.method == "POST":
         try:
@@ -145,6 +149,7 @@ def change_password(request):
 
 
 # ✅ Send Friend Request
+@csrf_exempt
 @ratelimit(key='user', rate='50/h', method='POST', block=True)
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
@@ -195,6 +200,10 @@ def health_check(request):
 
 
 @csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_all_users(request):
     if request.method == "GET":
         users = list(User.objects.values_list("username", flat=True))  # Get all usernames
@@ -226,6 +235,11 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 
+@csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_friends(request, username):
     try:
         # Log the request
@@ -248,6 +262,11 @@ from django.http import JsonResponse
 from django.contrib.auth.models import User
 from myapp.models import FriendRequest
 
+@csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_pending_requests(request, username):
     try:
         user = User.objects.get(username=username)
@@ -265,6 +284,11 @@ from django.http import JsonResponse
 from django.contrib.auth.models import User
 from myapp.models import FriendRequest
 
+@csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_sent_requests(request, username):
     try:
         print(f"📩 Fetching sent friend requests for: {username}")  # ✅ Debugging Line
@@ -294,6 +318,10 @@ from django.views.decorators.csrf import csrf_exempt
 from myapp.models import FriendRequest, UserProfile
 
 @csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def accept_friend_request(request):
     """
     🔧 IMPROVED: Better error handling and reliability
@@ -348,6 +376,11 @@ def accept_friend_request(request):
 
 
 
+@csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def chat_room(request, room_name):
     return render(request, "chat/chat.html", {"room_name": room_name})
 
@@ -365,6 +398,7 @@ from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .models import StudyEvent
 
+@csrf_exempt
 @ratelimit(key='user', rate='20/h', method='POST', block=True)
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
@@ -825,6 +859,10 @@ from django.utils import timezone  # Add this import
 from .models import StudyEvent, DeclinedInvitation  # Add DeclinedInvitation
 
 @csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_study_events(request, username):
     """
     🔧 FIXED: Simplified event fetching for better consistency
@@ -977,6 +1015,10 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import StudyEvent, User
 
 @csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def rsvp_study_event(request):
     if request.method == "POST":
         try:
@@ -1066,6 +1108,10 @@ def rsvp_study_event(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def update_study_event(request):
     """
     PUT/POST request with JSON:
@@ -1201,6 +1247,10 @@ def send_event_update_notifications(event, old_title, old_time, old_location, no
         pass
 
 @csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def delete_study_event(request):
     """
     POST request with JSON:
@@ -1251,6 +1301,11 @@ def delete_study_event(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+@csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_user_profile(request, username):
     try:
         user = User.objects.get(username=username)
@@ -1298,6 +1353,10 @@ def get_user_profile(request, username):
         return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def search_events(request):
     if request.method == "GET":
         query = request.GET.get("query", "")
@@ -1397,6 +1456,10 @@ def get_event_embedding(event):
     return embedding
 
 @csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def enhanced_search_events(request):
     if request.method == "GET":
         query = request.GET.get("query", "")
@@ -1451,6 +1514,10 @@ def enhanced_search_events(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @csrf_exempt
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def certify_user(request):
     if request.method == "POST":
         try:
@@ -1472,6 +1539,10 @@ def certify_user(request):
 # -----------------------------
 
 @csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def decline_invitation(request):
     """
     Declines an invitation and records it in the DeclinedInvitation model.
@@ -1522,6 +1593,10 @@ def decline_invitation(request):
 
 
 @csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_invitations(request, username):
     """
     Returns events where the user was invited but has not yet accepted
@@ -1600,6 +1675,10 @@ from django.contrib.auth.models import User
 from .models import StudyEvent, EventComment
 
 @csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def add_event_comment(request):
     """
     Simplified comment endpoint with extensive error tracking
@@ -1696,6 +1775,10 @@ def add_event_comment(request):
     return JsonResponse({"error": f"Method {request.method} not allowed"}, status=405)
 
 @csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def toggle_event_like(request):
     """
     Like or unlike an event or post with comprehensive error handling and logging
@@ -1809,6 +1892,10 @@ def toggle_event_like(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def record_event_share(request):
     """
     Record an event share
@@ -2077,6 +2164,10 @@ def get_event_feed(request, event_id):
 
 # Update the add_event_comment function to support post creation with images
 @csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def add_event_comment(request):
     """
     Add a comment/post to an event, possibly with images
@@ -2159,6 +2250,10 @@ def add_event_comment(request):
 
 # Update the event like function to handle post likes
 @csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def toggle_event_like(request):
     """
     Like or unlike an event or post
@@ -2434,6 +2529,10 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     return r * c
 
 @csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def advanced_auto_match(request):
     """
     🔧 ENHANCED: Sophisticated auto-matching system using all available user data
@@ -2943,8 +3042,10 @@ Insert it at the beginning of the get_invitations function.
 """
 
 # Push Notification Views
+@csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
 @api_view(['POST'])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def register_device(request):
     """
@@ -3044,6 +3145,11 @@ def send_push_notification(user_id, notification_type, **kwargs):
 
 # Update the accept_invitation function to send notification to event host
 
+@csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def accept_invitation(request, invitation_id):
     try:
         invitation = EventInvitation.objects.get(id=invitation_id)
@@ -3092,6 +3198,10 @@ def accept_invitation(request, invitation_id):
         }, status=400)
 
 @csrf_exempt
+@ratelimit(key='user', rate='50/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def invite_to_event(request):
     if request.method == "POST":
         try:
@@ -3148,6 +3258,10 @@ def invite_to_event(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def update_user_interests(request):
     """
     Update a user's profile with basic info, interests, skills, and preferences
@@ -3234,6 +3348,10 @@ def update_user_interests(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def submit_user_rating(request):
     """
     Submit a rating for another user based on Bandura's social learning theory.
@@ -3427,6 +3545,10 @@ def get_trust_levels(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def schedule_rating_reminder(request):
     """
     Schedule a reminder for a user to rate another user after an event.
@@ -3480,6 +3602,10 @@ def schedule_rating_reminder(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_profile_completion(request, username):
     """
     Get detailed profile completion information for a user
@@ -3616,6 +3742,10 @@ def get_profile_completion(request, username):
 # MARK: - PinIt User Preferences and Settings API Endpoints
 
 @csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_user_preferences(request, username):
     """
     Get user preferences and settings for PinIt
@@ -3711,6 +3841,10 @@ def get_user_preferences(request, username):
 
 
 @csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def update_user_preferences(request, username):
     """
     Update user preferences and settings for PinIt
@@ -3803,6 +3937,10 @@ def update_user_preferences(request, username):
 
 
 @csrf_exempt
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_matching_preferences(request, username):
     """
     Get detailed matching preferences for PinIt auto-matching
@@ -3846,6 +3984,10 @@ def get_matching_preferences(request, username):
 
 
 @csrf_exempt
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def update_matching_preferences(request, username):
     """
     Update matching preferences for PinIt auto-matching

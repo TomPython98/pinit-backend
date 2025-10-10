@@ -54,6 +54,7 @@ class CalendarManager: ObservableObject {
     // Username should be set once the user is logged in.
     var username: String = ""
     private var hasFetchedInitialEvents = false // Flag to track initial fetch
+    private var accountManager: UserAccountManager? // Reference to account manager for auth
     
     // Change this to your backend's base URL.
     private let baseURL = "https://pinit-backend-production.up.railway.app/api/"
@@ -66,6 +67,7 @@ class CalendarManager: ObservableObject {
     
     /// Dependency Injection initializer. You can pass in your account manager.
     init(accountManager: UserAccountManager) {
+        self.accountManager = accountManager
         
         // Listen for logout notification
         NotificationCenter.default.addObserver(self,
@@ -237,7 +239,11 @@ class CalendarManager: ObservableObject {
             self.isLoading = true
         }
         
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+        var request = URLRequest(url: url)
+        // Add JWT authentication header
+        accountManager?.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
             
             // Always set isLoading to false when done

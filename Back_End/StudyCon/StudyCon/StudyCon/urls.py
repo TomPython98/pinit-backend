@@ -36,6 +36,7 @@ urlpatterns = [
     # Invitation endpoints
     path("api/decline_invitation/", views.decline_invitation, name="decline_invitation"),
     path("api/get_invitations/<str:username>/", views.get_invitations, name="get_invitations"),
+    path("api/accept_invitation/<str:invitation_id>/", views.accept_invitation, name="accept_invitation"),
     
     # User profile and certification
     path("api/get_user_profile/<str:username>/", views.get_user_profile, name="get_user_profile"),
@@ -58,11 +59,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("chat/<str:room_name>/", views.chat_room, name="chat_room"),
 
-
-    path('api/get_user_profile/<str:username>/', views.get_user_profile, name='get_user_profile'),
-    
     path('api/update_user_interests/', views.update_user_interests, name='update_user_interests'),
-    #path('api/auto_match_event/', views.auto_match_event, name='auto_match_event'),
     path('api/advanced_auto_match/', views.advanced_auto_match, name='advanced_auto_match'),
 
     path('invite_to_event/', views.invite_to_event, name='invite_to_event'),
@@ -77,6 +74,15 @@ urlpatterns = [
     
     # NEW: Profile completion endpoint
     path('api/profile_completion/<str:username>/', views.get_profile_completion, name='profile_completion'),
+    
+    # PinIt User Preferences and Settings API Endpoints
+    path('api/user_preferences/<str:username>/', views.get_user_preferences, name='get_user_preferences'),
+    path('api/update_user_preferences/<str:username>/', views.update_user_preferences, name='update_user_preferences'),
+    path('api/matching_preferences/<str:username>/', views.get_matching_preferences, name='get_matching_preferences'),
+    path('api/update_matching_preferences/<str:username>/', views.update_matching_preferences, name='update_matching_preferences'),
+    
+    # Device registration
+    path('api/register-device/', views.register_device, name='register_device'),
 ]
 
 

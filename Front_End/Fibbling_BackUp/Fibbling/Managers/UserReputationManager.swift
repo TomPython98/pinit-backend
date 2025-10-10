@@ -9,6 +9,13 @@ class UserReputationManager: ObservableObject {
     
     // Use APIConfig for consistent URL management
     private let baseURLs = APIConfig.baseURLs
+    private var accountManager: UserAccountManager? // Reference to account manager for auth
+    
+    // MARK: - Account Manager Setup
+    
+    func setAccountManager(_ accountManager: UserAccountManager) {
+        self.accountManager = accountManager
+    }
     
     // MARK: - API Methods
     
@@ -89,7 +96,10 @@ class UserReputationManager: ObservableObject {
             return
         }
         
-        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+        var request = URLRequest(url: url)
+        accountManager?.addAuthHeader(to: &request)
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let httpResponse = response as? HTTPURLResponse {
                 
                 // If we got a valid response (even an error), log it
@@ -135,6 +145,9 @@ class UserReputationManager: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // ✅ Add JWT authentication header
+        accountManager?.addAuthHeader(to: &request)
         
         // Create a dictionary that matches the backend's expected format
         let ratingData: [String: Any] = [

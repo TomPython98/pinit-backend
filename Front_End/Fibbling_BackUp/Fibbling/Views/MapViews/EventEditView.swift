@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import PhotosUI
+import CoreLocation
 
 // MARK: - EventEditView
 struct EventEditView: View {
@@ -22,6 +23,7 @@ struct EventEditView: View {
     @State private var showImagePicker = false
     
     @State private var selectedCoordinate: CLLocationCoordinate2D
+    @State private var locationName = ""
     @State private var invitedFriends = ""
     @State private var isPublic: Bool
     @State private var eventSearchQuery = ""
@@ -35,6 +37,13 @@ struct EventEditView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     
+    // Location editing states
+    @State private var locationSuggestions: [String] = []
+    @State private var showLocationSuggestions = false
+    @State private var isGeocoding = false
+    @State private var isLocationSelected = true // Start as true since we have existing location
+    @State private var searchTask: Task<Void, Never>? // For debouncing location search
+    
     // MARK: - Init
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>) {
         self.event = event
@@ -47,6 +56,7 @@ struct EventEditView: View {
         self._eventEndDate = State(initialValue: event.endTime)
         self._selectedEventType = State(initialValue: event.eventType)
         self._selectedCoordinate = State(initialValue: event.coordinate)
+        self._locationName = State(initialValue: "Current Location") // Will be geocoded to get proper name
         self._isPublic = State(initialValue: event.isPublic)
         self._maxParticipants = State(initialValue: 10) // Default value since maxParticipants doesn't exist in StudyEvent
         self._tags = State(initialValue: event.interestTags ?? [])
@@ -306,32 +316,156 @@ struct EventEditView: View {
     private var locationTab: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Current Location
-                VStack(alignment: .leading, spacing: 8) {
+                // Location Editing Card
+                VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Image(systemName: "location").foregroundColor(.brandPrimary)
+                        Image(systemName: "location.fill").foregroundColor(.orange)
                         Text("Location").font(.headline).foregroundColor(Color.textPrimary)
                     }
                     
-                    Text("Latitude: \(String(format: "%.6f", selectedCoordinate.latitude))")
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
-                    
-                    Text("Longitude: \(String(format: "%.6f", selectedCoordinate.longitude))")
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
-                    
-                    Text("📍 Location editing will be available in a future update")
-                        .font(.caption)
-                        .foregroundColor(Color.textMuted)
-                        .italic()
+                    VStack(spacing: 16) {
+                        // Location Input with Suggestions
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(isLocationSelected ? "Location Selected" : "Location")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.textPrimary)
+                                
+                                Spacer()
+                                
+                                if isLocationSelected {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.system(size: 16, weight: .medium))
+                                }
+                            }
+                            
+                            VStack(spacing: 0) {
+                                HStack {
+                                    TextField("Enter location (e.g., Brandenburger Tor, Berlin)", text: $locationName)
+                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                        .onChange(of: locationName) { _, newValue in
+                                            // Reset location selected state when user types
+                                            if !newValue.isEmpty {
+                                                isLocationSelected = false
+                                            }
+                                            
+                                            // Cancel previous search task
+                                            searchTask?.cancel()
+                                            
+                                            // Only show suggestions, don't auto-geocode
+                                            if newValue.count > 2 {
+                                                // Debounce the search to avoid throttling
+                                                searchTask = Task {
+                                                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                                                    
+                                                    if !Task.isCancelled {
+                                                        await MainActor.run {
+                                                            searchLocationSuggestions(query: newValue)
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                locationSuggestions = []
+                                                showLocationSuggestions = false
+                                            }
+                                        }
+                                        .onSubmit {
+                                            // Geocode when user presses return
+                                            if !locationName.isEmpty {
+                                                geocodeLocation(locationName)
+                                            }
+                                        }
+                                    
+                                    // Find Location button
+                                    Button(action: {
+                                        if !locationName.isEmpty {
+                                            geocodeLocation(locationName)
+                                        }
+                                    }) {
+                                        Image(systemName: "magnifyingglass")
+                                            .foregroundColor(.orange)
+                                            .font(.system(size: 16, weight: .medium))
+                                    }
+                                    .disabled(locationName.isEmpty || isGeocoding)
+                                }
+                                
+                                // Loading indicator
+                                if isGeocoding {
+                                    HStack {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                        Text("Finding location...")
+                                            .font(.caption)
+                                            .foregroundColor(.textSecondary)
+                                    }
+                                    .padding(.top, 8)
+                                }
+                                
+                                // Location Suggestions
+                                if showLocationSuggestions && !locationSuggestions.isEmpty {
+                                    VStack(spacing: 0) {
+                                        ForEach(locationSuggestions.prefix(3), id: \.self) { suggestion in
+                                            Button(action: {
+                                                locationName = suggestion
+                                                showLocationSuggestions = false
+                                                locationSuggestions = []
+                                                geocodeLocation(suggestion)
+                                            }) {
+                                                HStack {
+                                                    Image(systemName: "location")
+                                                        .foregroundColor(.orange)
+                                                        .font(.caption)
+                                                    
+                                                    Text(suggestion)
+                                                        .font(.subheadline)
+                                                        .foregroundColor(.textPrimary)
+                                                    
+                                                    Spacer()
+                                                }
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 12)
+                                                .background(Color.bgCard)
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                            
+                                            if suggestion != locationSuggestions.prefix(3).last {
+                                                Divider()
+                                                    .padding(.horizontal, 16)
+                                            }
+                                        }
+                                    }
+                                    .background(Color.bgCard)
+                                    .cornerRadius(12)
+                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                    .padding(.top, 8)
+                                }
+                            }
+                        }
+                        
+                        // Current Coordinates Display
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Current Coordinates")
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(.textSecondary)
+                            
+                            Text("Latitude: \(String(format: "%.6f", selectedCoordinate.latitude))")
+                                .font(.caption)
+                                .foregroundColor(.textSecondary)
+                            
+                            Text("Longitude: \(String(format: "%.6f", selectedCoordinate.longitude))")
+                                .font(.caption)
+                                .foregroundColor(.textSecondary)
+                        }
                         .padding(.top, 8)
+                    }
                 }
+                .cardStyle()
                 
-                // Invited Friends
-                VStack(alignment: .leading, spacing: 8) {
+                // Invited Friends Card
+                VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Image(systemName: "person.2").foregroundColor(.brandPrimary)
+                        Image(systemName: "person.2").foregroundColor(.blue)
                         Text("Invited Friends").font(.headline).foregroundColor(Color.textPrimary)
                     }
                     
@@ -340,8 +474,17 @@ struct EventEditView: View {
                         .foregroundColor(Color.textPrimary)
                         .lineLimit(3...6)
                 }
+                .cardStyle()
             }
             .padding()
+        }
+        .onAppear {
+            // Geocode the current location to get a proper name
+            reverseGeocodeLocation()
+        }
+        .onDisappear {
+            // Cancel any pending search tasks
+            searchTask?.cancel()
         }
     }
     
@@ -421,16 +564,43 @@ struct EventEditView: View {
             return
         }
         
-        guard let url = URL(string: APIConfig.fullURL(for: "updateEvent")) else {
-            alertMessage = "Invalid API URL"
-            showAlert = true
-            isLoading = false
+        print("🔍 EventEditView: Event ID: \(event.id.uuidString)")
+        
+        // Try updating with URL fallback mechanism
+        tryUpdateEvent(index: 0, username: username)
+    }
+    
+    private func tryUpdateEvent(index: Int, username: String) {
+        let baseURLs = APIConfig.baseURLs
+        
+        // Check if we've tried all URLs
+        guard index < baseURLs.count else {
+            DispatchQueue.main.async {
+                self.isLoading = false
+                self.alertMessage = "Failed to connect to any server"
+                self.showAlert = true
+            }
+            return
+        }
+        
+        let baseURL = baseURLs[index]
+        let endpointPath = APIConfig.endpoints["updateEvent"] ?? "updateEvent"
+        let updateURL = "\(baseURL)\(endpointPath)"
+        
+        print("🔍 EventEditView: Trying URL \(index + 1)/\(baseURLs.count): \(updateURL)")
+        
+        guard let url = URL(string: updateURL) else {
+            // Skip to next URL if this one can't be constructed
+            tryUpdateEvent(index: index + 1, username: username)
             return
         }
         
         var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
+        request.httpMethod = "POST"  // ✅ Backend expects POST, not PUT
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // ✅ Add JWT authentication header
+        accountManager.addAuthHeader(to: &request)
         
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -438,6 +608,7 @@ struct EventEditView: View {
         let formattedEndDate = isoFormatter.string(from: eventEndDate)
         
         // Prepare the request body
+        print("🔍 EventEditView: Using event ID for update: \(event.id.uuidString)")
         let jsonBody: [String: Any] = [
             "username": username,
             "event_id": event.id.uuidString,
@@ -454,6 +625,7 @@ struct EventEditView: View {
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: jsonBody)
+            print("🔍 EventEditView: Request body: \(jsonBody)")
         } catch {
             alertMessage = "Error preparing request: \(error.localizedDescription)"
             showAlert = true
@@ -463,58 +635,145 @@ struct EventEditView: View {
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
-                isLoading = false
-                
                 if let error = error {
-                    alertMessage = "Network error: \(error.localizedDescription)"
-                    showAlert = true
+                    print("🔍 EventEditView: Network error on URL \(index + 1): \(error.localizedDescription)")
+                    // Try the next URL
+                    self.tryUpdateEvent(index: index + 1, username: username)
                     return
                 }
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    alertMessage = "Invalid response"
-                    showAlert = true
+                    print("🔍 EventEditView: Invalid response on URL \(index + 1)")
+                    // Try the next URL
+                    self.tryUpdateEvent(index: index + 1, username: username)
                     return
+                }
+                
+                print("🔍 EventEditView: Response status: \(httpResponse.statusCode)")
+                if let data = data, let responseString = String(data: data, encoding: .utf8) {
+                    print("🔍 EventEditView: Response body: \(responseString)")
                 }
                 
                 if httpResponse.statusCode == 200 {
                     // Update local event by creating a new one with updated values
-                    if let index = studyEvents.firstIndex(where: { $0.id == event.id }) {
-                        let oldEvent = studyEvents[index]
+                    if let index = self.studyEvents.firstIndex(where: { $0.id == self.event.id }) {
+                        let oldEvent = self.studyEvents[index]
                         let updatedEvent = StudyEvent(
                             id: oldEvent.id,
-                            title: eventTitle,
-                            coordinate: selectedCoordinate,
-                            time: eventDate,
-                            endTime: eventEndDate,
-                            description: eventDescription,
-                            invitedFriends: invitedFriends.isEmpty ? [] : invitedFriends.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) },
+                            title: self.eventTitle,
+                            coordinate: self.selectedCoordinate,
+                            time: self.eventDate,
+                            endTime: self.eventEndDate,
+                            description: self.eventDescription,
+                            invitedFriends: self.invitedFriends.isEmpty ? [] : self.invitedFriends.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) },
                             attendees: oldEvent.attendees,
-                            isPublic: isPublic,
+                            isPublic: self.isPublic,
                             host: oldEvent.host,
                             hostIsCertified: oldEvent.hostIsCertified,
-                            eventType: selectedEventType,
-                            isAutoMatched: enableAutoMatching,
-                            interestTags: tags,
+                            eventType: self.selectedEventType,
+                            isAutoMatched: self.enableAutoMatching,
+                            interestTags: self.tags,
                             matchedUsers: oldEvent.matchedUsers
                         )
                         
-                        studyEvents[index] = updatedEvent
+                        self.studyEvents[index] = updatedEvent
                     }
                     
-                    alertMessage = "Event updated successfully!"
-                    showAlert = true
+                    self.isLoading = false
+                    self.alertMessage = "Event updated successfully!"
+                    self.showAlert = true
                 } else {
+                    // If we got a valid response (even an error), don't try other URLs
+                    // This means the server responded but the request failed
+                    self.isLoading = false
+                    
                     if let data = data, let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let errorMessage = errorData["error"] as? String {
-                        alertMessage = errorMessage
+                        self.alertMessage = errorMessage
                     } else {
-                        alertMessage = "Failed to update event (Status: \(httpResponse.statusCode))"
+                        self.alertMessage = "Failed to update event (Status: \(httpResponse.statusCode))"
                     }
-                    showAlert = true
+                    self.showAlert = true
                 }
             }
         }.resume()
+    }
+    
+    // MARK: - Location Functions
+    
+    private func searchLocationSuggestions(query: String) {
+        guard !query.isEmpty else { return }
+        
+        let searchRequest = MKLocalSearch.Request()
+        searchRequest.naturalLanguageQuery = query
+        
+        let search = MKLocalSearch(request: searchRequest)
+        search.start { response, error in
+            DispatchQueue.main.async {
+                if let response = response {
+                    self.locationSuggestions = response.mapItems.prefix(5).map { item in
+                        return item.name ?? item.placemark.title ?? "Unknown Location"
+                    }
+                    self.showLocationSuggestions = true
+                }
+            }
+        }
+    }
+    
+    private func geocodeLocation(_ address: String) {
+        isGeocoding = true
+        
+        let geocoder = CLGeocoder()
+        geocoder.geocodeAddressString(address) { placemarks, error in
+            DispatchQueue.main.async {
+                self.isGeocoding = false
+                
+                if let error = error {
+                    print("Geocoding error: \(error.localizedDescription)")
+                    return
+                }
+                
+                if let placemark = placemarks?.first,
+                   let location = placemark.location {
+                    self.selectedCoordinate = location.coordinate
+                    self.isLocationSelected = true
+                    self.showLocationSuggestions = false
+                    self.locationSuggestions = []
+                }
+            }
+        }
+    }
+    
+    private func reverseGeocodeLocation() {
+        let geocoder = CLGeocoder()
+        let location = CLLocation(latitude: selectedCoordinate.latitude, longitude: selectedCoordinate.longitude)
+        
+        geocoder.reverseGeocodeLocation(location) { placemarks, error in
+            DispatchQueue.main.async {
+                if let placemark = placemarks?.first {
+                    // Create a readable location name
+                    var locationName = ""
+                    
+                    if let name = placemark.name {
+                        locationName = name
+                    } else if let thoroughfare = placemark.thoroughfare {
+                        locationName = thoroughfare
+                        if let locality = placemark.locality {
+                            locationName += ", \(locality)"
+                        }
+                    } else if let locality = placemark.locality {
+                        locationName = locality
+                        if let country = placemark.country {
+                            locationName += ", \(country)"
+                        }
+                    } else {
+                        locationName = "Current Location"
+                    }
+                    
+                    self.locationName = locationName
+                }
+            }
+        }
     }
 }
 

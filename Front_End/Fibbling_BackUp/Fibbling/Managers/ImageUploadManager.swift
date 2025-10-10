@@ -16,6 +16,7 @@ class ImageUploadManager: ObservableObject {
     private var uploadQueue: [UploadTask] = []
     private var activeUploads: Set<String> = []
     private let maxConcurrentUploads = 2
+    private var accountManager: UserAccountManager? // Reference to account manager for auth
     
     // Optimized URLSession for uploads
     private lazy var uploadSession: URLSession = {
@@ -29,6 +30,12 @@ class ImageUploadManager: ObservableObject {
     }()
     
     private init() {}
+    
+    // MARK: - Account Manager Setup
+    
+    func setAccountManager(_ accountManager: UserAccountManager) {
+        self.accountManager = accountManager
+    }
     
     // MARK: - Smart Upload with Network-Aware Compression
     
@@ -147,6 +154,9 @@ class ImageUploadManager: ObservableObject {
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = networkMonitor.connectionSpeed.timeout
+        
+        // Add JWT authentication header
+        accountManager?.addAuthHeader(to: &urlRequest)
         
         // Create multipart form data with progress tracking
         let boundary = "Boundary-\(UUID().uuidString)"

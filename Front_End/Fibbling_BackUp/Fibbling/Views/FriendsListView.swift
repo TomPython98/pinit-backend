@@ -627,13 +627,14 @@ struct FriendsListView: View {
     // MARK: - Actions
     private func acceptFriendRequest(_ username: String) {
         guard let currentUser = accountManager.currentUser,
-              let url = URL(string: "\(baseURL)/friend-requests/accept/") else { return }
+              let url = URL(string: "\(baseURL)/accept_friend_request/") else { return }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager.addAuthHeader(to: &request)
         
-        let body = ["from": username, "to": currentUser]
+        let body = ["from_user": username]  // Only send from_user - backend gets to_user from JWT
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -661,13 +662,14 @@ struct FriendsListView: View {
     
     private func declineFriendRequest(_ username: String) {
         guard let currentUser = accountManager.currentUser,
-              let url = URL(string: "\(baseURL)/friend-requests/decline/") else { return }
+              let url = URL(string: "\(baseURL)/decline_friend_request/") else { return }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager.addAuthHeader(to: &request)
         
-        let body = ["from": username, "to": currentUser]
+        let body = ["from_user": username]  // Only send from_user - backend gets to_user from JWT
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -692,13 +694,14 @@ struct FriendsListView: View {
     
     private func sendFriendRequest(_ username: String) {
         guard let currentUser = accountManager.currentUser,
-              let url = URL(string: "\(baseURL)/friend-requests/send/") else { return }
+              let url = URL(string: "\(baseURL)/send_friend_request/") else { return }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager.addAuthHeader(to: &request)
         
-        let body = ["from": currentUser, "to": username]
+        let body = ["to_user": username]
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -761,7 +764,10 @@ struct FriendsListView: View {
         guard let currentUser = accountManager.currentUser,
               let url = URL(string: "\(baseURL)/get_pending_requests/\(currentUser)/") else { return }
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     print("Error fetching friend requests: \(error.localizedDescription)")
@@ -795,8 +801,11 @@ struct FriendsListView: View {
             return
         }
         
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
         print("🔍 DEBUG: Starting URLSession request")
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        URLSession.shared.dataTask(with: request) { data, response, error in
             print("🔍 DEBUG: URLSession response received")
             
             DispatchQueue.main.async {

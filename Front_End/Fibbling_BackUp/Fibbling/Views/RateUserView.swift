@@ -33,6 +33,7 @@ struct RateUserView: View {
     let targetUser: String
     let onComplete: (Bool) -> Void
     
+    @EnvironmentObject var accountManager: UserAccountManager
     @State private var rating: Int = 5
     @State private var reference: String = ""
     @State private var isSubmitting = false
@@ -198,6 +199,9 @@ struct RateUserView: View {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // ✅ Add JWT authentication header
+        accountManager.addAuthHeader(to: &request)
         
         // Serialize to JSON
         do {

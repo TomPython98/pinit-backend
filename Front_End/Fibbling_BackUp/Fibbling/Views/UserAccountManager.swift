@@ -245,7 +245,10 @@ class UserAccountManager: ObservableObject {
         AppLogger.logRequest(url: url.absoluteString, method: "GET")
         print("🔍 DEBUG: Starting URLSession request")
 
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+        var request = URLRequest(url: url)
+        addAuthHeader(to: &request)
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             print("🔍 DEBUG: URLSession response received")
             guard let self = self else { 
                 print("🔍 DEBUG: ERROR - self is nil")
@@ -326,7 +329,10 @@ class UserAccountManager: ObservableObject {
 
         AppLogger.logRequest(url: url.absoluteString, method: "GET")
 
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+        var request = URLRequest(url: url)
+        addAuthHeader(to: &request)
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
             
             if let error = error {
@@ -429,7 +435,10 @@ class UserAccountManager: ObservableObject {
         guard let username = currentUser,
               let url = URL(string: "\(APIConfig.primaryBaseURL)/get_pending_requests/\(username)/") else { return }
 
-        URLSession.shared.dataTask(with: url) { data, _, _ in
+        var request = URLRequest(url: url)
+        addAuthHeader(to: &request)  // ✅ Add JWT authentication
+
+        URLSession.shared.dataTask(with: request) { data, _, _ in
             guard let data = data else {
                 return
             }
@@ -455,13 +464,16 @@ class UserAccountManager: ObservableObject {
         }
 
 
-        let body: [String: String] = ["from_user": username, "to_user": currentUser]
+        let body: [String: String] = ["from_user": username]  // Only send from_user - backend gets to_user from JWT
         let jsonData = try? JSONSerialization.data(withJSONObject: body)
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.httpBody = jsonData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // ✅ Add JWT authentication header
+        addAuthHeader(to: &request)
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {

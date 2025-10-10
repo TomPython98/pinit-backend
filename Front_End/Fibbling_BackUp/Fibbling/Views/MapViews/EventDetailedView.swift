@@ -121,10 +121,17 @@ struct EventDetailView: View {
         // Always use the passed event as the primary source, only use array for updates
         self._localEvent = State(initialValue: event)
         
-        // Try to find a more complete version in the array, but don't fail if not found
-        if let updatedEventInArray = studyEvents.wrappedValue.first(where: { $0.id == event.id }) {
-            // Found event in array, use it for any additional data
+        // 🔧 FIX: Try to find a more complete version in the array by matching title and host
+        // This handles cases where the event ID might have changed (e.g., after backend creation)
+        if let updatedEventInArray = studyEvents.wrappedValue.first(where: { 
+            $0.id == event.id || 
+            ($0.title == event.title && $0.host == event.host && abs($0.time.timeIntervalSince(event.time)) < 60)
+        }) {
+            // Found event in array (by ID or by matching title/host/time), use it for any additional data
+            print("🔍 EventDetailedView: Found updated event in array with ID: \(updatedEventInArray.id.uuidString)")
             self._localEvent = State(initialValue: updatedEventInArray)
+        } else {
+            print("🔍 EventDetailedView: No matching event found in array, using passed event ID: \(event.id.uuidString)")
         }
     }
     
@@ -2101,7 +2108,10 @@ struct EventSocialFeedView: View {
             return
         }
         
-        URLSession.shared.dataTask(with: finalUrl) { data, response, error in
+        var request = URLRequest(url: finalUrl)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     self.errorMessage = "Network error: \(error.localizedDescription)"
@@ -3756,10 +3766,11 @@ struct UserProfileView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let body = [
-            "from_user": accountManager.currentUser ?? "Guest",
-            "to_user": username
-        ]
+        // ✅ Add JWT authentication header
+        accountManager.addAuthHeader(to: &request)
+        
+        // ✅ Only send to_user - backend gets from_user from JWT
+        let body = ["to_user": username]
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)

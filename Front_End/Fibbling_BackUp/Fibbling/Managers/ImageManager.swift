@@ -18,6 +18,7 @@ class ImageManager: ObservableObject {
     var userImageCache: [String: [UserImage]] = [:] // username -> images
     private var imageCache: [String: UIImage] = [:] // url -> image
     private let cacheQueue = DispatchQueue(label: "imageCache", attributes: .concurrent)
+    private var accountManager: UserAccountManager? // Reference to account manager for auth
     
     // Professional components
     private let professionalCache = ProfessionalImageCache.shared
@@ -55,6 +56,13 @@ class ImageManager: ObservableObject {
         ) { [weak self] _ in
             self?.clearAllCaches()
         }
+    }
+    
+    // MARK: - Account Manager Setup
+    
+    func setAccountManager(_ accountManager: UserAccountManager) {
+        self.accountManager = accountManager
+        uploadManager.setAccountManager(accountManager)
     }
     
     deinit {
@@ -98,6 +106,15 @@ class ImageManager: ObservableObject {
         
         do {
             var request = URLRequest(url: finalURL)
+            
+            // ✅ Debug: Check if accountManager is available
+            if accountManager == nil {
+                AppLogger.error("ImageManager: accountManager is nil when loading images for \(username)", category: AppLogger.image)
+            } else {
+                AppLogger.logImage("ImageManager: Adding JWT auth header for \(username)")
+            }
+            
+            accountManager?.addAuthHeader(to: &request)
             // Force network fetch when refreshing
             request.cachePolicy = forceRefresh ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
             request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")

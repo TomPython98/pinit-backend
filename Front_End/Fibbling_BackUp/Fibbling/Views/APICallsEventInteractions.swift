@@ -12,12 +12,26 @@ import AppKit
 class EventAPIService {
     private let baseURL = APIConfig.primaryBaseURL
     private var cancellables = Set<AnyCancellable>()
+    private var accountManager: UserAccountManager? // Reference to account manager for auth
+    
+    // MARK: - Initialization
+    
+    init(accountManager: UserAccountManager? = nil) {
+        self.accountManager = accountManager
+    }
+    
+    func setAccountManager(_ accountManager: UserAccountManager) {
+        self.accountManager = accountManager
+    }
     
     // Fetch event social feed
     func fetchEventFeed(eventID: UUID, currentUser: String, completion: @escaping (Result<EventInteractions, Error>) -> Void) {
         let url = URL(string: "\(baseURL)/events/feed/\(eventID.uuidString)/?current_user=\(currentUser)")!
         
-        URLSession.shared.dataTaskPublisher(for: url)
+        var request = URLRequest(url: url)
+        accountManager?.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTaskPublisher(for: request)
             .tryMap { data, response -> Data in
                 guard let httpResponse = response as? HTTPURLResponse,
                       (200...299).contains(httpResponse.statusCode) else {
@@ -47,6 +61,7 @@ class EventAPIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager?.addAuthHeader(to: &request)
         
         // For now, we'll just handle text posts - image uploads would need multipart form data
         let postData: [String: Any] = [

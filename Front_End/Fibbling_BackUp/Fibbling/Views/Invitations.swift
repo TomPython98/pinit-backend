@@ -140,7 +140,10 @@ struct InvitationsView: View {
         
         isLoading = true
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             defer { DispatchQueue.main.async { isLoading = false } }
             
             if let error = error {
@@ -193,8 +196,10 @@ struct InvitationsView: View {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager.addAuthHeader(to: &request)
+        
         let body: [String: Any] = [
-            "username": username,
             "event_id": invitation.event.id.uuidString
         ]
         
@@ -272,8 +277,10 @@ struct InvitationsView: View {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager.addAuthHeader(to: &request)
+        
         let body: [String: Any] = [
-            "username": username,
             "event_id": invitation.event.id.uuidString
         ]
         

@@ -1027,6 +1027,9 @@ struct EventCreationView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // ✅ Add JWT authentication header
+        accountManager.addAuthHeader(to: &request)
+        
         // Format dates for backend
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -1081,9 +1084,12 @@ struct EventCreationView: View {
                                 let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
                                 print("✅ Event created successfully: \(json ?? [:])")
                                 
-                                // Create local event for UI
+                                // Create local event for UI using the backend event ID
+                                let eventId = json?["event_id"] as? String ?? UUID().uuidString
+                                print("🔍 EventCreationView: Backend returned event_id: \(eventId)")
+                                
                                 let newEvent = StudyEvent(
-                                    id: UUID(),
+                                    id: UUID(uuidString: eventId) ?? UUID(),
                                     title: self.eventTitle,
                                     coordinate: self.selectedCoordinate,
                                     time: self.eventDate,
@@ -1100,6 +1106,7 @@ struct EventCreationView: View {
                                     matchedUsers: []
                                 )
                                 
+                                print("🔍 EventCreationView: Created StudyEvent with ID: \(newEvent.id.uuidString)")
                                 self.onSave(newEvent)
                                 self.dismiss()
                             } catch {

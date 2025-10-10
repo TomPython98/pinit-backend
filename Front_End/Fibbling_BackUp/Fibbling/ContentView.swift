@@ -255,7 +255,6 @@ struct ContentView: View {
                 #else
                 ProfileView()
                     .environmentObject(accountManager)
-                    .environmentObject(UserProfileManager())
                 #endif
             }
             
@@ -764,8 +763,13 @@ struct CommunityHubView: View {
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var accountManager: UserAccountManager
-    @StateObject private var profileManager = UserProfileManager()
+    @StateObject private var profileManager: UserProfileManager
     @StateObject private var reputationManager = UserReputationManager()
+    
+    init() {
+        // We'll initialize profileManager in onAppear with the account manager
+        _profileManager = StateObject(wrappedValue: UserProfileManager())
+    }
     
     // State for editable fields
     @State private var editMode: Bool = false
@@ -1036,9 +1040,6 @@ struct ProfileView: View {
                         // Auto-Matching preferences (added from API)
                         autoMatchingSection
                         
-                        // Privacy settings with improved toggles
-                        privacySection
-                        
                         // User Reputation section
                         reputationSection
                             
@@ -1053,7 +1054,23 @@ struct ProfileView: View {
             .navigationTitle("Your Profile")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                // Images are loaded via ImageManager in the main onAppear
+                // Initialize profile manager with account manager for JWT authentication
+                profileManager.setAccountManager(accountManager)
+                
+                // Load profile data
+                if let username = accountManager.currentUser {
+                    // Ensure we have JWT tokens before making API calls
+                    if accountManager.accessToken != nil {
+                        profileManager.fetchUserProfile(username: username) { success in
+                            if success {
+                                // Profile loaded successfully
+                            }
+                        }
+                    } else {
+                        // No JWT token available - user needs to log in again
+                        print("⚠️ No JWT token available for profile loading")
+                    }
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -1778,6 +1795,12 @@ struct ProfileView: View {
             return
         }
         
+        // Check if we have JWT tokens for authentication
+        guard accountManager.accessToken != nil else {
+            alertMessage = "Authentication expired. Please log out and log back in."
+            showAlert = true
+            return
+        }
         
         // Update skill levels for any skills that don't have levels yet
         for skill in skills {
@@ -2302,34 +2325,6 @@ struct ProfileView: View {
         )
     }
     
-    // MARK: - Privacy Section with enhanced toggle style
-    private var privacySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Privacy Settings", systemImage: "lock.fill")
-            
-            Divider()
-                .background(Color.divider)
-                .padding(.bottom, 6)
-            
-            Toggle("Profile Visible to Everyone", isOn: .constant(true))
-                .padding(.horizontal)
-                .toggleStyle(EnhancedToggleStyle())
-            
-            Toggle("Show University & Degree", isOn: .constant(true))
-                .padding(.horizontal)
-                .toggleStyle(EnhancedToggleStyle())
-            
-            Toggle("Allow Friend Requests", isOn: .constant(true))
-                .padding(.horizontal)
-                .toggleStyle(EnhancedToggleStyle())
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color.bgCard)
-                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
-        )
-    }
     
     // MARK: - User Reputation section
     private var reputationSection: some View {

@@ -113,6 +113,7 @@ def login_user(request):
 
 
 # ✅ Send Friend Request
+@csrf_exempt
 @ratelimit(key='user', rate='10/h', method='POST', block=True)
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
@@ -238,6 +239,7 @@ from django.http import JsonResponse
 from django.contrib.auth.models import User
 from myapp.models import FriendRequest
 
+@csrf_exempt
 @ratelimit(key='user', rate='100/h', method='GET', block=True)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
@@ -263,6 +265,7 @@ from django.http import JsonResponse
 from django.contrib.auth.models import User
 from myapp.models import FriendRequest
 
+@csrf_exempt
 @ratelimit(key='user', rate='100/h', method='GET', block=True)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
