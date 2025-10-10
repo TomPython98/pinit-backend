@@ -2068,23 +2068,18 @@ def get_event_interactions(request, event_id):
 # Add these functions to your views.py file
 
 @ratelimit(key='ip', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_event_feed(request, event_id):
     """
     Retrieve event feed data (posts, likes, shares) in the format expected by the new Swift implementation.
     This combines comments, likes, and shares into the new Posts structure.
     """
     try:
-        # Get current user from the query parameter
-        current_username = request.GET.get('current_user', None)
-        if not current_username:
-            return JsonResponse({"error": "current_user parameter is required"}, status=400)
-            
-        # Try to get the current user
-        try:
-            current_user = User.objects.get(username=current_username)
-        except User.DoesNotExist:
-            return JsonResponse({"error": "User not found"}, status=404)
-            
+        # Use authenticated user instead of query parameter
+        current_user = request.user
+        
         # Convert string ID to UUID
         event = StudyEvent.objects.get(id=uuid.UUID(event_id))
         
