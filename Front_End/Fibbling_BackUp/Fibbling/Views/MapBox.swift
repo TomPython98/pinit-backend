@@ -675,6 +675,7 @@ func clusterEvents(_ events: [StudyEvent], region: MKCoordinateRegion) -> [Clust
 struct StudyMapBoxView: UIViewRepresentable {
     var events: [StudyEvent]
     var region: Binding<MKCoordinateRegion>
+    var refreshVersion: Int = 0
     var onSelect: ((StudyEvent) -> Void)?
     
     func makeUIView(context: Context) -> MapView {
@@ -740,44 +741,55 @@ struct StudyMapBoxView: UIViewRepresentable {
     
     
     func updateUIView(_ uiView: MapView, context: Context) {
+        print("🗺️ updateUIView called with \(events.count) events, refreshVersion: \(refreshVersion)")
         let newClusters = clusterEvents(events, region: region.wrappedValue)
         
         // Simple refresh mechanism to avoid cascading calls
-        if newClusters != context.coordinator.lastClusters || 
-           context.coordinator.forceRefresh != events.count {
+        if newClusters != context.coordinator.lastClusters ||
+           context.coordinator.forceRefresh != refreshVersion {
+            
+            print("🗺️ Refresh triggered: lastClusters changed=\(newClusters != context.coordinator.lastClusters), refreshVersion changed=\(context.coordinator.forceRefresh != refreshVersion)")
             
             // Clear all existing annotations
             uiView.viewAnnotations.removeAll()
+            print("🗺️ Cleared all annotations")
             
             // Add updated annotations
             updateAnnotations(on: uiView, region: region.wrappedValue, events: events)
             
             // Update tracking state
             context.coordinator.lastClusters = newClusters
-            context.coordinator.forceRefresh = events.count
+            context.coordinator.forceRefresh = refreshVersion
             
             // Force layout update to ensure annotations are properly displayed
             uiView.setNeedsLayout()
+        } else {
+            print("🗺️ Skipping refresh - no changes detected")
         }
     }
     
 
     
     private func updateAnnotations(on mapView: MapView, region: MKCoordinateRegion, events: [StudyEvent]) {
+        print("🗺️ updateAnnotations called with \(events.count) events")
         let clusters = clusterEvents(events, region: region)
+        print("🗺️ Generated \(clusters.count) clusters")
         for cluster in clusters {
             if cluster.events.count == 1, let event = cluster.events.first {
+                print("🗺️ Adding single event pin: \(event.title) at (\(event.coordinate.latitude), \(event.coordinate.longitude))")
                 let customView = createAnnotationView(for: event)
                 let viewAnnotation = ViewAnnotation(coordinate: event.coordinate, view: customView)
                 viewAnnotation.allowOverlap = true
                 mapView.viewAnnotations.add(viewAnnotation)
             } else {
+                print("🗺️ Adding cluster at (\(cluster.coordinate.latitude), \(cluster.coordinate.longitude)) with \(cluster.events.count) events")
                 let clusterView = ClusterAnnotationView(events: cluster.events, frame: CGRect(x: 0, y: 0, width: 40, height: 40))
                 let viewAnnotation = ViewAnnotation(coordinate: cluster.coordinate, view: clusterView)
                 viewAnnotation.allowOverlap = true
                 mapView.viewAnnotations.add(viewAnnotation)
             }
         }
+        print("🗺️ Total annotations added: \(mapView.viewAnnotations.allAnnotations.count)")
     }
     
     func makeCoordinator() -> Coordinator {
@@ -870,9 +882,23 @@ struct StudyMapView: View {
     @State private var isSearchExpanded = false
     @State private var showSearchSheet = false
     @State private var selectedEvent: StudyEvent?
+    @State private var mapRefreshVersion: Int = 0
     
     @State private var mapSearchQuery = ""
-    @State private var mapSearchResults: [MKMapItem] = []
+    @State private var mapSearchResults: [MapSearchResult] = []
+    
+    // Simple struct to hold map search results
+    struct MapSearchResult: Hashable {
+        let name: String
+        let title: String
+        let coordinate: CLLocationCoordinate2D
+        
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(name)
+            hasher.combine(coordinate.latitude)
+            hasher.combine(coordinate.longitude)
+        }
+    }
     @State private var filterQuery: String = ""
     @State private var filterPrivateOnly: Bool = false
     @State private var filterCertifiedOnly: Bool = false
@@ -938,7 +964,6 @@ struct StudyMapView: View {
         
         let username = accountManager.currentUser ?? ""
         
-        
         // First filter events by view mode - Read from calendarManager.events
         let eventsFilteredByType = calendarManager.events.filter { event in
             switch eventViewMode {
@@ -960,7 +985,6 @@ struct StudyMapView: View {
                 return true
             }
         }
-        
         
         // Apply standard filtering
         let events = eventsFilteredByType.filter { event in
@@ -993,13 +1017,7 @@ struct StudyMapView: View {
             
             let include = anyTextMatches && privateMatches && certifiedMatches && typeMatches && notExpired
             
-            if !include {
-            }
-            
             return include
-        }
-        
-        for event in events {
         }
         
         return events
@@ -1009,7 +1027,7 @@ struct StudyMapView: View {
         NavigationStack {
             ZStack {
                 // Map View
-                StudyMapBoxView(events: filteredEvents, region: $region, onSelect: { event in
+                StudyMapBoxView(events: filteredEvents, region: $region, refreshVersion: mapRefreshVersion, onSelect: { event in
                     // Always get the most up-to-date version of the event from studyEvents
                     if let freshEvent = calendarManager.events.first(where: { $0.id == event.id }) {
                         selectedEvent = freshEvent
@@ -1017,7 +1035,41 @@ struct StudyMapView: View {
                         selectedEvent = event
                     }
                 })
+                .id(mapRefreshVersion)
                 .edgesIgnoringSafeArea(.all)
+                .onChange(of: calendarManager.events) { oldValue, newValue in
+                    // Always recenter when events change to ensure visibility
+                    if !filteredEvents.isEmpty {
+                        print("🗺️ Events changed, recentering to fit \(filteredEvents.count) events")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation(.easeInOut(duration: 0.8)) {
+                                region = regionThatFits(events: filteredEvents)
+                            }
+                            mapRefreshVersion += 1
+                        }
+                    }
+                }
+                .onChange(of: filteredEvents) { oldValue, newValue in
+                    // When the visible set changes (e.g., after fetch), ensure pins are brought into view
+                    if !newValue.isEmpty {
+                        print("🗺️ Filtered events changed to \(newValue.count), recentering")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            withAnimation(.easeInOut(duration: 0.8)) {
+                                region = regionThatFits(events: newValue)
+                            }
+                            mapRefreshVersion += 1
+                        }
+                    }
+                }
+                .onChange(of: eventViewMode) { _ in
+                    // Refocus when switching view modes to ensure visibility
+                    if !filteredEvents.isEmpty {
+                        withAnimation(.easeInOut(duration: 0.6)) {
+                            region = regionThatFits(events: filteredEvents)
+                        }
+                        mapRefreshVersion += 1
+                    }
+                }
                 
                 // Location permission overlay
                 if showLocationPermission {
@@ -1133,6 +1185,16 @@ struct StudyMapView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     locationManager.requestLocationPermission()
                 }
+                
+                // Recenter map to show events if we're still at default coordinates
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    if isDefaultRegion(region.center) && !filteredEvents.isEmpty {
+                        withAnimation(.easeInOut(duration: 1.0)) {
+                            region = regionThatFits(events: filteredEvents)
+                        }
+                        mapRefreshVersion += 1
+                    }
+                }
             }
             .onChange(of: locationManager.location) { newLocation in
                 // Only update region once when location is first detected
@@ -1166,6 +1228,14 @@ struct StudyMapView: View {
                         selectedEvent = nil
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             selectedEvent = updatedEvent
+                            // Recenter map on the updated event so it's visible after edits
+                            withAnimation(.easeInOut(duration: 0.6)) {
+                                region.center = updatedEvent.coordinate
+                                region.span = MKCoordinateSpan(latitudeDelta: max(region.span.latitudeDelta, 0.05),
+                                                               longitudeDelta: max(region.span.longitudeDelta, 0.05))
+                            }
+                            // Bump map refresh version to force re-annotation
+                            mapRefreshVersion += 1
                         }
                     } else {
                         selectedEvent = nil
@@ -1195,6 +1265,20 @@ struct StudyMapView: View {
                     message: Text(alertMessage),
                     dismissButton: .default(Text("OK"))
                 )
+            }
+            // Recenter when we receive a location update from the edit screen
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("EventLocationUpdated"))) { notification in
+                guard let userInfo = notification.userInfo,
+                      let lat = userInfo["lat"] as? CLLocationDegrees,
+                      let lon = userInfo["lon"] as? CLLocationDegrees else { return }
+                let coord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    region.center = coord
+                    region.span = MKCoordinateSpan(latitudeDelta: max(region.span.latitudeDelta, 0.05),
+                                                   longitudeDelta: max(region.span.longitudeDelta, 0.05))
+                }
+                // Ensure map re-renders annotations even if cluster signature didn't change
+                mapRefreshVersion += 1
             }
             // Add confirmation dialog for view mode selection
             .confirmationDialog(
@@ -1231,6 +1315,44 @@ struct StudyMapView: View {
             }
         }
     }
+
+    // MARK: - Region helpers
+    private func isDefaultRegion(_ center: CLLocationCoordinate2D) -> Bool {
+        // Default to Buenos Aires in app; treat near that as default
+        abs(center.latitude - (-34.6037)) < 0.01 && abs(center.longitude - (-58.3816)) < 0.01
+    }
+    
+    private func regionThatFits(events: [StudyEvent]) -> MKCoordinateRegion {
+        guard let first = events.first else {
+            return region
+        }
+        
+        var minLat = first.coordinate.latitude
+        var maxLat = first.coordinate.latitude
+        var minLon = first.coordinate.longitude
+        var maxLon = first.coordinate.longitude
+        
+        for e in events {
+            minLat = min(minLat, e.coordinate.latitude)
+            maxLat = max(maxLat, e.coordinate.latitude)
+            minLon = min(minLon, e.coordinate.longitude)
+            maxLon = max(maxLon, e.coordinate.longitude)
+        }
+        
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2.0,
+            longitude: (minLon + maxLon) / 2.0
+        )
+        
+        // Add padding and enforce a reasonable minimum span
+        let latDelta = max((maxLat - minLat) * 1.4, 0.1)
+        let lonDelta = max((maxLon - minLon) * 1.4, 0.1)
+        
+        return MKCoordinateRegion(
+            center: center,
+            span: MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
+        )
+    }
     
     
     // Redesigned search bar
@@ -1265,16 +1387,16 @@ struct StudyMapView: View {
                     VStack(spacing: 6) {
                         ForEach(mapSearchResults, id: \.self) { place in
                             Button(action: {
-                                mapSearchQuery = place.placemark.name ?? "Unknown Place"
-                                newEventCoordinate = place.placemark.coordinate
-                                region.center = place.placemark.coordinate
+                                mapSearchQuery = place.name
+                                newEventCoordinate = place.coordinate
+                                region.center = place.coordinate
                                 withAnimation { isSearchExpanded = false }
                             }) {
                                 HStack {
                                     VStack(alignment: .leading) {
-                                        Text(place.placemark.name ?? "Unknown")
+                                        Text(place.name)
                                             .font(.headline)
-                                        Text(place.placemark.title ?? "")
+                                        Text(place.title)
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
                                     }
@@ -1612,13 +1734,57 @@ struct StudyMapView: View {
     }
     
     func searchMapLocations() {
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = mapSearchQuery
-        request.region = region
-        let search = MKLocalSearch(request: request)
-        search.start { response, _ in
-            if let response = response {
-                self.mapSearchResults = response.mapItems
+        guard !mapSearchQuery.isEmpty else {
+            mapSearchResults = []
+            return
+        }
+        
+        // Use Apple Maps (MKLocalSearch) for better POI results
+        let searchRequest = MKLocalSearch.Request()
+        searchRequest.naturalLanguageQuery = mapSearchQuery
+        searchRequest.region = region
+        searchRequest.resultTypes = [.pointOfInterest, .address]
+        
+        let search = MKLocalSearch(request: searchRequest)
+        search.start { response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Map location search error: \(error.localizedDescription)")
+                    self.mapSearchResults = []
+                    return
+                }
+                
+                guard let response = response else {
+                    self.mapSearchResults = []
+                    return
+                }
+                
+                self.mapSearchResults = response.mapItems.prefix(8).compactMap { item in
+                    guard let name = item.name else { return nil }
+                    
+                    let coordinate = item.placemark.coordinate
+                    
+                    // Build display string
+                    var displayParts: [String] = [name]
+                    var addressParts: [String] = []
+                    
+                    if let thoroughfare = item.placemark.thoroughfare {
+                        addressParts.append(thoroughfare)
+                    }
+                    if let locality = item.placemark.locality {
+                        addressParts.append(locality)
+                    }
+                    
+                    let title = addressParts.isEmpty ? name : "\(name), \(addressParts.joined(separator: ", "))"
+                    
+                    return MapSearchResult(
+                        name: name,
+                        title: title,
+                        coordinate: coordinate
+                    )
+                }
+                
+                print("🔍 MapBox search '\(self.mapSearchQuery)' found \(self.mapSearchResults.count) results")
             }
         }
     }
