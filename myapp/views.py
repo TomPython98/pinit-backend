@@ -4206,22 +4206,18 @@ def upload_user_image(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def get_user_images(request, username):
-    """Get all images for a user"""
+    """Get all images for a user - allows viewing other users' images for social features"""
     if request.method != 'GET':
         return JsonResponse({"error": "Only GET method allowed"}, status=405)
     
     try:
-        # ✅ SECURITY: Only users can see their own images
-        if request.user.username != username:
-            return JsonResponse({"error": "Forbidden"}, status=403)
-            
         # Find user
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
         
-        # Get images
+        # Get images - allow viewing other users' images for social features
         images = UserImage.objects.filter(user=user).order_by('-is_primary', '-uploaded_at')
         
         images_data = []
