@@ -148,6 +148,23 @@ struct ContentView: View {
 
     }
     
+    // Listen for global request to show map at specific coordinate
+    private func openMapAndCenterOn(eventIDString: String, coordinate: CLLocationCoordinate2D) {
+        let lat = coordinate.latitude
+        let lon = coordinate.longitude
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            NotificationCenter.default.post(
+                name: Notification.Name("ShowEventOnMap"),
+                object: nil,
+                userInfo: [
+                    "eventID": eventIDString,
+                    "lat": lat,
+                    "lon": lon
+                ]
+            )
+        }
+    }
+
     // MARK: - Refined sophisticated background
     var backgroundGradient: some View {
         ZStack {

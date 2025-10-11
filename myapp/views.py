@@ -16,6 +16,8 @@ from rest_framework import status
 from push_notifications.models import APNSDevice
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 # Robust import for ratelimit: fall back to no-op if package isn't available at runtime
 try:
     from ratelimit.decorators import ratelimit  # django-ratelimit installs as 'ratelimit'
@@ -3147,7 +3149,7 @@ Insert it at the beginning of the get_invitations function.
 
 # Push Notification Views
 @api_view(['POST'])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def register_device(request):
     """
@@ -3242,14 +3244,80 @@ def send_push_notification(user_id, notification_type, **kwargs):
                     )
                     
                 except Exception as e:
-                    pass
+                    print(f"APNS send error: {e}")
             
             elif device.device_type == 'android':
                 # Implementation for FCM (Android) would go here
                 pass
                 
     except Exception as e:
-        pass
+        print(f"Error sending push notification: {e}")
+
+
+# Moderation and Account Management Endpoints
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    try:
+        new_password = request.data.get('new_password')
+        if not new_password:
+            return Response({'error': 'new_password required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validate_password(new_password, user=request.user)
+        except ValidationError as ve:
+            return Response({'error': ve.messages}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        user.set_password(new_password)
+        user.save()
+        return Response({'success': True})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def report_content(request):
+    try:
+        content_id = request.data.get('content_id')
+        content_type = request.data.get('content_type')
+        reason = request.data.get('reason')
+        description = request.data.get('description', '')
+        if not content_id or not content_type or not reason:
+            return Response({'error': 'content_id, content_type, and reason are required'}, status=status.HTTP_400_BAD_REQUEST)
+        # TODO: Persist in Report model (future)
+        print(f"Report by {request.user.username}: {content_type} {content_id} reason={reason} desc={description}")
+        return Response({'success': True})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def block_user(request):
+    try:
+        username = request.data.get('blocked_user')
+        if not username:
+            return Response({'error': 'blocked_user required'}, status=status.HTTP_400_BAD_REQUEST)
+        # Placeholder for Block model logic
+        return Response({'success': True})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def unblock_user(request):
+    try:
+        username = request.data.get('unblocked_user')
+        if not username:
+            return Response({'error': 'unblocked_user required'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'success': True})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Update the accept_invitation function to send notification to event host
 

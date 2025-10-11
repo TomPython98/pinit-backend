@@ -5,6 +5,11 @@ import json
 import asyncio
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+import re
+
+def _sanitize_group_name(name: str) -> str:
+    """Sanitize string for Channels group names (alnum, dash, underscore)."""
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', name or '')
 
 def broadcast_event_update(event_id, event_type, usernames):
     """
@@ -35,7 +40,7 @@ def broadcast_event_update(event_id, event_type, usernames):
     
     # Notify each user of the event change
     for username in usernames:
-        group_name = f"events_{username}"
+        group_name = f"events_{_sanitize_group_name(username)}"
         print(f"📢 Broadcasting {event_type} for event {event_id} to user: {username}")
         
         # Send the message to the group

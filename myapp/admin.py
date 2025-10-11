@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.models import User
 
 from django.contrib import admin
-from .models import StudyEvent, UserRating, UserTrustLevel, UserReputationStats
+from .models import StudyEvent, UserRating, UserTrustLevel, UserReputationStats, EventReviewReminder
 
 @admin.register(StudyEvent)
 class StudyEventAdmin(admin.ModelAdmin):
@@ -28,3 +28,11 @@ class UserReputationStatsAdmin(admin.ModelAdmin):
     search_fields = ('user__username',)
     readonly_fields = ('average_rating', 'total_ratings', 'last_updated')
     date_hierarchy = 'last_updated'
+
+@admin.register(EventReviewReminder)
+class EventReviewReminderAdmin(admin.ModelAdmin):
+    list_display = ('user', 'event', 'sent_at')
+    list_filter = ('sent_at',)
+    search_fields = ('user__username', 'event__title')
+    readonly_fields = ('sent_at',)
+    date_hierarchy = 'sent_at'

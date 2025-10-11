@@ -703,6 +703,33 @@ class UserReputationStats(models.Model):
         level_info = f" - {self.trust_level.title}" if self.trust_level else ""
         return f"{self.user.username}{level_info} ({self.average_rating:.1f}/5.0 from {self.total_ratings} ratings)"
 
+
+class EventReviewReminder(models.Model):
+    """
+    Model to track which users have been sent review reminders for which events.
+    Prevents duplicate review reminder notifications.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event = models.ForeignKey(
+        StudyEvent, 
+        on_delete=models.CASCADE, 
+        related_name='review_reminders'
+    )
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='received_review_reminders'
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('event', 'user')
+        ordering = ['-sent_at']
+    
+    def __str__(self):
+        return f"Review reminder for {self.user.username} - {self.event.title}"
+
+
 # Initialize default trust levels
 from django.db.models.signals import post_migrate
 from django.dispatch import receiver

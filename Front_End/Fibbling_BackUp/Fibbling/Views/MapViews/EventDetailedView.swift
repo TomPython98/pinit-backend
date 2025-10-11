@@ -9,6 +9,7 @@ import SwiftUI
 import PhotosUI
 import MapKit
 import EventKit
+import CoreLocation
 
 //
 //  EventDetailAndInteractions.swift
@@ -95,6 +96,8 @@ struct EventDetailView: View {
     @State private var selectedUserProfile: String? = nil
     @State private var showEditSheet = false
     @State private var showEventReportSheet = false
+    @State private var navigateToMap = false
+    @State private var resolvedAddress: String? = nil
 
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>, onRSVP: @escaping (UUID) -> Void) {
         self.event = event
@@ -133,6 +136,8 @@ struct EventDetailView: View {
             self._localEvent = State(initialValue: updatedEventInArray)
         } else {
         }
+
+        // Address resolution moved to onAppear to avoid capturing self in init
     }
     
     var isAttending: Bool {
@@ -834,6 +839,25 @@ extension EventDetailView {
                 .fill(Color.bgCard)
                 .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
         )
+        .onAppear {
+            // Resolve human-readable address for the event coordinate
+            let coordinate = localEvent.coordinate
+            let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            CLGeocoder().reverseGeocodeLocation(location) { placemarks, error in
+                if let placemark = placemarks?.first {
+                    let parts: [String] = [
+                        placemark.name,
+                        placemark.locality,
+                        placemark.administrativeArea,
+                        placemark.postalCode,
+                        placemark.country
+                    ].compactMap { $0 }.filter { !$0.isEmpty }
+                    if !parts.isEmpty {
+                        resolvedAddress = parts.joined(separator: ", ")
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - Event Details Card
@@ -900,6 +924,41 @@ extension EventDetailView {
                     
                     Spacer()
                 }
+            }
+            
+            // Address Section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(.system(size: 20))
+                        .foregroundColor(.textLight)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(Color.brandPrimary)
+                                .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                        )
+                    
+                    Text("Location")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Spacer()
+                }
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    if let address = resolvedAddress {
+                        Text(address)
+                            .font(.body)
+                            .foregroundColor(.textPrimary)
+                    } else {
+                        // Fallback while resolving
+                        Text(String(format: "Lat: %.5f, Lon: %.5f", localEvent.coordinate.latitude, localEvent.coordinate.longitude))
+                            .font(.footnote)
+                            .foregroundColor(.textSecondary)
+                    }
+                }
+                .padding(.leading, 52)
             }
             
             // Description Section
@@ -1461,7 +1520,10 @@ extension EventDetailView {
                 HStack(spacing: 12) {
                     // Group Chat Button
                     groupChatButton
-                    
+                }
+                
+                // Third Row
+                HStack(spacing: 12) {
                     // Edit Button (if hosting)
             if isHosting && !isEventCompleted {
                         editEventButton
@@ -1550,6 +1612,8 @@ extension EventDetailView {
             )
         }
     }
+    
+    // Removed Show on Map button per user request
     
     private var editEventButton: some View {
         Button(action: { showEditSheet = true }) {
@@ -1651,39 +1715,6 @@ extension EventDetailView {
             
             // Social Feed Actions
             VStack(spacing: 12) {
-                // Share Photos Button
-                Button(action: {
-                    showSocialFeedSheet = true
-                }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "camera.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.textLight)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Share Photos")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(.textLight)
-                            
-                            Text("Upload event photos")
-                                .font(.caption)
-                                .foregroundColor(.textLight.opacity(0.8))
-                        }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 14))
-                            .foregroundColor(.textLight)
-                    }
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.brandPrimary)
-                            .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
-                    )
-                }
-                
                 // View Feed Button
                 Button(action: {
                     showInteractions = true
@@ -1790,6 +1821,8 @@ struct EventSocialFeedView: View {
     @State private var errorMessage: String?
     // Track posts with like requests in flight to prevent double taps
     @State private var inFlightLikePostIds: Set<Int> = []
+    // Force UI refresh when interactions change
+    @State private var refreshTrigger: Int = 0
     
     // MARK: - View Body
     var body: some View {
@@ -1808,9 +1841,28 @@ struct EventSocialFeedView: View {
             SocialImagePicker(selectedImages: $selectedImages, maxSelection: 4)
         }
         .sheet(item: $showingFullPost) { post in
-            PostDetailView(post: post, onLike: { likePost(postID: post.id) }, onReply: { text in
-                replyToPost(postID: post.id, text: text)
-            })
+            PostDetailView(
+                post: post,
+                onLike: { likePost(postID: post.id) },
+                onReply: { text in
+                    replyToPost(postID: post.id, text: text)
+                    // Update the sheet's post to reflect the new reply
+                    if var updatedPost = showingFullPost {
+                        let optimisticReply = EventInteractions.Post(
+                            id: Int.random(in: 9000...10000),
+                            text: text,
+                            username: accountManager.currentUser ?? "Guest",
+                            created_at: Date().ISO8601Format(),
+                            imageURLs: nil,
+                            likes: 0,
+                            isLikedByCurrentUser: false,
+                            replies: []
+                        )
+                        updatedPost.replies.append(optimisticReply)
+                        showingFullPost = updatedPost
+                    }
+                }
+            )
             .environmentObject(accountManager)
         }
         .overlay(
@@ -1994,7 +2046,7 @@ struct EventSocialFeedView: View {
                                 },
                                 onReply: { showReplySheet(for: post) }
                             )
-                            .id("\(post.id)-\(post.likes)-\(post.isLikedByCurrentUser)")
+                            .id("\(post.id)-\(post.likes)-\(post.isLikedByCurrentUser)-\(refreshTrigger)")
                             .padding(.bottom, 1)
                         }
                     }
@@ -2372,8 +2424,31 @@ struct EventSocialFeedView: View {
                                                 self.selectedImages = savedImages
                                                 return
                                             }
-                                            // Success after refresh
-                                            self.refreshFeed()
+                                            // Success after refresh - parse response and update optimistic post
+                                            if let data = data,
+                                               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                               let postData = json["post"] as? [String: Any],
+                                               let realID = postData["id"] as? Int {
+                                                // Update optimistic post with real ID
+                                                if var currentInteractions = self.interactions {
+                                                    for i in 0..<currentInteractions.posts.count {
+                                                        if currentInteractions.posts[i].id == optimisticPost.id {
+                                                            currentInteractions.posts[i] = EventInteractions.Post(
+                                                                id: realID,
+                                                                text: currentInteractions.posts[i].text,
+                                                                username: currentInteractions.posts[i].username,
+                                                                created_at: currentInteractions.posts[i].created_at,
+                                                                imageURLs: currentInteractions.posts[i].imageURLs,
+                                                                likes: 0,
+                                                                isLikedByCurrentUser: false,
+                                                                replies: []
+                                                            )
+                                                            break
+                                                        }
+                                                    }
+                                                    self.interactions = currentInteractions
+                                                }
+                                            }
                                         }
                                     }.resume()
                                 } else {
@@ -2403,8 +2478,32 @@ struct EventSocialFeedView: View {
                         }
                     }
                     
-                    // Post created successfully, refresh feed
-                    self.refreshFeed()
+                    // Post created successfully - parse response and update optimistic post with real ID
+                    if let data = data,
+                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let postData = json["post"] as? [String: Any],
+                       let realID = postData["id"] as? Int {
+                        // Update optimistic post with real ID
+                        if var currentInteractions = self.interactions {
+                            for i in 0..<currentInteractions.posts.count {
+                                if currentInteractions.posts[i].id == optimisticPost.id {
+                                    // Replace optimistic ID with real ID
+                                    currentInteractions.posts[i] = EventInteractions.Post(
+                                        id: realID,
+                                        text: currentInteractions.posts[i].text,
+                                        username: currentInteractions.posts[i].username,
+                                        created_at: currentInteractions.posts[i].created_at,
+                                        imageURLs: currentInteractions.posts[i].imageURLs,
+                                        likes: 0,
+                                        isLikedByCurrentUser: false,
+                                        replies: []
+                                    )
+                                    break
+                                }
+                            }
+                            self.interactions = currentInteractions
+                        }
+                    }
                 }
             }.resume()
         }
@@ -2513,6 +2612,7 @@ struct EventSocialFeedView: View {
                 postID: postID
             )
             interactions = currentInteractions
+            refreshTrigger += 1  // Force UI refresh
         }
         
         // Make API call to persist the change
@@ -2592,6 +2692,7 @@ struct EventSocialFeedView: View {
                                                 )
                                                 self.interactions = updatedInteractions
                                                 self.updateLikeCache(postID: postID, likes: totalLikes, isLiked: liked)
+                                                self.refreshTrigger += 1  // Force UI refresh
                                             }
                                             self.inFlightLikePostIds.remove(postID)
                                         }
@@ -2628,6 +2729,7 @@ struct EventSocialFeedView: View {
                                 )
                                 self.interactions = updatedInteractions
                                 self.updateLikeCache(postID: postID, likes: totalLikes, isLiked: liked)
+                                self.refreshTrigger += 1  // Force UI refresh
                             }
                             self.inFlightLikePostIds.remove(postID)
                         } else {
@@ -2742,6 +2844,7 @@ struct EventSocialFeedView: View {
                 reply: optimisticReply
             )
             interactions = currentInteractions
+            refreshTrigger += 1  // Force UI refresh
         }
         
         // Make API request
@@ -2763,17 +2866,69 @@ struct EventSocialFeedView: View {
                 
                 guard (200...299).contains(httpResponse.statusCode) else {
                     self.errorMessage = "Server error: \(httpResponse.statusCode)"
-                    
-                    // Show response data for debugging
-                    if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                    }
+                    // Revert optimistic update on error
+                    self.refreshFeed()
                     return
                 }
                 
-                // Reply created successfully, refresh the feed to show actual server data
-                self.refreshFeed()
+                // Reply created successfully - parse response and update with real ID
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let postData = json["post"] as? [String: Any],
+                   let realID = postData["id"] as? Int {
+                    // Replace optimistic reply with real data
+                    if var currentInteractions = self.interactions {
+                        currentInteractions.posts = self.replaceOptimisticReply(
+                            posts: currentInteractions.posts,
+                            optimisticID: optimisticReply.id,
+                            realID: realID,
+                            replyText: text,
+                            username: username
+                        )
+                        self.interactions = currentInteractions
+                        self.refreshTrigger += 1  // Force UI refresh
+                    }
+                } else {
+                    // If we can't parse, just refresh to be safe
+                    self.refreshFeed()
+                }
             }
         }.resume()
+    }
+    
+    private func replaceOptimisticReply(posts: [EventInteractions.Post], optimisticID: Int, realID: Int, replyText: String, username: String) -> [EventInteractions.Post] {
+        var updatedPosts = posts
+        
+        for i in 0..<updatedPosts.count {
+            // Check replies of this post
+            if let replyIndex = updatedPosts[i].replies.firstIndex(where: { $0.id == optimisticID }) {
+                // Replace with real data
+                updatedPosts[i].replies[replyIndex] = EventInteractions.Post(
+                    id: realID,
+                    text: replyText,
+                    username: username,
+                    created_at: updatedPosts[i].replies[replyIndex].created_at,
+                    imageURLs: nil,
+                    likes: 0,
+                    isLikedByCurrentUser: false,
+                    replies: []
+                )
+                return updatedPosts
+            }
+            
+            // Recursively check nested replies
+            if !updatedPosts[i].replies.isEmpty {
+                updatedPosts[i].replies = replaceOptimisticReply(
+                    posts: updatedPosts[i].replies,
+                    optimisticID: optimisticID,
+                    realID: realID,
+                    replyText: replyText,
+                    username: username
+                )
+            }
+        }
+        
+        return updatedPosts
     }
     
     private func addReplyToPost(posts: [EventInteractions.Post], postID: Int, reply: EventInteractions.Post) -> [EventInteractions.Post] {
@@ -3099,6 +3254,24 @@ struct PostDetailView: View {
                     )
                         .padding(.bottom, 12)
                     
+                    // Show replies if any
+                    if !localPost.replies.isEmpty {
+                        Divider()
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Replies (\(localPost.replies.count))")
+                                .font(.headline)
+                                .foregroundColor(.black)
+                                .padding(.horizontal)
+                            
+                            ForEach(localPost.replies) { reply in
+                                postDetailReplyView(for: reply)
+                                    .padding(.horizontal)
+                            }
+                        }
+                        .padding(.top, 8)
+                        .padding(.bottom, 12)
+                    }
+                    
                     Divider()
                     
                     // Reply composer
@@ -3150,11 +3323,84 @@ struct PostDetailView: View {
         !replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
+    private func postDetailReplyView(for reply: EventInteractions.Post) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            // Smaller profile image for replies
+            UserProfileImageView(username: reply.username, size: 24, borderColor: .blue)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(reply.username)
+                        .font(.subheadline.bold())
+                        .foregroundColor(.black)
+                    Spacer()
+                    Text(formatDate(reply.created_at))
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
+                
+                Text(reply.text)
+                    .font(.subheadline)
+                    .foregroundColor(.black)
+            }
+        }
+        .padding(8)
+        .background(Color.white)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
+        .cornerRadius(8)
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        guard let date = ISO8601DateFormatter().date(from: dateString) else {
+            return "Just now"
+        }
+        
+        let now = Date()
+        let components = Calendar.current.dateComponents([.minute, .hour, .day], from: date, to: now)
+        
+        if let minutes = components.minute, minutes < 60 {
+            return minutes < 1 ? "Just now" : "\(minutes)m"
+        } else if let hours = components.hour, hours < 24 {
+            return "\(hours)h"
+        } else if let days = components.day {
+            return "\(days)d"
+        }
+        
+        return "Just now"
+    }
+    
     private func submitReply() {
         guard isReplyButtonEnabled else { return }
-        onReply(replyText)
+        let textToSubmit = replyText
+        
+        // Create optimistic reply immediately in local state
+        let optimisticReply = EventInteractions.Post(
+            id: Int.random(in: 9000...10000),
+            text: textToSubmit,
+            username: accountManager.currentUser ?? "Guest",
+            created_at: Date().ISO8601Format(),
+            imageURLs: nil,
+            likes: 0,
+            isLikedByCurrentUser: false,
+            replies: []
+        )
+        
+        // Add to local UI immediately
+        localPost.replies.append(optimisticReply)
+        
+        // Clear input
         replyText = ""
-        dismiss()
+        
+        // Send to backend
+        onReply(textToSubmit)
+        
+        // Dismiss after a short delay to show the reply was added
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            dismiss()
+        }
     }
 }
 

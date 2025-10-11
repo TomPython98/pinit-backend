@@ -1280,6 +1280,36 @@ struct StudyMapView: View {
                 // Ensure map re-renders annotations even if cluster signature didn't change
                 mapRefreshVersion += 1
             }
+            // Center map on event when "Show on Map" is tapped from event detail
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowEventOnMap"))) { notification in
+                guard let userInfo = notification.userInfo,
+                      let eventIDString = userInfo["eventID"] as? String,
+                      let eventID = UUID(uuidString: eventIDString) else { return }
+                
+                // Support payloads with explicit lat/lon to avoid type bridging issues
+                var targetCoord: CLLocationCoordinate2D? = nil
+                if let lat = userInfo["lat"] as? CLLocationDegrees,
+                   let lon = userInfo["lon"] as? CLLocationDegrees {
+                    targetCoord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                } else if let coordinate = userInfo["coordinate"] as? CLLocationCoordinate2D {
+                    targetCoord = coordinate
+                }
+                
+                // Center the map with a closer zoom
+                if let coordinate = targetCoord {
+                    withAnimation(.easeInOut(duration: 0.8)) {
+                        region.center = coordinate
+                        region.span = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                    }
+                }
+                
+                // Ensure the correct event is selected (do not reopen detail sheet here per user request)
+                if let event = calendarManager.events.first(where: { $0.id == eventID }) {
+                    selectedEvent = event
+                }
+                
+                mapRefreshVersion += 1
+            }
             // Add confirmation dialog for view mode selection
             .confirmationDialog(
                 "Select View Mode",

@@ -193,8 +193,22 @@ struct EventCreationView: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
                     
-                    TextField("What's your event about?", text: $eventTitle)
-                        .textFieldStyle(ModernTextFieldStyle())
+                    ZStack(alignment: .leading) {
+                        if eventTitle.isEmpty {
+                            Text("What's your event about?")
+                                .foregroundColor(Color.gray.opacity(0.5))
+                                .padding()
+                        }
+                        TextField("", text: $eventTitle)
+                            .foregroundColor(Color.black)
+                            .padding()
+                    }
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                 }
                 
                 // Event Type
@@ -219,9 +233,23 @@ struct EventCreationView: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
                     
-                    TextField("Tell people what to expect...", text: $eventDescription, axis: .vertical)
-                        .textFieldStyle(ModernTextFieldStyle())
-                        .lineLimit(3...6)
+                    ZStack(alignment: .topLeading) {
+                        if eventDescription.isEmpty {
+                            Text("Tell people what to expect...")
+                                .foregroundColor(Color.gray.opacity(0.5))
+                                .padding()
+                        }
+                        TextField("", text: $eventDescription, axis: .vertical)
+                            .foregroundColor(Color.black)
+                            .padding()
+                            .lineLimit(3...6)
+                    }
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                 }
             }
         }
@@ -307,9 +335,16 @@ struct EventCreationView: View {
                     
                     VStack(spacing: 0) {
                         HStack {
-                            TextField("Enter location (e.g., Brandenburger Tor, Berlin)", text: $locationName)
-                                .textFieldStyle(ModernTextFieldStyle())
-                                .onChange(of: locationName) { oldValue, newValue in
+                            ZStack(alignment: .leading) {
+                                if locationName.isEmpty {
+                                    Text("Enter location (e.g., Brandenburger Tor, Berlin)")
+                                        .foregroundColor(Color.gray.opacity(0.5))
+                                        .padding()
+                                }
+                                TextField("", text: $locationName)
+                                    .foregroundColor(Color.black)
+                                    .padding()
+                                    .onChange(of: locationName) { oldValue, newValue in
                                     // If the change was triggered programmatically, do not reset selection
                                     if suppressLocationOnChange {
                                         suppressLocationOnChange = false
@@ -324,13 +359,20 @@ struct EventCreationView: View {
                                         locationSuggestions = []
                                         showLocationSuggestions = false
                                     }
-                                }
-                                .onSubmit {
-                                    // Geocode when user presses return
-                                    if !locationName.isEmpty {
-                                        geocodeLocation(locationName)
                                     }
-                                }
+                                    .onSubmit {
+                                        // Geocode when user presses return
+                                        if !locationName.isEmpty {
+                                            geocodeLocation(locationName)
+                                        }
+                                    }
+                            }
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
                             
                             // Dynamic indicator: checkmark, loading, or search button
                             if isLocationSelected && !isGeocoding {
@@ -642,8 +684,22 @@ struct EventCreationView: View {
                         
                         // Add tag input
                         HStack {
-                            TextField("Add interest tag", text: $newTag)
-                                .textFieldStyle(ModernTextFieldStyle())
+                            ZStack(alignment: .leading) {
+                                if newTag.isEmpty {
+                                    Text("Add interest tag")
+                                        .foregroundColor(Color.gray.opacity(0.5))
+                                        .padding()
+                                }
+                                TextField("", text: $newTag)
+                                    .foregroundColor(Color.black)
+                                    .padding()
+                            }
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
                             
                             Button("Add") {
                                 addTag()

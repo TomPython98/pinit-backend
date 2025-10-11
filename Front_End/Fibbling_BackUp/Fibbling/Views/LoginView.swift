@@ -68,29 +68,43 @@ struct LoginView: View {
                             
                             ZStack(alignment: .trailing) {
                                 if showPassword {
-                                    TextField("Enter your password", text: $password)
-                                        .padding(12)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.bgCard)
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.cardStroke, lineWidth: 1)
-                                        )
-                                        .foregroundColor(Color.textPrimary)
+                                    ZStack(alignment: .leading) {
+                                        if password.isEmpty {
+                                            Text("Enter your password")
+                                                .foregroundColor(Color.gray.opacity(0.6))
+                                                .padding(.horizontal, 12)
+                                        }
+                                        TextField("", text: $password)
+                                            .padding(12)
+                                            .foregroundColor(Color.textPrimary)
+                                    }
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.bgCard)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.cardStroke, lineWidth: 1)
+                                    )
                                 } else {
-                                    SecureField("Enter your password", text: $password)
-                                        .padding(12)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.bgCard)
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.cardStroke, lineWidth: 1)
-                                        )
-                                        .foregroundColor(Color.textPrimary)
+                                    ZStack(alignment: .leading) {
+                                        if password.isEmpty {
+                                            Text("Enter your password")
+                                                .foregroundColor(Color.gray.opacity(0.6))
+                                                .padding(.horizontal, 12)
+                                        }
+                                        SecureField("", text: $password)
+                                            .padding(12)
+                                            .foregroundColor(Color.textPrimary)
+                                    }
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.bgCard)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.cardStroke, lineWidth: 1)
+                                    )
                                 }
                                 
                                 Button(action: { showPassword.toggle() }) {
@@ -220,31 +234,45 @@ struct LoginView: View {
             let placeholder = getPlaceholder(for: title, keyboardType: keyboardType)
             
             if isSecure {
-                SecureField(placeholder, text: text)
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.bgCard)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.cardStroke, lineWidth: 1)
-                    )
-                    .foregroundColor(Color.textPrimary)
+                ZStack(alignment: .leading) {
+                    if text.wrappedValue.isEmpty {
+                        Text(placeholder)
+                            .foregroundColor(Color.gray.opacity(0.6))
+                            .padding(.horizontal, 12)
+                    }
+                    SecureField("", text: text)
+                        .padding(12)
+                        .foregroundColor(Color.textPrimary)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.bgCard)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.cardStroke, lineWidth: 1)
+                )
             } else {
-                TextField(placeholder, text: text)
-                    .keyboardType(keyboardType)
-                    .autocapitalization(.none)
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.bgCard)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.cardStroke, lineWidth: 1)
-                    )
-                    .foregroundColor(Color.textPrimary)
+                ZStack(alignment: .leading) {
+                    if text.wrappedValue.isEmpty {
+                        Text(placeholder)
+                            .foregroundColor(Color.gray.opacity(0.6))
+                            .padding(.horizontal, 12)
+                    }
+                    TextField("", text: text)
+                        .keyboardType(keyboardType)
+                        .autocapitalization(.none)
+                        .padding(12)
+                        .foregroundColor(Color.textPrimary)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.bgCard)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.cardStroke, lineWidth: 1)
+                )
             }
         }
     }

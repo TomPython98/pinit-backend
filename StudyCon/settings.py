@@ -9,7 +9,9 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ✅ SECURITY: Use environment variable for SECRET_KEY
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '&i+0_qgk943=xr&!fdh519l6h7xjm1w_%@t9i^p%eo%cz6elef')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise RuntimeError('DJANGO_SECRET_KEY must be set')
 
 DEBUG = False
 
@@ -71,12 +73,22 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'StudyCon.wsgi.application'
 
-# WebSocket configuration
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",  # For Railway deployment
-    },
-}
+# WebSocket configuration (use Redis in production when available)
+if os.environ.get('REDIS_URL'):
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [os.environ.get('REDIS_URL')],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
 
 # Set Django Channels as the ASGI server
 ASGI_APPLICATION = "StudyCon.asgi.application"
@@ -113,46 +125,32 @@ if DEBUG:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 else:
-    # Production: use Cloudflare R2 with S3-compatible credentials
-    print("🔧 Configuring R2 storage with S3-compatible credentials...")
-    AWS_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', '5bc85e1cd49529516bf4f1e62cd662a3')
-    AWS_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '6dbdbab1d5a91cc0e0693a3921eb1b74904f78569f44fa347f4e9ace47a7ce15')
-    AWS_STORAGE_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', 'pinit-images')
-    AWS_S3_ENDPOINT_URL = os.environ.get('R2_ENDPOINT_URL', 'https://da76c95301856b7cd9fee0a8f758097a.r2.cloudflarestorage.com')
-    AWS_S3_REGION_NAME = 'auto'
+    # Production: use Cloudflare R2 with S3-compatible credentials from environment only
+    AWS_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = os.environ.get('R2_ENDPOINT_URL')
+    AWS_S3_REGION_NAME = os.environ.get('R2_REGION', 'auto')
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_DEFAULT_ACL = 'public-read'
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
-    AWS_S3_CUSTOM_DOMAIN = os.environ.get('R2_CUSTOM_DOMAIN', 'pub-3df36a2ba44f4af9a779dc24cb9097a8.r2.dev')
+    AWS_S3_CUSTOM_DOMAIN = os.environ.get('R2_CUSTOM_DOMAIN')
     AWS_QUERYSTRING_AUTH = False  # public URLs
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    
-    # Force R2 storage for all file fields
-    from storages.backends.s3boto3 import S3Boto3Storage
-    
-    class R2Storage(S3Boto3Storage):
-        bucket_name = AWS_STORAGE_BUCKET_NAME
-        custom_domain = AWS_S3_CUSTOM_DOMAIN
-        file_overwrite = False
-        default_acl = 'public-read'
-        querystring_auth = False
-    
+
     # Modern Django 4.2+ STORAGES configuration
     STORAGES = {
         "default": {
-            "BACKEND": "storages.backends.s3.S3Storage",
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
         },
         "staticfiles": {
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
-    print(f"✅ R2 configured with S3-compatible credentials")
-    print(f"✅ Endpoint: {AWS_S3_ENDPOINT_URL}")
-    print(f"✅ Bucket: {AWS_STORAGE_BUCKET_NAME}")
-    print(f"✅ Media URL: {MEDIA_URL}")
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
@@ -211,6 +209,7 @@ if os.environ.get('DATABASE_URL'):
         'sslmode': 'require',
     }
 else:
+    # Only allow SQLite fallback for local development
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -245,11 +244,11 @@ LOGGING = {
     },
 }
 
-# Push Notifications Settings
+# Push Notifications Settings (configure via environment)
 PUSH_NOTIFICATIONS_SETTINGS = {
-    "APNS_CERTIFICATE": "/path/to/your/certificate.pem",  # Replace with actual path for production
-    "APNS_TOPIC": "com.yourdomain.studycon",  # Replace with your app bundle ID
-    "APNS_USE_SANDBOX": True,  # Set to False for production
+    "APNS_CERTIFICATE": os.environ.get('APNS_CERTIFICATE_PATH', ''),
+    "APNS_TOPIC": os.environ.get('APNS_TOPIC', ''),
+    "APNS_USE_SANDBOX": os.environ.get('APNS_USE_SANDBOX', 'False').lower() == 'true',
 }
 
 # ✅ SECURITY: Security Headers

@@ -7,6 +7,12 @@ urlpatterns = [
     path('api/register-device/', views.register_device, name='register_device'),
     path('api/profile_completion/<str:username>/', views.get_profile_completion, name='profile_completion'),
     
+    # Moderation and account management
+    path('change_password/', views.change_password, name='change_password'),
+    path('report_content/', views.report_content, name='report_content'),
+    path('block_user/', views.block_user, name='block_user'),
+    path('unblock_user/', views.unblock_user, name='unblock_user'),
+    
     # PinIt User Preferences and Settings API Endpoints
     path('api/user_preferences/<str:username>/', views.get_user_preferences, name='get_user_preferences'),
     path('api/update_user_preferences/<str:username>/', views.update_user_preferences, name='update_user_preferences'),
