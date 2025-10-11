@@ -56,8 +56,8 @@ class CalendarManager: ObservableObject {
     private var hasFetchedInitialEvents = false // Flag to track initial fetch
     private var accountManager: UserAccountManager? // Reference to account manager for auth
     
-    // Change this to your backend's base URL.
-    private let baseURL = "https://pinit-backend-production.up.railway.app/api/"
+    // Use APIConfig for consistent base URL
+    private let baseURL = APIConfig.primaryBaseURL
     private var cancellable: AnyCancellable?
     private var webSocketManager: EventsWebSocketManager?
     
@@ -229,7 +229,7 @@ class CalendarManager: ObservableObject {
     /// Fetch initial events for the current user. Should only be called once on login.
     func fetchEvents() {
         guard !username.isEmpty,
-              let url = URL(string: "\(baseURL)get_study_events/\(username)/")
+              let url = URL(string: "\(baseURL)/get_study_events/\(username)/")
         else {
             return
         }
@@ -375,7 +375,7 @@ class CalendarManager: ObservableObject {
 
     /// Fallback fetch using enhanced_search_events (less strict, not per-username)
     private func fetchEventsEnhancedFallback() {
-        guard let url = URL(string: "\(baseURL)enhanced_search_events/") else { return }
+        guard let url = URL(string: "\(baseURL)/enhanced_search_events/") else { return }
         var request = URLRequest(url: url)
         accountManager?.addAuthHeader(to: &request)
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
@@ -642,7 +642,7 @@ extension CalendarManager: EventsWebSocketManagerDelegate {
 
     /// Fallback: fetch via enhanced_search_events and handle a specific event
     private func fetchEnhancedAndHandle(eventID: UUID) {
-        guard let url = URL(string: "\(baseURL)enhanced_search_events/") else {
+        guard let url = URL(string: "\(baseURL)/enhanced_search_events/") else {
             self.constructEventFromWebSocketMessage(eventID: eventID)
             return
         }

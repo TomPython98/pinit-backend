@@ -577,8 +577,8 @@ struct EditProfileView: View {
         // Convert to base64 for backend
         let base64String = imageData.base64EncodedString()
         
-        // Use the existing update profile endpoint
-        guard let url = URL(string: "https://pinit-backend-production.up.railway.app/api/update_user_profile/") else {
+        // Use the existing update preferences endpoint
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/update_user_preferences/\(username)/") else {
             return false
         }
         
