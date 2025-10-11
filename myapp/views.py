@@ -2165,6 +2165,11 @@ def get_event_feed(request, event_id):
                 event=event, 
                 comment_id=comment.id
             ).exists()
+            # Total likes for this comment
+            comment_likes_count = EventLike.objects.filter(
+                event=event,
+                comment=comment
+            ).count()
             
             # Collect image URLs for the top-level comment
             top_image_urls = list(comment.images.values_list('image_url', flat=True))
@@ -2172,6 +2177,15 @@ def get_event_feed(request, event_id):
             # Get replies for this comment
             replies = []
             for reply in EventComment.objects.filter(parent=comment).prefetch_related('images').order_by('created_at'):
+                reply_is_liked = EventLike.objects.filter(
+                    user=current_user,
+                    event=event,
+                    comment=reply
+                ).exists()
+                reply_likes_count = EventLike.objects.filter(
+                    event=event,
+                    comment=reply
+                ).count()
                 reply_image_urls = list(reply.images.values_list('image_url', flat=True))
                 replies.append({
                     "id": reply.id,
@@ -2179,8 +2193,8 @@ def get_event_feed(request, event_id):
                     "username": reply.user.username,
                     "created_at": reply.created_at.isoformat(),
                     "imageURLs": reply_image_urls if reply_image_urls else None,
-                    "likes": 0,  # Add likes count for replies if implementing
-                    "isLikedByCurrentUser": False,  # Add current user like check if implementing
+                    "likes": reply_likes_count,
+                    "isLikedByCurrentUser": reply_is_liked,
                     "replies": []  # We don't support nested replies beyond 1 level
                 })
             
@@ -2191,7 +2205,7 @@ def get_event_feed(request, event_id):
                 "username": comment.user.username,
                 "created_at": comment.created_at.isoformat(),
                 "imageURLs": top_image_urls if top_image_urls else None,
-                "likes": 0,  # Add like count for each post if implementing 
+                "likes": comment_likes_count,
                 "isLikedByCurrentUser": is_liked,
                 "replies": replies
             }
