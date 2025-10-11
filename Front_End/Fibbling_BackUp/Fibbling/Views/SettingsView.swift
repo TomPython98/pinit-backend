@@ -402,8 +402,8 @@ struct SettingsView: View {
                                 supportSettings
                             }
                             
-                            // Danger Zone
-                            settingsCard("Danger Zone", icon: PinItIcons.delete, color: .pinItError) {
+                            // Account Actions
+                            settingsCard("Account Actions", icon: PinItIcons.delete, color: .pinItError) {
                                 dangerZone
                             }
                         }

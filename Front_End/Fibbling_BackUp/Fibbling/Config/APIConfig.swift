@@ -51,7 +51,8 @@ struct APIConfig {
         "rateUser": "/rate_user/",
         "getPotentialMatches": "/get_potential_matches/",
         "getMatchDetails": "/get_match_details/",
-        "deleteAccount": "/delete_account/"
+        "deleteAccount": "/delete_account/",
+        "deleteEvent": "/delete_study_event/"
     ]
     
     // MARK: - Helper Methods

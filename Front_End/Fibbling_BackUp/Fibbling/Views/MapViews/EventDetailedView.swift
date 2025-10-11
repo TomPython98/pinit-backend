@@ -98,6 +98,7 @@ struct EventDetailView: View {
     @State private var showEventReportSheet = false
     @State private var navigateToMap = false
     @State private var resolvedAddress: String? = nil
+    @State private var showDeleteAlert = false
 
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>, onRSVP: @escaping (UUID) -> Void) {
         self.event = event
@@ -188,12 +189,21 @@ struct EventDetailView: View {
             
             ToolbarItem(placement: .navigationBarTrailing) {
                 if isHosting {
-                    Button(action: { showEditSheet = true }) {
-                        Image(systemName: "pencil")
+                    Menu {
+                        Button(action: { showEditSheet = true }) {
+                            Label("Edit Event", systemImage: "pencil")
+                        }
+                        
+                        Button(action: { showDeleteAlert = true }) {
+                            Label("Delete Event", systemImage: "trash")
+                        }
+                        .foregroundColor(.red)
+                    } label: {
+                        Image(systemName: "ellipsis")
                             .font(.title2)
                             .foregroundColor(Color.textPrimary)
                     }
-                    .accessibilityLabel("Edit Event")
+                    .accessibilityLabel("Event Options")
                 }
             }
         }
@@ -246,6 +256,14 @@ struct EventDetailView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(alertMessage)
+        }
+        .alert("Delete Event", isPresented: $showDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteEvent()
+            }
+        } message: {
+            Text("Are you sure you want to delete this event? This action cannot be undone.")
         }
         .onAppear(perform: handleOnAppear)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("EventRSVPUpdated")).throttle(for: 1.0, scheduler: RunLoop.main, latest: true)) { notification in
@@ -405,7 +423,48 @@ struct EventDetailView: View {
         }
     }
     
-    // MARK: - Image Prefetching
+    // MARK: - Delete Event
+    private func deleteEvent() {
+        guard let url = URL(string: APIConfig.fullURL(for: "deleteEvent")) else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager.addAuthHeader(to: &request)
+        
+        let body = ["event_id": localEvent.id.uuidString]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        alertTitle = "Error"
+                        alertMessage = "Failed to delete event: \(error.localizedDescription)"
+                        showAlert = true
+                        return
+                    }
+                    
+                    if let httpResponse = response as? HTTPURLResponse {
+                        if httpResponse.statusCode == 200 {
+                            // Success - remove from local events and dismiss
+                            studyEvents.removeAll { $0.id == localEvent.id }
+                            dismiss()
+                        } else {
+                            alertTitle = "Error"
+                            alertMessage = "Failed to delete event"
+                            showAlert = true
+                        }
+                    }
+                }
+            }.resume()
+        } catch {
+            alertTitle = "Error"
+            alertMessage = "Failed to prepare delete request"
+            showAlert = true
+        }
+    }
     private func prefetchAttendeeImages() {
         var usernamesToPrefetch: [String] = []
         

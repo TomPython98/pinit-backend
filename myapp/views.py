@@ -1422,15 +1422,17 @@ def delete_study_event(request):
         user = request.user  # Use authenticated user
         event_id = data.get("event_id")
 
+        # Try to find the event by ID (handle both UUID and non-UUID formats)
         try:
+            # First try as UUID
             event_uuid = uuid.UUID(event_id)
-        except ValueError:
-            return JsonResponse({"error": "Invalid event_id format"}, status=400)
-
-        try:
             event = StudyEvent.objects.get(id=event_uuid)
-        except StudyEvent.DoesNotExist:
-            return JsonResponse({"error": "Event not found"}, status=404)
+        except (ValueError, StudyEvent.DoesNotExist):
+            # If UUID parsing fails, try to find by string ID (for legacy events)
+            try:
+                event = StudyEvent.objects.get(id=event_id)
+            except StudyEvent.DoesNotExist:
+                return JsonResponse({"error": "Event not found"}, status=404)
 
         # Check if the user is actually the host
         if event.host != user:
@@ -1446,7 +1448,7 @@ def delete_study_event(request):
         
         # Broadcast event deletion to WebSocket clients
         broadcast_event_deleted(
-            event_id=event_uuid,
+            event_id=str(event.id),  # Convert to string for WebSocket
             host_username=host_username,
             attendees=attendees,
             invited_friends=invited_friends
