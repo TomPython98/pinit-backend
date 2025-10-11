@@ -1474,13 +1474,22 @@ def delete_study_event(request):
             except Exception as delete_error:
                 print(f"🔍 DELETE EVENT DEBUG: Delete error: {str(delete_error)}")
                 
-                # If it's a missing table error, provide helpful message
+                # If it's a missing table error, try manual deletion
                 if "no such table" in str(delete_error).lower():
-                    print(f"🔍 DELETE EVENT DEBUG: Missing database table detected")
-                    return JsonResponse({
-                        "error": "Event deletion failed due to missing database tables. Please contact support.",
-                        "details": "Database migration required"
-                    }, status=500)
+                    print(f"🔍 DELETE EVENT DEBUG: Missing database table detected, attempting manual cleanup")
+                    try:
+                        # Manually delete the event using raw SQL to bypass cascade issues
+                        from django.db import connection
+                        with connection.cursor() as cursor:
+                            # Delete the event directly
+                            cursor.execute("DELETE FROM myapp_studyevent WHERE id = %s", [str(event.id)])
+                            print(f"🔍 DELETE EVENT DEBUG: Event deleted manually via SQL")
+                    except Exception as manual_error:
+                        print(f"🔍 DELETE EVENT DEBUG: Manual deletion also failed: {str(manual_error)}")
+                        return JsonResponse({
+                            "error": "Event deletion failed due to database issues. Please contact support.",
+                            "details": "Database migration required"
+                        }, status=500)
                 else:
                     # Re-raise other errors
                     raise delete_error
@@ -1578,13 +1587,22 @@ def delete_account(request):
             print(f"🔍 DELETE ACCOUNT DEBUG: Delete error: {str(delete_error)}")
             print(f"🔍 DELETE ACCOUNT DEBUG: Delete error type: {type(delete_error)}")
             
-            # If it's a missing table error, provide helpful message
+            # If it's a missing table error, try manual deletion
             if "no such table" in str(delete_error).lower():
-                print(f"🔍 DELETE ACCOUNT DEBUG: Missing database table detected")
-                return JsonResponse({
-                    "error": "Account deletion failed due to missing database tables. Please contact support.",
-                    "details": "Database migration required"
-                }, status=500)
+                print(f"🔍 DELETE ACCOUNT DEBUG: Missing database table detected, attempting manual cleanup")
+                try:
+                    # Manually delete the user using raw SQL to bypass cascade issues
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        # Delete the user directly
+                        cursor.execute("DELETE FROM auth_user WHERE id = %s", [user.id])
+                        print(f"🔍 DELETE ACCOUNT DEBUG: User deleted manually via SQL")
+                except Exception as manual_error:
+                    print(f"🔍 DELETE ACCOUNT DEBUG: Manual deletion also failed: {str(manual_error)}")
+                    return JsonResponse({
+                        "error": "Account deletion failed due to database issues. Please contact support.",
+                        "details": "Database migration required"
+                    }, status=500)
             else:
                 # Re-raise other errors
                 raise delete_error
