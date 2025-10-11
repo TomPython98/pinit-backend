@@ -2125,8 +2125,21 @@ def get_event_feed(request, event_id):
                 elif is_invited:
                     pass
         
-        # Get all comments (sorted by newest first)
-        comments = EventComment.objects.filter(event=event, parent=None).order_by('-created_at')
+        # Get all comments (sorted by newest first), prefetch images and replies with images
+        from myapp.models import EventImage
+        comments = (
+            EventComment.objects
+                .filter(event=event, parent=None)
+                .select_related('user')
+                .prefetch_related(
+                    'images',
+                    models.Prefetch(
+                        'eventcomment_set',
+                        queryset=EventComment.objects.select_related('user').prefetch_related('images')
+                    )
+                )
+                .order_by('-created_at')
+        )
         
         # Get likes data
         likes_total = EventLike.objects.filter(event=event).count()
@@ -2153,15 +2166,19 @@ def get_event_feed(request, event_id):
                 comment_id=comment.id
             ).exists()
             
+            # Collect image URLs for the top-level comment
+            top_image_urls = list(comment.images.values_list('image_url', flat=True))
+            
             # Get replies for this comment
             replies = []
-            for reply in EventComment.objects.filter(parent=comment).order_by('created_at'):
+            for reply in EventComment.objects.filter(parent=comment).prefetch_related('images').order_by('created_at'):
+                reply_image_urls = list(reply.images.values_list('image_url', flat=True))
                 replies.append({
                     "id": reply.id,
                     "text": reply.text,
                     "username": reply.user.username,
                     "created_at": reply.created_at.isoformat(),
-                    "imageURLs": None,  # Add image handling if needed
+                    "imageURLs": reply_image_urls if reply_image_urls else None,
                     "likes": 0,  # Add likes count for replies if implementing
                     "isLikedByCurrentUser": False,  # Add current user like check if implementing
                     "replies": []  # We don't support nested replies beyond 1 level
@@ -2173,7 +2190,7 @@ def get_event_feed(request, event_id):
                 "text": comment.text,
                 "username": comment.user.username,
                 "created_at": comment.created_at.isoformat(),
-                "imageURLs": None,  # Add image handling if needed
+                "imageURLs": top_image_urls if top_image_urls else None,
                 "likes": 0,  # Add like count for each post if implementing 
                 "isLikedByCurrentUser": is_liked,
                 "replies": replies
@@ -3502,6 +3519,89 @@ def submit_user_rating(request):
             return JsonResponse({"error": str(e)}, status=500)
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@ratelimit(key='user', rate='50/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_past_events(request, username):
+    """
+    Get past events that the user attended (events that have ended).
+    This allows users to review attendees even after events have concluded.
+    
+    Returns events where:
+    - User was an attendee
+    - Event end_time has passed
+    - Ordered by most recent first (within the last 30 days)
+    """
+    try:
+        user = User.objects.get(username=username)
+        
+        # Verify the authenticated user is requesting their own past events
+        if request.user != user:
+            return JsonResponse({"error": "Unauthorized"}, status=403)
+        
+        now = timezone.now()
+        thirty_days_ago = now - timedelta(days=30)
+        
+        # Get events that:
+        # 1. User attended (is in attendees)
+        # 2. Have ended (end_time < now)
+        # 3. Ended within last 30 days (to keep list manageable)
+        past_events = StudyEvent.objects.filter(
+            attendees=user,
+            end_time__lt=now,
+            end_time__gte=thirty_days_ago
+        ).select_related('host').prefetch_related('attendees', 'event_ratings').order_by('-end_time')
+        
+        events_data = []
+        for event in past_events:
+            # Get all attendees excluding the current user
+            other_attendees = event.attendees.exclude(id=user.id)
+            
+            attendees_data = []
+            for attendee in other_attendees:
+                # Check if user has already rated this attendee for this event
+                already_rated = UserRating.objects.filter(
+                    from_user=user,
+                    to_user=attendee,
+                    event=event
+                ).exists()
+                
+                attendees_data.append({
+                    'username': attendee.username,
+                    'first_name': attendee.first_name,
+                    'last_name': attendee.last_name,
+                    'already_rated': already_rated
+                })
+            
+            events_data.append({
+                'event_id': str(event.id),
+                'title': event.title,
+                'description': event.description,
+                'host': event.host.username,
+                'time': event.time.isoformat(),
+                'end_time': event.end_time.isoformat(),
+                'event_type': event.event_type,
+                'attendees': attendees_data,
+                'total_attendees': event.attendees.count(),
+                'can_review': len(attendees_data) > 0  # Can only review if there were other attendees
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'past_events': events_data,
+            'count': len(events_data)
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 def get_user_reputation(request, username):
     """
