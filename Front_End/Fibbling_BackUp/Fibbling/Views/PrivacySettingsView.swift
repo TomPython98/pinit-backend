@@ -33,6 +33,7 @@ struct PrivacySettingsView: View {
                             VStack(spacing: 16) {
                                 Toggle("Show Online Status", isOn: $showOnlineStatus)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .foregroundColor(Color.black)
                                 Text("Let other users see when you are online.")
                                     .font(.caption)
                                     .foregroundStyle(Color.pinItTextSecondary)
@@ -40,6 +41,7 @@ struct PrivacySettingsView: View {
 
                                 Toggle("Show Activity Status", isOn: $showActivityStatus)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .foregroundColor(Color.black)
                                 Text("Display your recent activity, like events attended.")
                                     .font(.caption)
                                     .foregroundStyle(Color.pinItTextSecondary)
@@ -47,6 +49,7 @@ struct PrivacySettingsView: View {
 
                                 Toggle("Share My Location", isOn: $shareLocation)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .foregroundColor(Color.black)
                                 Text("Allow PinIt to use your location for event discovery and matching.")
                                     .font(.caption)
                                     .foregroundStyle(Color.pinItTextSecondary)
@@ -59,10 +62,13 @@ struct PrivacySettingsView: View {
                             VStack(spacing: 16) {
                                 Toggle("Allow Tagging in Events", isOn: $allowTagging)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .foregroundColor(Color.black)
                                 Toggle("Allow Direct Messages", isOn: $allowDirectMessages)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .foregroundColor(Color.black)
                                 Toggle("Allow Event Discovery by Friends", isOn: $allowEventDiscovery)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .foregroundColor(Color.black)
                             }
                         }
                         
@@ -71,6 +77,7 @@ struct PrivacySettingsView: View {
                             VStack(spacing: 16) {
                                 Toggle("Enable Data Sharing", isOn: $dataSharingEnabled)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .foregroundColor(Color.black)
                                 Text("Allow PinIt to share anonymized data with partners for app improvement.")
                                     .font(.caption)
                                     .foregroundStyle(Color.pinItTextSecondary)
@@ -78,8 +85,10 @@ struct PrivacySettingsView: View {
 
                                 Toggle("Send Analytics Data", isOn: $analyticsEnabled)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .foregroundColor(Color.black)
                                 Toggle("Send Crash Reports", isOn: $crashReportingEnabled)
                                     .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .foregroundColor(Color.black)
                             }
                         }
                         

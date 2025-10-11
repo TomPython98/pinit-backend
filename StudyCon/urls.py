@@ -50,6 +50,7 @@ urlpatterns = [
     path("api/events/comment/", views.add_event_comment, name="add_event_comment"),
     path("api/events/like/", views.toggle_event_like, name="toggle_event_like"),
     path("api/events/share/", views.record_event_share, name="record_event_share"),
+    path("api/events/upload_image/", views.upload_event_post_image, name="upload_event_post_image"),
     path("api/events/interactions/<str:event_id>/", views.get_event_interactions, name="get_event_interactions"),
     
     # NEW: Feed endpoint to match Swift implementation

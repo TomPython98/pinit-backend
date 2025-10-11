@@ -335,7 +335,15 @@ struct EditProfileView: View {
         VStack(spacing: 12) {
             HStack {
                 TextField("Type your interest here...", text: $newInterest)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.white)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .foregroundColor(Color.black)
                     .onSubmit {
                         addInterest()
                     }

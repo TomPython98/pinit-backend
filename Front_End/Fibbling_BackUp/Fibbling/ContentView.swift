@@ -1053,6 +1053,9 @@ struct ProfileView: View {
             }
             .navigationTitle("Your Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.white, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .onAppear {
                 // Initialize profile manager with account manager for JWT authentication
                 profileManager.setAccountManager(accountManager)
@@ -1072,6 +1075,11 @@ struct ProfileView: View {
                 }
             }
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Your Profile")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close") {
                         dismiss()

@@ -262,9 +262,7 @@ SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# ✅ SECURITY: Request Size Limits
-DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+# ✅ SECURITY: Request Size Limits (removed duplicates - using settings above)
 
 # ✅ SECURITY: Additional Security Settings
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'

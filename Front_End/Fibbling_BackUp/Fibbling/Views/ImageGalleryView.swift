@@ -596,7 +596,15 @@ struct ModernCaptionEditorView: View {
                         .foregroundColor(.primary)
                     
                     TextField("Add a caption...", text: $caption, axis: .vertical)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.white)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                        .foregroundColor(Color.black)
                         .focused($isTextFieldFocused)
                         .lineLimit(3...6)
                 }

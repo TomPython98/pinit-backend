@@ -2242,13 +2242,15 @@ def add_event_comment(request):
                     text=text
                 )
             
-            # If the post has images, store them
-            # Note: You need to implement image storage if needed
-            # This is just a placeholder for how you might handle it
+            # If the post has images, store them as EventImage records
             if image_urls and len(image_urls) > 0:
-                # Store image URLs in a related model or as JSON in a field
-                # Example: EventImage.objects.create(comment=comment, image_url=url)
-                pass
+                from myapp.models import EventImage
+                for url in image_urls:
+                    try:
+                        EventImage.objects.create(comment=comment, image_url=url)
+                    except Exception:
+                        # Continue on individual failures
+                        continue
 
             # Return the created post data
             return JsonResponse({
@@ -2273,6 +2275,52 @@ def add_event_comment(request):
             return JsonResponse({"error": str(e)}, status=500)
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+# New: Upload event post image to R2 and return a public URL
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from ratelimit.decorators import ratelimit
+from uuid import uuid4
+from django.conf import settings
+from .storage import R2Storage
+
+
+@ratelimit(key='user', rate='40/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def upload_event_post_image(request):
+    """Accepts multipart/form-data with fields: image (file), event_id (uuid string).
+    Saves the image to Cloudflare R2 and returns the public URL.
+    """
+    try:
+        if 'image' not in request.FILES:
+            return JsonResponse({"error": "No image file provided"}, status=400)
+        image_file = request.FILES['image']
+        event_id = request.POST.get('event_id')
+        if not event_id:
+            return JsonResponse({"error": "Missing event_id"}, status=400)
+
+        # Save to R2 under a deterministic path
+        storage = R2Storage()
+        ext = ''
+        if hasattr(image_file, 'name') and '.' in image_file.name:
+            ext = image_file.name.split('.')[-1].lower()
+            if len(ext) > 5:
+                ext = ''
+        filename = f"events/{event_id}/posts/{uuid4().hex}{('.' + ext) if ext else ''}"
+
+        saved_name = storage._save(filename, image_file)
+        public_url = storage.url(saved_name)
+
+        return JsonResponse({
+            "success": True,
+            "url": public_url
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 @ratelimit(key='user', rate='50/h', method='POST', block=True)
 @api_view(['POST'])

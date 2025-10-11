@@ -99,7 +99,15 @@ struct AccessibilityEnhancements {
                 .accessibilityAddTraits(.isHeader)
             
             TextField(placeholder, text: text)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.white)
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                .foregroundColor(Color.black)
                 .accessibilityLabel(title)
                 .accessibilityHint(hint ?? "Enter \(title.lowercased())")
         }

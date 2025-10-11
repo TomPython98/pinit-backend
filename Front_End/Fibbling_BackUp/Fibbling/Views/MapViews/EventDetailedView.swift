@@ -1798,6 +1798,7 @@ struct EventSocialFeedView: View {
             
             postsListView
         }
+        .background(Color.white)
         .navigationBarHidden(true)
         .sheet(isPresented: $isShowingImagePicker) {
             SocialImagePicker(selectedImages: $selectedImages, maxSelection: 4)
@@ -1834,6 +1835,7 @@ struct EventSocialFeedView: View {
             Text(event.title)
                 .font(.headline)
                 .lineLimit(1)
+                .foregroundColor(Color.black)
             
             Spacer()
             
@@ -1851,7 +1853,7 @@ struct EventSocialFeedView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 10)
-        .background(Color(.secondarySystemBackground))
+        .background(Color.white)
     }
     
     private var createPostSection: some View {
@@ -1862,11 +1864,18 @@ struct EventSocialFeedView: View {
                 
                 // Text input and controls
                 VStack(alignment: .leading, spacing: 10) {
-                    TextField("What's happening at this event?", text: $newPostText, axis: .vertical)
-                        .lineLimit(3...6)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .foregroundColor(.textPrimary)
-                        .tint(.brandPrimary)
+                    ZStack(alignment: .topLeading) {
+                        if newPostText.isEmpty {
+                            Text("What's happening at this event?")
+                                .foregroundColor(Color.gray.opacity(0.5))
+                                .allowsHitTesting(false)
+                        }
+                        TextField("", text: $newPostText, axis: .vertical)
+                            .lineLimit(3...6)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .foregroundColor(Color.black)
+                            .tint(.brandPrimary)
+                    }
                     
                     // Image preview grid
                     if !selectedImages.isEmpty {
@@ -1910,7 +1919,7 @@ struct EventSocialFeedView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
-        .background(Color.bgCard)
+        .background(Color.white)
     }
     
     private var imagePreviewGrid: some View {
@@ -1950,14 +1959,18 @@ struct EventSocialFeedView: View {
             HStack(spacing: 20) {
                 Label("\(interactions?.posts.count ?? 0) Posts", systemImage: "text.bubble")
                     .font(.subheadline)
+                    .foregroundColor(Color.black)
                 Label("\(interactions?.likes.total ?? 0) Likes", systemImage: "heart")
                     .font(.subheadline)
+                    .foregroundColor(Color.black)
                 Label("\(interactions?.shares.total ?? 0) Shares", systemImage: "square.and.arrow.up")
                     .font(.subheadline)
+                    .foregroundColor(Color.black)
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
         }
+        .background(Color.white)
     }
     
     private var postsListView: some View {
@@ -1995,10 +2008,12 @@ struct EventSocialFeedView: View {
                 .foregroundColor(.gray.opacity(0.5))
             Text("Be the first to post about this event!")
                 .font(.title3)
-                .foregroundColor(.gray)
+                .foregroundColor(Color.black)
             Spacer()
         }
         .frame(height: 300)
+        .frame(maxWidth: .infinity)
+        .background(Color.white)
     }
     
     private var loadingView: some View {
@@ -2142,6 +2157,8 @@ struct EventSocialFeedView: View {
                 do {
                     let decoded = try JSONDecoder().decode(EventInteractions.self, from: data)
                     self.interactions = decoded
+                    // Merge any locally cached like states to avoid resetting to 0
+                    self.mergeLikesWithCache()
                 } catch {
                     self.errorMessage = "Failed to decode data: \(error.localizedDescription)"
                     
@@ -2157,6 +2174,63 @@ struct EventSocialFeedView: View {
     
     private func refreshFeed() {
         fetchInteractions()
+    }
+
+    // MARK: - Like Cache (persists per-post likes across view reloads)
+    private struct LikeCacheEntry: Codable {
+        var likes: Int
+        var isLiked: Bool
+    }
+
+    private func likeCacheKey() -> String {
+        return "like_cache_\(event.id.uuidString)"
+    }
+
+    private func loadLikeCache() -> [Int: LikeCacheEntry] {
+        let key = likeCacheKey()
+        guard let data = UserDefaults.standard.data(forKey: key) else { return [:] }
+        if let decoded = try? JSONDecoder().decode([String: LikeCacheEntry].self, from: data) {
+            var byInt: [Int: LikeCacheEntry] = [:]
+            for (k,v) in decoded { if let id = Int(k) { byInt[id] = v } }
+            return byInt
+        }
+        return [:]
+    }
+
+    private func saveLikeCache(_ cache: [Int: LikeCacheEntry]) {
+        var byString: [String: LikeCacheEntry] = [:]
+        for (k,v) in cache { byString[String(k)] = v }
+        if let data = try? JSONEncoder().encode(byString) {
+            UserDefaults.standard.set(data, forKey: likeCacheKey())
+        }
+    }
+
+    private func updateLikeCache(postID: Int, likes: Int, isLiked: Bool) {
+        var cache = loadLikeCache()
+        cache[postID] = LikeCacheEntry(likes: likes, isLiked: isLiked)
+        saveLikeCache(cache)
+    }
+
+    private func mergeLikesWithCache() {
+        guard var current = interactions else { return }
+        let cache = loadLikeCache()
+        current.posts = mergePostsWithCache(current.posts, cache: cache)
+        interactions = current
+    }
+
+    private func mergePostsWithCache(_ posts: [EventInteractions.Post], cache: [Int: LikeCacheEntry]) -> [EventInteractions.Post] {
+        var updated = posts
+        for i in 0..<updated.count {
+            let id = updated[i].id
+            if let entry = cache[id] {
+                if entry.likes > updated[i].likes { updated[i].likes = entry.likes }
+                updated[i].isLikedByCurrentUser = entry.isLiked
+            }
+            if !updated[i].replies.isEmpty {
+                updated[i].replies = mergePostsWithCache(updated[i].replies, cache: cache)
+            }
+        }
+        return updated
     }
     
    
@@ -2185,12 +2259,60 @@ struct EventSocialFeedView: View {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Add JWT auth header to avoid 401
+        accountManager.addAuthHeader(to: &request)
+        // Add JWT auth header to avoid 401
+        accountManager.addAuthHeader(to: &request)
         
         // Add JWT authentication header
         accountManager.addAuthHeader(to: &request)
         
+        // 1) Upload images to backend to get R2 URLs
+        var uploadedURLs: [String] = []
+        if !selectedImages.isEmpty {
+            let dispatchGroup = DispatchGroup()
+            for img in selectedImages {
+                dispatchGroup.enter()
+                if let jpegData = img.jpegData(compressionQuality: 0.8) {
+                    let uploadURLString = "\(APIConfig.primaryBaseURL)/events/upload_image/"
+                    if let uploadURL = URL(string: uploadURLString) {
+                        var req = URLRequest(url: uploadURL)
+                        req.httpMethod = "POST"
+                        // Build simple multipart form
+                        let boundary = "Boundary-\(UUID().uuidString)"
+                        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+                        accountManager.addAuthHeader(to: &req)
+                        var body = Data()
+                        func append(_ str: String) { body.append(str.data(using: .utf8)!) }
+                        append("--\(boundary)\r\n")
+                        append("Content-Disposition: form-data; name=\"event_id\"\r\n\r\n")
+                        append("\(event.id.uuidString)\r\n")
+                        append("--\(boundary)\r\n")
+                        append("Content-Disposition: form-data; name=\"image\"; filename=\"post.jpg\"\r\n")
+                        append("Content-Type: image/jpeg\r\n\r\n")
+                        body.append(jpegData)
+                        append("\r\n--\(boundary)--\r\n")
+                        req.httpBody = body
+                        URLSession.shared.dataTask(with: req) { data, response, error in
+                            defer { dispatchGroup.leave() }
+                            guard error == nil, let data = data,
+                                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                  let url = json["url"] as? String else { return }
+                            DispatchQueue.main.async { uploadedURLs.append(url) }
+                        }.resume()
+                    } else {
+                        dispatchGroup.leave()
+                    }
+                } else {
+                    dispatchGroup.leave()
+                }
+            }
+            // Wait for uploads to finish synchronously before proceeding
+            dispatchGroup.wait()
+        }
+
         // Prepare post data
-        let imageURLs = selectedImages.isEmpty ? nil : selectedImages.map { _ in "placeholder" }
+        let imageURLs: [String]? = uploadedURLs.isEmpty ? nil : uploadedURLs
         let username = accountManager.currentUser ?? "Guest"
         
         let postData: [String: Any] = [
@@ -2358,8 +2480,10 @@ struct EventSocialFeedView: View {
         ]
         
         
+        let bodyData: Data
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            bodyData = try JSONSerialization.data(withJSONObject: body)
+            request.httpBody = bodyData
         } catch {
             return
         }
@@ -2378,6 +2502,51 @@ struct EventSocialFeedView: View {
                 }
                 
                 
+                if httpResponse.statusCode == 401 {
+                    // Try to refresh token and retry once
+                    Task { @MainActor in
+                        let refreshed = await self.accountManager.refreshAccessToken()
+                        if refreshed {
+                            var retryReq = URLRequest(url: url)
+                            retryReq.httpMethod = "POST"
+                            retryReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                            self.accountManager.addAuthHeader(to: &retryReq)
+                            retryReq.httpBody = bodyData
+                            URLSession.shared.dataTask(with: retryReq) { data, response, error in
+                                DispatchQueue.main.async {
+                                    guard let httpResp = response as? HTTPURLResponse else { return }
+                                    if !(200...299).contains(httpResp.statusCode) {
+                                        // Revert optimistic update on hard failure
+                                        self.refreshFeed()
+                                        return
+                                    }
+                                    if let data = data {
+                                        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                           let liked = json["liked"] as? Bool,
+                                           let totalLikes = json["total_likes"] as? Int {
+                                            if var updatedInteractions = self.interactions {
+                                                updatedInteractions.posts = self.updatePostLikeCount(
+                                                    posts: updatedInteractions.posts,
+                                                    postID: postID,
+                                                    newCount: totalLikes,
+                                                    isLiked: liked
+                                                )
+                                                self.interactions = updatedInteractions
+                                                self.updateLikeCache(postID: postID, likes: totalLikes, isLiked: liked)
+                                            }
+                                        }
+                                    }
+                                }
+                            }.resume()
+                        } else {
+                            self.errorMessage = "Session expired. Please log in again to like posts."
+                            // Revert optimistic update by refetching
+                            self.refreshFeed()
+                        }
+                    }
+                    return
+                }
+
                 if let data = data, let responseString = String(data: data, encoding: .utf8) {
                     
                     // Try to parse response for total_likes
@@ -2397,6 +2566,7 @@ struct EventSocialFeedView: View {
                                     isLiked: liked
                                 )
                                 self.interactions = updatedInteractions
+                                self.updateLikeCache(postID: postID, likes: totalLikes, isLiked: liked)
                             }
                         } else {
                         }
@@ -2664,7 +2834,7 @@ struct EventPostView: View {
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
-        .background(Color.bgCard)
+        .background(Color.white)
         .overlay(
             Rectangle()
                 .frame(height: 1)
@@ -2730,7 +2900,11 @@ struct EventPostView: View {
             }
         }
         .padding(8)
-        .background(Color.bgSecondary)
+        .background(Color.white)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
         .cornerRadius(8)
     }
     
@@ -2763,10 +2937,19 @@ struct PostDetailView: View {
     let onLike: () -> Void
     let onReply: (String) -> Void
     
+    // Keep a local, optimistically updated copy for immediate UI feedback
+    @State private var localPost: EventInteractions.Post
     @State private var replyText = ""
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var accountManager: UserAccountManager
-    
+
+    init(post: EventInteractions.Post, onLike: @escaping () -> Void, onReply: @escaping (String) -> Void) {
+        self.post = post
+        self.onLike = onLike
+        self.onReply = onReply
+        _localPost = State(initialValue: post)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -2795,12 +2978,23 @@ struct PostDetailView: View {
                 .accessibilityLabel("Share Post")
             }
             .padding()
-            .background(Color(.secondarySystemBackground))
+            .background(Color.white)
             
             ScrollView {
                 VStack(spacing: 0) {
                     // Original post
-                    EventPostView(post: post, onLike: onLike, onReply: {})
+                    EventPostView(
+                        post: localPost,
+                        onLike: {
+                            // Optimistically toggle like state locally
+                            let wasLiked = localPost.isLikedByCurrentUser
+                            localPost.isLikedByCurrentUser.toggle()
+                            localPost.likes += wasLiked ? -1 : 1
+                            // Persist in backend / parent state
+                            onLike()
+                        },
+                        onReply: {}
+                    )
                         .padding(.bottom, 12)
                     
                     Divider()
@@ -2810,9 +3004,24 @@ struct PostDetailView: View {
                         UserProfileImageView(username: accountManager.currentUser ?? "Guest", size: 30, borderColor: Color.brandPrimary)
                         
                         VStack(alignment: .trailing, spacing: 8) {
-                            TextField("Add your reply...", text: $replyText, axis: .vertical)
-                                .lineLimit(1...5)
-                                .textFieldStyle(PlainTextFieldStyle())
+                            ZStack(alignment: .topLeading) {
+                                if replyText.isEmpty {
+                                    Text("Add your reply...")
+                                        .foregroundColor(Color.gray.opacity(0.5))
+                                        .allowsHitTesting(false)
+                                }
+                                TextField("", text: $replyText, axis: .vertical)
+                                    .lineLimit(1...5)
+                                    .textFieldStyle(PlainTextFieldStyle())
+                                    .foregroundColor(Color.black)
+                            }
+                            .padding(10)
+                            .background(Color.white)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
                             
                             Button {
                                 submitReply()
@@ -2831,6 +3040,7 @@ struct PostDetailView: View {
                     .padding()
                 }
             }
+            .background(Color.white)
         }
     }
     

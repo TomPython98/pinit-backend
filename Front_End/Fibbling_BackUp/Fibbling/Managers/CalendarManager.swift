@@ -255,14 +255,23 @@ class CalendarManager: ObservableObject {
             }
             
             if let error = error {
+                // Fallback to enhanced search on network error
+                self.fetchEventsEnhancedFallback()
                 return
             }
             
             // Log HTTP status for debugging
             if let httpResponse = response as? HTTPURLResponse {
+                // If rate limited or forbidden, fallback to enhanced endpoint
+                if httpResponse.statusCode == 403 || httpResponse.statusCode == 429 {
+                    self.fetchEventsEnhancedFallback()
+                    return
+                }
             }
             
             guard let data = data else {
+                // Fallback if no data
+                self.fetchEventsEnhancedFallback()
                 return
             }
             
@@ -356,6 +365,42 @@ class CalendarManager: ObservableObject {
                     // Print all events ID and attendees for debugging
                     for event in self.events {
                     }
+                }
+            } catch {
+                // Fallback to enhanced endpoint on decode errors (e.g., HTML 403 body)
+                self.fetchEventsEnhancedFallback()
+            }
+        }.resume()
+    }
+
+    /// Fallback fetch using enhanced_search_events (less strict, not per-username)
+    private func fetchEventsEnhancedFallback() {
+        guard let url = URL(string: "\(baseURL)enhanced_search_events/") else { return }
+        var request = URLRequest(url: url)
+        accountManager?.addAuthHeader(to: &request)
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.isLoading = false
+                self.lastRefreshTime = Date()
+            }
+            if let error = error { return }
+            guard let data = data else { return }
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(StudyEventsResponse.self, from: data)
+                DispatchQueue.main.async {
+                    // Apply same filtering logic as primary path
+                    let filteredEvents = response.events.filter { event in
+                        let isUserEvent = event.host == self.username || event.attendees.contains(self.username)
+                        let isAutoMatchedEvent = event.isAutoMatched ?? false
+                        let isInvitedEvent = event.invitedFriends.contains(self.username)
+                        let isPublicEvent = event.isPublic ?? false
+                        let isExpired = event.endTime <= Date()
+                        return !isExpired && (isUserEvent || isAutoMatchedEvent || isInvitedEvent || isPublicEvent)
+                    }
+                    self.events = filteredEvents
+                    self.objectWillChange.send()
                 }
             } catch {
             }
@@ -550,18 +595,21 @@ extension CalendarManager: EventsWebSocketManagerDelegate {
         
         // First try using the multi-event endpoint with the current username
         let url = URL(string: "\(baseURL)get_study_events/\(username)/")
+        var request = URLRequest(url: url!)
+        // Add JWT for protected endpoint
+        accountManager?.addAuthHeader(to: &request)
         
-        
-        URLSession.shared.dataTask(with: url!) { [weak self] data, response, error in
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
             
             if let error = error {
-                self.constructEventFromWebSocketMessage(eventID: eventID)
+                // Try fallback
+                self.fetchEnhancedAndHandle(eventID: eventID)
                 return
             }
             
             guard let data = data else {
-                self.constructEventFromWebSocketMessage(eventID: eventID)
+                self.fetchEnhancedAndHandle(eventID: eventID)
                 return
             }
             
@@ -584,6 +632,33 @@ extension CalendarManager: EventsWebSocketManagerDelegate {
                         } else {
                         }
                     }
+                }
+            } catch {
+                // Fallback to enhanced fetch if decode fails
+                self.fetchEnhancedAndHandle(eventID: eventID)
+            }
+        }.resume()
+    }
+
+    /// Fallback: fetch via enhanced_search_events and handle a specific event
+    private func fetchEnhancedAndHandle(eventID: UUID) {
+        guard let url = URL(string: "\(baseURL)enhanced_search_events/") else {
+            self.constructEventFromWebSocketMessage(eventID: eventID)
+            return
+        }
+        var request = URLRequest(url: url)
+        accountManager?.addAuthHeader(to: &request)
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            if let _ = error { self.constructEventFromWebSocketMessage(eventID: eventID); return }
+            guard let data = data else { self.constructEventFromWebSocketMessage(eventID: eventID); return }
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(StudyEventsResponse.self, from: data)
+                if let updatedEvent = response.events.first(where: { $0.id == eventID }) {
+                    self.handleUpdatedEvent(updatedEvent)
+                } else {
+                    self.constructEventFromWebSocketMessage(eventID: eventID)
                 }
             } catch {
                 self.constructEventFromWebSocketMessage(eventID: eventID)

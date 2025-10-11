@@ -170,9 +170,23 @@ struct EventEditView: View {
                         Image(systemName: "textformat").foregroundColor(.brandPrimary)
                         Text("Event Title").font(.headline).foregroundColor(Color.textPrimary)
                     }
-                    TextField("Enter event title", text: $eventTitle)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .foregroundColor(Color.textPrimary)
+                    ZStack(alignment: .leading) {
+                        if eventTitle.isEmpty {
+                            Text("Enter event title")
+                                .foregroundColor(Color.gray.opacity(0.5))
+                                .padding(.horizontal, 12)
+                        }
+                        TextField("", text: $eventTitle)
+                            .foregroundColor(Color.black)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                    }
+                    .background(Color.white)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                 }
                 
                 // Event Type
@@ -275,9 +289,24 @@ struct EventEditView: View {
                     
                     // Add new tag
                     HStack {
-                        TextField("Add tag", text: $newTag)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .foregroundColor(Color.textPrimary)
+                        ZStack(alignment: .leading) {
+                            if newTag.isEmpty {
+                                Text("Add tag")
+                                    .foregroundColor(Color.gray.opacity(0.5))
+                                    .padding(.horizontal, 12)
+                                    .allowsHitTesting(false)
+                            }
+                            TextField("", text: $newTag)
+                                .foregroundColor(Color.black)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                        }
+                        .background(Color.white)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
                         
                         Button("Add") {
                             addTag()
@@ -344,8 +373,24 @@ struct EventEditView: View {
                             
                             VStack(spacing: 0) {
                                 HStack {
-                                TextField("Enter location (e.g., Brandenburger Tor, Berlin)", text: $locationName)
-                                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                                ZStack(alignment: .leading) {
+                                    if locationName.isEmpty {
+                                        Text("Enter location (e.g., Brandenburger Tor, Berlin)")
+                                            .foregroundColor(Color.gray.opacity(0.5))
+                                            .padding(.horizontal, 12)
+                                            .allowsHitTesting(false)
+                                    }
+                                    TextField("", text: $locationName)
+                                        .foregroundColor(Color.black)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                }
+                                .background(Color.white)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                )
                                     .onChange(of: locationName) { oldValue, newValue in
                                         // Reset location selected state when user types, unless programmatic
                                         if suppressLocationOnChange {
@@ -506,10 +551,26 @@ struct EventEditView: View {
                         Text("Invited Friends").font(.headline).foregroundColor(Color.textPrimary)
                     }
                     
-                    TextField("Enter usernames separated by commas", text: $invitedFriends, axis: .vertical)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .foregroundColor(Color.textPrimary)
-                        .lineLimit(3...6)
+                    ZStack(alignment: .topLeading) {
+                        if invitedFriends.isEmpty {
+                            Text("Enter usernames separated by commas")
+                                .foregroundColor(Color.gray.opacity(0.5))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .allowsHitTesting(false)
+                        }
+                        TextField("", text: $invitedFriends, axis: .vertical)
+                            .foregroundColor(Color.black)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .lineLimit(3...6)
+                    }
+                    .background(Color.white)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                 }
                 .cardStyle()
             }
@@ -708,6 +769,17 @@ struct EventEditView: View {
                         self.studyEvents[index] = updatedEvent
                     }
                     
+                    // Notify map to recenter to the updated location immediately
+                    NotificationCenter.default.post(
+                        name: Notification.Name("EventLocationUpdated"),
+                        object: nil,
+                        userInfo: [
+                            "eventID": self.event.id.uuidString,
+                            "lat": self.selectedCoordinate.latitude,
+                            "lon": self.selectedCoordinate.longitude
+                        ]
+                    )
+                    
                     self.isLoading = false
                     self.alertMessage = "Event updated successfully!"
                     self.showAlert = true
@@ -844,6 +916,8 @@ struct EventEditView: View {
                         
                         // Optionally update the location name with the full place name
                         if let placeName = firstFeature["place_name"] as? String {
+                            // Prevent TextField onChange from clearing selection for programmatic update
+                            self.suppressLocationOnChange = true
                             self.locationName = placeName
                         }
                     } else {
@@ -905,7 +979,11 @@ struct EventEditView: View {
                         locationName = "Current Location"
                     }
                     
+                    // Prevent TextField onChange from clearing selection for programmatic update
+                    self.suppressLocationOnChange = true
                     self.locationName = locationName
+                    // Keep mini map visible when name updates programmatically
+                    self.isLocationSelected = true
                 }
             }
         }
