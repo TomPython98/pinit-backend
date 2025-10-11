@@ -712,13 +712,15 @@ class EventReviewReminder(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey(
         StudyEvent, 
-        on_delete=models.CASCADE, 
-        related_name='review_reminders'
+        on_delete=models.SET_NULL,  # Changed from CASCADE to SET_NULL
+        related_name='review_reminders',
+        null=True, blank=True  # Allow null values
     )
     user = models.ForeignKey(
         User, 
-        on_delete=models.CASCADE, 
-        related_name='received_review_reminders'
+        on_delete=models.SET_NULL,  # Changed from CASCADE to SET_NULL
+        related_name='received_review_reminders',
+        null=True, blank=True  # Allow null values
     )
     sent_at = models.DateTimeField(auto_now_add=True)
     
