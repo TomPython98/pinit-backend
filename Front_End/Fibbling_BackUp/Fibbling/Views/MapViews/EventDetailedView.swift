@@ -86,6 +86,8 @@ struct EventDetailView: View {
     @State private var showAlert = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
+    // Prevent double-like taps while request is in flight
+    @State private var inFlightLikePostIds: Set<Int> = []
     @State private var showShareSheet = false
     @State private var showSocialFeedSheet = false
     @State private var showFeedView = false
@@ -1786,6 +1788,8 @@ struct EventSocialFeedView: View {
     @State private var showingFullPost: EventInteractions.Post?
     @State private var isRefreshing = false
     @State private var errorMessage: String?
+    // Track posts with like requests in flight to prevent double taps
+    @State private var inFlightLikePostIds: Set<Int> = []
     
     // MARK: - View Body
     var body: some View {
@@ -1983,7 +1987,11 @@ struct EventSocialFeedView: View {
                         ForEach(interactions.posts) { post in
                             EventPostView(
                                 post: post,
-                                onLike: { likePost(postID: post.id) },
+                                onLike: {
+                                    guard !inFlightLikePostIds.contains(post.id) else { return }
+                                    inFlightLikePostIds.insert(post.id)
+                                    likePost(postID: post.id)
+                                },
                                 onReply: { showReplySheet(for: post) }
                             )
                             .id("\(post.id)-\(post.likes)-\(post.isLikedByCurrentUser)")
@@ -2260,17 +2268,150 @@ struct EventSocialFeedView: View {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        // Add JWT auth header to avoid 401
-        accountManager.addAuthHeader(to: &request)
-        // Add JWT auth header to avoid 401
+        // Add JWT auth header once
         accountManager.addAuthHeader(to: &request)
         
-        // Add JWT authentication header
-        accountManager.addAuthHeader(to: &request)
+        // Helper function to create and send post with given image URLs
+        func createAndSendPost(withImageURLs imageURLs: [String]) {
+            let username = accountManager.currentUser ?? "Guest"
+            
+            let postData: [String: Any] = [
+                "username": username,
+                "event_id": event.id.uuidString,
+                "text": newPostText,
+                "image_urls": imageURLs.isEmpty ? [] : imageURLs
+            ]
+            
+            // Convert to JSON
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: postData)
+            } catch {
+                self.errorMessage = "Failed to encode post data: \(error.localizedDescription)"
+                self.isRefreshing = false
+                return
+            }
+            
+            // Create a local copy of post while waiting for response
+            let imageURLsOptional: [String]? = imageURLs.isEmpty ? nil : imageURLs
+            let optimisticPost = EventInteractions.Post(
+                id: Int.random(in: 9000...10000),  // Temporary ID that will be replaced
+                text: newPostText,
+                username: username,
+                created_at: Date().ISO8601Format(),
+                imageURLs: imageURLsOptional,
+                likes: 0,
+                isLikedByCurrentUser: false,
+                replies: []
+            )
+            
+            // Immediately update UI with optimistic post
+            if var currentInteractions = self.interactions {
+                currentInteractions.posts.insert(optimisticPost, at: 0)
+                self.interactions = currentInteractions
+            } else {
+                // Create new interactions object if none exists
+                self.interactions = EventInteractions(
+                    posts: [optimisticPost],
+                    likes: EventInteractions.Likes(total: 0, users: []),
+                    shares: EventInteractions.Shares(total: 0, breakdown: [:])
+                )
+            }
+            
+            // Clear input immediately for good UX
+            let savedText = newPostText
+            let savedImages = self.selectedImages
+            self.newPostText = ""
+            self.selectedImages = []
+            
+            // Make API request
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                DispatchQueue.main.async {
+                    self.isRefreshing = false
+                    
+                    if let error = error {
+                        self.errorMessage = "Failed to create post: \(error.localizedDescription)"
+                        // Revert optimistic update on failure
+                        if var current = self.interactions {
+                            current.posts.removeAll { $0.id == optimisticPost.id }
+                            self.interactions = current
+                        }
+                        // Restore input
+                        self.newPostText = savedText
+                        self.selectedImages = savedImages
+                        return
+                    }
+                    
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        self.errorMessage = "Invalid server response"
+                        return
+                    }
+                    
+                    if !(200...299).contains(httpResponse.statusCode) {
+                        if httpResponse.statusCode == 401 {
+                            // Try refreshing token and retry once
+                            Task { @MainActor in
+                                let refreshed = await self.accountManager.refreshAccessToken()
+                                if refreshed {
+                                    var retryReq = URLRequest(url: url)
+                                    retryReq.httpMethod = "POST"
+                                    retryReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                                    self.accountManager.addAuthHeader(to: &retryReq)
+                                    retryReq.httpBody = request.httpBody
+                                    URLSession.shared.dataTask(with: retryReq) { data, response, error in
+                                        DispatchQueue.main.async {
+                                            guard let httpResp = response as? HTTPURLResponse else { return }
+                                            if !(200...299).contains(httpResp.statusCode) {
+                                                // Revert optimistic update on hard failure
+                                                if var current = self.interactions {
+                                                    current.posts.removeAll { $0.id == optimisticPost.id }
+                                                    self.interactions = current
+                                                }
+                                                self.errorMessage = "Server error: \(httpResp.statusCode)"
+                                                // Restore input
+                                                self.newPostText = savedText
+                                                self.selectedImages = savedImages
+                                                return
+                                            }
+                                            // Success after refresh
+                                            self.refreshFeed()
+                                        }
+                                    }.resume()
+                                } else {
+                                    // Refresh failed: revert optimistic update
+                                    if var current = self.interactions {
+                                        current.posts.removeAll { $0.id == optimisticPost.id }
+                                        self.interactions = current
+                                    }
+                                    self.errorMessage = "Session expired. Please log in again."
+                                    // Restore input
+                                    self.newPostText = savedText
+                                    self.selectedImages = savedImages
+                                }
+                            }
+                            return
+                        } else {
+                            self.errorMessage = "Server error: \(httpResponse.statusCode)"
+                            // Revert optimistic update on failure
+                            if var current = self.interactions {
+                                current.posts.removeAll { $0.id == optimisticPost.id }
+                                self.interactions = current
+                            }
+                            // Restore input
+                            self.newPostText = savedText
+                            self.selectedImages = savedImages
+                            return
+                        }
+                    }
+                    
+                    // Post created successfully, refresh feed
+                    self.refreshFeed()
+                }
+            }.resume()
+        }
         
-        // 1) Upload images to backend to get R2 URLs
-        var uploadedURLs: [String] = []
+        // 1) Upload images to backend to get R2 URLs (async)
         if !selectedImages.isEmpty {
+            var uploadedURLs: [String] = []
             let dispatchGroup = DispatchGroup()
             for img in selectedImages {
                 dispatchGroup.enter()
@@ -2299,7 +2440,7 @@ struct EventSocialFeedView: View {
                             guard error == nil, let data = data,
                                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                                   let url = json["url"] as? String else { return }
-                            DispatchQueue.main.async { uploadedURLs.append(url) }
+                            uploadedURLs.append(url)
                         }.resume()
                     } else {
                         dispatchGroup.leave()
@@ -2308,103 +2449,15 @@ struct EventSocialFeedView: View {
                     dispatchGroup.leave()
                 }
             }
-            // Wait for uploads to finish synchronously before proceeding
-            dispatchGroup.wait()
-        }
-
-        // Prepare post data
-        let imageURLs: [String]? = uploadedURLs.isEmpty ? nil : uploadedURLs
-        let username = accountManager.currentUser ?? "Guest"
-        
-        let postData: [String: Any] = [
-            "username": username,
-            "event_id": event.id.uuidString,
-            "text": newPostText,
-            "image_urls": imageURLs as Any
-        ]
-        
-        // Convert to JSON
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: postData)
-        } catch {
-            errorMessage = "Failed to encode post data: \(error.localizedDescription)"
-            isRefreshing = false
-            return
-        }
-        
-        // Create a local copy of post while waiting for response
-        let optimisticPost = EventInteractions.Post(
-            id: Int.random(in: 9000...10000),  // Temporary ID that will be replaced
-            text: newPostText,
-            username: username,
-            created_at: Date().ISO8601Format(),
-            imageURLs: imageURLs,
-            likes: 0,
-            isLikedByCurrentUser: false,
-            replies: []
-        )
-        
-        // Immediately update UI with optimistic post
-        if var currentInteractions = interactions {
-            currentInteractions.posts.insert(optimisticPost, at: 0)
-            interactions = currentInteractions
-        } else {
-            // Create new interactions object if none exists
-            interactions = EventInteractions(
-                posts: [optimisticPost],
-                likes: EventInteractions.Likes(total: 0, users: []),
-                shares: EventInteractions.Shares(total: 0, breakdown: [:])
-            )
-        }
-        
-        // Clear input immediately for good UX
-        let savedText = newPostText
-        let savedImages = selectedImages
-        newPostText = ""
-        selectedImages = []
-        
-        // Make API request
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
-                self.isRefreshing = false
-                
-                if let error = error {
-                    self.errorMessage = "Failed to create post: \(error.localizedDescription)"
-                    // Revert optimistic update on failure
-                    if var current = self.interactions {
-                        current.posts.removeAll { $0.id == optimisticPost.id }
-                        self.interactions = current
-                    }
-                    // Restore input
-                    self.newPostText = savedText
-                    self.selectedImages = savedImages
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    self.errorMessage = "Invalid server response"
-                    return
-                }
-                
-                guard (200...299).contains(httpResponse.statusCode) else {
-                    self.errorMessage = "Server error: \(httpResponse.statusCode)"
-                    
-                    // Show response data for debugging
-                    if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                    }
-                    
-                    // Revert optimistic update on failure
-                    if var current = self.interactions {
-                        current.posts.removeAll { $0.id == optimisticPost.id }
-                        self.interactions = current
-                    }
-                    return
-                }
-                
-                // Post created successfully, refresh the feed
-                self.refreshFeed()
+            
+            // When all uploads finish, create and send post
+            dispatchGroup.notify(queue: .main) {
+                createAndSendPost(withImageURLs: uploadedURLs)
             }
-        }.resume()
+        } else {
+            // No images: proceed immediately
+            createAndSendPost(withImageURLs: [])
+        }
     }
     // Updated helper function to set likes count from server response
     func updatePostLikeCount(posts: [EventInteractions.Post], postID: Int, newCount: Int, isLiked: Bool) -> [EventInteractions.Post] {
@@ -2498,6 +2551,7 @@ struct EventSocialFeedView: View {
                     self.errorMessage = "Failed to like post: \(error.localizedDescription)"
                     // Revert the optimistic update if the API call fails
                     self.refreshFeed()
+                    self.inFlightLikePostIds.remove(postID)
                     return
                 }
                 
@@ -2522,6 +2576,7 @@ struct EventSocialFeedView: View {
                                     if !(200...299).contains(httpResp.statusCode) {
                                         // Revert optimistic update on hard failure
                                         self.refreshFeed()
+                                        self.inFlightLikePostIds.remove(postID)
                                         return
                                     }
                                     if let data = data {
@@ -2538,6 +2593,7 @@ struct EventSocialFeedView: View {
                                                 self.interactions = updatedInteractions
                                                 self.updateLikeCache(postID: postID, likes: totalLikes, isLiked: liked)
                                             }
+                                            self.inFlightLikePostIds.remove(postID)
                                         }
                                     }
                                 }
@@ -2546,6 +2602,7 @@ struct EventSocialFeedView: View {
                             self.errorMessage = "Session expired. Please log in again to like posts."
                             // Revert optimistic update by refetching
                             self.refreshFeed()
+                            self.inFlightLikePostIds.remove(postID)
                         }
                     }
                     return
@@ -2572,15 +2629,19 @@ struct EventSocialFeedView: View {
                                 self.interactions = updatedInteractions
                                 self.updateLikeCache(postID: postID, likes: totalLikes, isLiked: liked)
                             }
+                            self.inFlightLikePostIds.remove(postID)
                         } else {
+                            self.inFlightLikePostIds.remove(postID)
                         }
                     } catch {
+                        self.inFlightLikePostIds.remove(postID)
                     }
                 }
                 
                 if !(200...299).contains(httpResponse.statusCode) {
                     self.errorMessage = "Server error: \(httpResponse.statusCode)"
                     self.refreshFeed()
+                    self.inFlightLikePostIds.remove(postID)
                 }
             }
         }.resume()
@@ -2873,28 +2934,44 @@ struct EventPostView: View {
         
         return LazyVGrid(columns: columns, spacing: 5) {
             ForEach(0..<imageURLs.count, id: \.self) { index in
-                // Create a visually appealing placeholder
+                let urlString = imageURLs[index]
+                let height: CGFloat = imageURLs.count == 1 ? 200 : 120
                 ZStack {
-                    Rectangle()
-                        .fill(LinearGradient(
-                            gradient: Gradient(colors: [Color.blue.opacity(0.7), Color.purple.opacity(0.7)]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: imageURLs.count == 1 ? 200 : 120)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.gray.opacity(0.1))
+                        .frame(height: height)
                     
-                    // Photo icon and label
-                    VStack {
-                        Image(systemName: "photo")
-                            .font(.system(size: 30))
-                            .foregroundColor(.white)
-                        
-                        Text("Image \(index + 1)")
-                            .foregroundColor(.white)
-                            .font(.caption)
-                            .padding(.top, 5)
+                    if let url = URL(string: urlString) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(height: height)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            case .failure(_):
+                                VStack(spacing: 6) {
+                                    Image(systemName: "xmark.octagon")
+                                        .foregroundColor(.red)
+                                    Text("Image failed")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
+                    } else {
+                        VStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .foregroundColor(.orange)
+                            Text("Invalid URL")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
                     }
                 }
             }
