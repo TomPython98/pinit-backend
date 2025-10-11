@@ -1059,6 +1059,202 @@ def get_user_recent_activity(request, username):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_trending_events(request):
+    """
+    Get trending events sorted by popularity (RSVP count) and recency
+    Used by the community hub to show popular events
+    """
+    try:
+        # Get current time to exclude past events
+        now = timezone.now()
+        
+        # Get events from the last 7 days, sorted by popularity
+        from datetime import timedelta
+        week_ago = now - timedelta(days=7)
+        
+        events = StudyEvent.objects.select_related('host', 'host__userprofile').prefetch_related(
+            'attendees', 'invited_friends'
+        ).filter(
+            time__gte=week_ago,  # Events from last week
+            end_time__gt=now,    # Not yet ended
+            is_public=True       # Only public events for trending
+        ).distinct()
+        
+        # Format events with popularity metrics
+        event_data = []
+        for event in events:
+            # Calculate popularity score
+            rsvp_count = event.attendees.count()
+            invite_count = event.invited_friends.count()
+            total_engagement = rsvp_count + invite_count
+            
+            # Time decay factor (more recent = higher score)
+            hours_since_created = (now - event.time).total_seconds() / 3600
+            time_decay = max(0.1, 1.0 - (hours_since_created / 168))  # Decay over 7 days
+            
+            # Popularity score
+            popularity_score = total_engagement * time_decay
+            
+            event_info = {
+                "id": str(event.id),
+                "title": event.title,
+                "description": event.description or "",
+                "latitude": event.latitude,
+                "longitude": event.longitude,
+                "time": event.time.isoformat(),
+                "end_time": event.end_time.isoformat(),
+                "host": event.host.username,
+                "hostIsCertified": event.host.userprofile.is_certified,
+                "isPublic": event.is_public,
+                "event_type": (event.event_type or "other").lower(),
+                "attendees": list(event.attendees.values_list("username", flat=True)),
+                "max_participants": event.max_participants,
+                "auto_matching_enabled": event.auto_matching_enabled,
+                "popularity_score": round(popularity_score, 2),
+                "rsvp_count": rsvp_count,
+                "interest_tags": event.get_interest_tags() if hasattr(event, 'get_interest_tags') else []
+            }
+            event_data.append(event_info)
+        
+        # Sort by popularity score (highest first)
+        event_data.sort(key=lambda x: x['popularity_score'], reverse=True)
+        
+        # Limit to top 20 trending events
+        event_data = event_data[:20]
+        
+        return JsonResponse({"events": event_data}, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_recent_activity(request, username):
+    """
+    Get recent community-wide social activity (RSVPs, comments, likes, shares)
+    Used by the community hub to show what's happening in the community
+    """
+    try:
+        # Get current time
+        now = timezone.now()
+        
+        # Get recent activities from the last 48 hours
+        from datetime import timedelta
+        two_days_ago = now - timedelta(days=2)
+        
+        activities = []
+        
+        # 1. Recent RSVPs
+        recent_rsvps = StudyEvent.objects.select_related('host').prefetch_related('attendees').filter(
+            time__gte=two_days_ago,
+            attendees__isnull=False
+        ).distinct()
+        
+        for event in recent_rsvps:
+            for attendee in event.attendees.all():
+                activities.append({
+                    "id": f"rsvp_{event.id}_{attendee.id}",
+                    "type": "rsvp",
+                    "username": attendee.username,
+                    "event_title": event.title,
+                    "event_id": str(event.id),
+                    "timestamp": event.time.isoformat(),
+                    "message": f"{attendee.username} joined {event.title}"
+                })
+        
+        # 2. Recent event comments (if EventComment model exists)
+        try:
+            from .models import EventComment
+            recent_comments = EventComment.objects.select_related('user', 'event').filter(
+                created_at__gte=two_days_ago
+            ).order_by('-created_at')[:20]
+            
+            for comment in recent_comments:
+                activities.append({
+                    "id": f"comment_{comment.id}",
+                    "type": "comment",
+                    "username": comment.user.username,
+                    "event_title": comment.event.title,
+                    "event_id": str(comment.event.id),
+                    "timestamp": comment.created_at.isoformat(),
+                    "message": f"{comment.user.username} commented on {comment.event.title}"
+                })
+        except ImportError:
+            pass  # EventComment model doesn't exist
+        
+        # 3. Recent event likes (if EventLike model exists)
+        try:
+            from .models import EventLike
+            recent_likes = EventLike.objects.select_related('user', 'event').filter(
+                created_at__gte=two_days_ago
+            ).order_by('-created_at')[:20]
+            
+            for like in recent_likes:
+                activities.append({
+                    "id": f"like_{like.id}",
+                    "type": "like",
+                    "username": like.user.username,
+                    "event_title": like.event.title,
+                    "event_id": str(like.event.id),
+                    "timestamp": like.created_at.isoformat(),
+                    "message": f"{like.user.username} liked {like.event.title}"
+                })
+        except ImportError:
+            pass  # EventLike model doesn't exist
+        
+        # 4. Recent event shares (if EventShare model exists)
+        try:
+            from .models import EventShare
+            recent_shares = EventShare.objects.select_related('user', 'event').filter(
+                created_at__gte=two_days_ago
+            ).order_by('-created_at')[:20]
+            
+            for share in recent_shares:
+                activities.append({
+                    "id": f"share_{share.id}",
+                    "type": "share",
+                    "username": share.user.username,
+                    "event_title": share.event.title,
+                    "event_id": str(share.event.id),
+                    "timestamp": share.created_at.isoformat(),
+                    "message": f"{share.user.username} shared {share.event.title}"
+                })
+        except ImportError:
+            pass  # EventShare model doesn't exist
+        
+        # 5. Recent event creations
+        recent_events = StudyEvent.objects.select_related('host').filter(
+            time__gte=two_days_ago
+        ).order_by('-time')[:10]
+        
+        for event in recent_events:
+            activities.append({
+                "id": f"create_{event.id}",
+                "type": "create",
+                "username": event.host.username,
+                "event_title": event.title,
+                "event_id": str(event.id),
+                "timestamp": event.time.isoformat(),
+                "message": f"{event.host.username} created {event.title}"
+            })
+        
+        # Sort all activities by timestamp (most recent first)
+        activities.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        # Limit to 50 most recent activities
+        activities = activities[:50]
+        
+        return JsonResponse({"activities": activities}, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 def _should_include_event(event, user, username):
     """Helper function to determine if an event should be included"""
     # Check if this is an auto-matched event for this user

@@ -32,6 +32,8 @@ urlpatterns = [
     path("api/get_study_events/<str:username>/", views.get_study_events, name="get_study_events"),
     path("api/get_past_events/<str:username>/", views.get_past_events, name="get_past_events"),
     path("api/get_user_recent_activity/<str:username>/", views.get_user_recent_activity, name="get_user_recent_activity"),
+    path("api/get_trending_events/", views.get_trending_events, name="get_trending_events"),
+    path("api/get_recent_activity/<str:username>/", views.get_recent_activity, name="get_recent_activity"),
     path("api/rsvp_study_event/", views.rsvp_study_event, name="rsvp_study_event"),
     path("api/delete_study_event/", views.delete_study_event, name="delete_study_event"),
     
