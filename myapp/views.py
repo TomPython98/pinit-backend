@@ -1143,7 +1143,7 @@ def get_recent_activity(request, username):
         # Get current time
         now = timezone.now()
         
-        # Get recent activities from the last 48 hours
+        # Get recent activities from the last 48 hours OR upcoming events
         from datetime import timedelta
         two_days_ago = now - timedelta(days=2)
         
@@ -1227,9 +1227,9 @@ def get_recent_activity(request, username):
         except ImportError:
             pass  # EventShare model doesn't exist
         
-        # 5. Recent event creations
+        # 5. Recent event creations (include all upcoming events)
         recent_events = StudyEvent.objects.select_related('host').filter(
-            time__gte=two_days_ago
+            end_time__gt=now  # All upcoming events
         ).order_by('-time')[:10]
         
         for event in recent_events:
