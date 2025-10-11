@@ -3291,16 +3291,16 @@ struct OnboardingView: View {
             description: "Discover and create events that match your interests and meet amazing people in your area."
         ),
         OnboardingPage(
-            title: "Smart Matching",
-            subtitle: "Privacy-focused auto-matching",
+            title: "Auto-Match",
+            subtitle: "Smart invitations based on interests",
             image: "heart.fill",
-            description: "Our intelligent system matches you with relevant events and people. Auto-matched events are only visible to matched users, ensuring privacy and meaningful connections."
+            description: "Our system automatically invites users with similar interests to your events. For private events, only matched users can see them - keeping your events discoverable but private."
         ),
         OnboardingPage(
             title: "Create & Join Events",
-            subtitle: "Public, private, or auto-matched",
+            subtitle: "Choose your privacy level",
             image: "calendar.badge.plus",
-            description: "Create public events for everyone, private events for friends, or use auto-matching for targeted discovery. Choose your privacy level and let smart matching find the right people."
+            description: "Create public events for everyone to see, or private events for friends only. Use auto-matching to find people with similar interests while keeping your event private."
         ),
         OnboardingPage(
             title: "Stay Connected",
@@ -3406,7 +3406,7 @@ struct EventCreationView: View {
 - **Location Integration**: Map-based location selection with geocoding
 - **Image Upload**: Multiple image upload for events
 - **Friend Invitations**: Invite friends to events with prominent CTA
-- **Boost Reach**: Renamed auto-matching with contextual descriptions
+- **Auto-Match**: Clear naming with contextual descriptions for both public and private events
 - **Event Types**: Visual event type selection
 - **Date/Time Selection**: Custom date and time pickers
 - **Location Suggestions**: Real-time location search and suggestions

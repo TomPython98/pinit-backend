@@ -580,7 +580,9 @@ struct EventCreationView: View {
                             // Auto-matching is now allowed for private events too
                         }
                     }
-                    Text(audienceSelection == .publicEvent ? "Anyone nearby can discover and join." : "Only invited friends and auto-matched users can see this event.")
+                    Text(audienceSelection == .publicEvent ? 
+                         "Everyone can discover and join this event." : 
+                         "Only invited friends and auto-matched users can see this event.")
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
@@ -592,10 +594,16 @@ struct EventCreationView: View {
                             .foregroundColor(.orange)
                             .font(.caption)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Private event")
+                            Text("Private Event")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundColor(.textPrimary)
-                            Text("Only invited friends and auto-matched users will be able to see this event.")
+                            Text("This event is hidden from everyone except:")
+                                .font(.caption)
+                                .foregroundColor(.textSecondary)
+                            Text("• Friends you invite directly")
+                                .font(.caption)
+                                .foregroundColor(.textSecondary)
+                            Text("• Users auto-matched by interests")
                                 .font(.caption)
                                 .foregroundColor(.textSecondary)
                             Button(action: { showFriendPicker = true }) {
@@ -704,16 +712,16 @@ struct EventCreationView: View {
             cardHeader("Optional Features", icon: "star.fill", color: .yellow)
             
             VStack(spacing: 16) {
-                // Boost Reach (Smart Matching) - available for both Public and Private
+                // Auto-Match - available for both Public and Private
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Boost Reach")
+                        Text("Auto-Match")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.textPrimary)
                         
                         Text(audienceSelection == .publicEvent ? 
-                             "Invite relevant users to help your public event reach more people." :
-                             "Auto-match with users who share similar interests. Only matched users will see this event.")
+                             "Automatically invite users with similar interests to your public event." :
+                             "Automatically invite users with similar interests. Only matched users can see this private event.")
                             .font(.caption)
                             .foregroundColor(.textSecondary)
                     }
@@ -1330,7 +1338,7 @@ struct EventCreationView: View {
     private func createEvent() {
         // Client-side validation: prevent private events without invitees or auto-matching
         if !isPublic && selectedFriends.isEmpty && !enableAutoMatching {
-            validationMessage = "Private events require at least one invited friend or auto-matching enabled."
+            validationMessage = "Private events need either invited friends or auto-matching enabled."
             showValidationAlert = true
             return
         }
