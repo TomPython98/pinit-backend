@@ -63,7 +63,7 @@ class CalendarManager: ObservableObject {
     
     // Automatic refresh timer
     private var autoRefreshTimer: Timer?
-    private let autoRefreshInterval: TimeInterval = 60.0 // Refresh every 60 seconds
+    private let autoRefreshInterval: TimeInterval = 300.0 // Refresh every 5 minutes (reduced from 60 seconds)
     
     /// Dependency Injection initializer. You can pass in your account manager.
     init(accountManager: UserAccountManager) {
@@ -160,9 +160,16 @@ class CalendarManager: ObservableObject {
     // Handler for app becoming active
     @objc private func handleAppBecameActive() {
         
-        // If we have a username and we're not already loading, refresh events
+        // WebSocket handles real-time updates - no need for app lifecycle refreshes
+        // Only refresh if WebSocket is disconnected and it's been a while
         if !username.isEmpty && !isLoading {
-            fetchEvents()
+            let webSocketConnected = webSocketManager?.isConnected ?? false
+            if !webSocketConnected {
+                let timeSinceLastRefresh = lastRefreshTime?.timeIntervalSinceNow ?? -999999
+                if abs(timeSinceLastRefresh) > 300 { // 5 minutes only if WebSocket is down
+                    fetchEvents()
+                }
+            }
         }
     }
     
@@ -181,8 +188,8 @@ class CalendarManager: ObservableObject {
         webSocketManager?.delegate = self
         webSocketManager?.connect()
         
-        // Start automatic refresh timer as backup
-        startAutoRefresh()
+        // WebSocket handles real-time updates - no need for backup polling
+        // startAutoRefresh() // Disabled - WebSocket provides real-time updates
     }
     
     /// Disconnect WebSocket

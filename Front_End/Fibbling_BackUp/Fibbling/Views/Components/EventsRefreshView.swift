@@ -80,12 +80,8 @@ struct EventsRefreshView: View {
             lastRefreshTime = Date()
         }
         .onAppear {
-            // Refresh events when this view appears, but only if we haven't refreshed recently
-            let timeSinceLastRefresh = Date().timeIntervalSince(lastRefreshTime)
-            if timeSinceLastRefresh > 30 { // Only refresh if it's been more than 30 seconds
-                refreshEvents()
-            } else {
-            }
+            // WebSocket handles real-time updates - only refresh if manually requested
+            // Remove automatic refresh on appear to reduce API calls
         }
         // This id modifier will force the view to update when the timer ticks
         .id("refreshView-\(refreshTimerTick)")
