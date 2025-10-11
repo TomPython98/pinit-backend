@@ -1525,10 +1525,50 @@ def delete_account(request):
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
     try:
+        print(f"🔍 DELETE ACCOUNT DEBUG: Starting delete account request")
         user = request.user
         username = user.username
         
-        print(f"🔍 DELETE ACCOUNT DEBUG: Attempting to delete user: {username}")
+        print(f"🔍 DELETE ACCOUNT DEBUG: User details - Username: {username}, ID: {user.id}, Is Active: {user.is_active}")
+        
+        # Check user's related objects before deletion
+        try:
+            print(f"🔍 DELETE ACCOUNT DEBUG: Checking user's related objects...")
+            
+            # Check StudyEvents hosted by this user
+            hosted_events = StudyEvent.objects.filter(host=user)
+            print(f"🔍 DELETE ACCOUNT DEBUG: User hosts {hosted_events.count()} events")
+            
+            # Check StudyEvents user is attending
+            attending_events = StudyEvent.objects.filter(attendees=user)
+            print(f"🔍 DELETE ACCOUNT DEBUG: User is attending {attending_events.count()} events")
+            
+            # Check UserRatings
+            try:
+                user_ratings = UserRating.objects.filter(user=user)
+                print(f"🔍 DELETE ACCOUNT DEBUG: User has {user_ratings.count()} ratings")
+            except Exception as rating_error:
+                print(f"🔍 DELETE ACCOUNT DEBUG: Error checking ratings: {str(rating_error)}")
+            
+            # Check UserTrustLevel
+            try:
+                trust_level = UserTrustLevel.objects.filter(user=user)
+                print(f"🔍 DELETE ACCOUNT DEBUG: User has {trust_level.count()} trust level records")
+            except Exception as trust_error:
+                print(f"🔍 DELETE ACCOUNT DEBUG: Error checking trust level: {str(trust_error)}")
+            
+            # Check UserReputationStats
+            try:
+                reputation_stats = UserReputationStats.objects.filter(user=user)
+                print(f"🔍 DELETE ACCOUNT DEBUG: User has {reputation_stats.count()} reputation stats")
+            except Exception as rep_error:
+                print(f"🔍 DELETE ACCOUNT DEBUG: Error checking reputation stats: {str(rep_error)}")
+                
+        except Exception as check_error:
+            print(f"🔍 DELETE ACCOUNT DEBUG: Error checking related objects: {str(check_error)}")
+            # Continue with deletion even if checks fail
+
+        print(f"🔍 DELETE ACCOUNT DEBUG: About to delete user {username}")
 
         # Delete the user account with proper error handling
         try:
@@ -1536,6 +1576,7 @@ def delete_account(request):
             print(f"🔍 DELETE ACCOUNT DEBUG: User {username} deleted successfully")
         except Exception as delete_error:
             print(f"🔍 DELETE ACCOUNT DEBUG: Delete error: {str(delete_error)}")
+            print(f"🔍 DELETE ACCOUNT DEBUG: Delete error type: {type(delete_error)}")
             
             # If it's a missing table error, provide helpful message
             if "no such table" in str(delete_error).lower():
@@ -1548,6 +1589,7 @@ def delete_account(request):
                 # Re-raise other errors
                 raise delete_error
 
+        print(f"🔍 DELETE ACCOUNT DEBUG: Returning success response")
         # Return success response
         return JsonResponse({
             "success": True,
@@ -1557,6 +1599,7 @@ def delete_account(request):
         
     except Exception as e:
         print(f"🔍 DELETE ACCOUNT DEBUG: Exception occurred: {str(e)}")
+        print(f"🔍 DELETE ACCOUNT DEBUG: Exception type: {type(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
