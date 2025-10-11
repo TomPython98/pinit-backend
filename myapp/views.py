@@ -27,6 +27,7 @@ except Exception:  # pragma: no cover
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
+from django.db.models import Prefetch
 
 # Security logger
 security_logger = logging.getLogger('myapp.security')
@@ -2086,6 +2087,7 @@ def get_event_feed(request, event_id):
     try:
         # Use authenticated user instead of query parameter
         current_user = request.user
+        current_username = getattr(current_user, 'username', '') or ''
         
         # Convert string ID to UUID
         event = StudyEvent.objects.get(id=uuid.UUID(event_id))
@@ -2133,8 +2135,8 @@ def get_event_feed(request, event_id):
                 .select_related('user')
                 .prefetch_related(
                     'images',
-                    models.Prefetch(
-                        'eventcomment_set',
+                    Prefetch(
+                        'replies',
                         queryset=EventComment.objects.select_related('user').prefetch_related('images')
                     )
                 )
