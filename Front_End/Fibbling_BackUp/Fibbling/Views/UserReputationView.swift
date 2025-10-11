@@ -259,31 +259,31 @@ struct UserRatingsListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Clean professional background
-                Color.bgSurface
+                // Clean professional background - use white explicitly
+                Color.white
                     .ignoresSafeArea()
                 
                 List {
                     ForEach(ratings) { rating in
                         RatingRowView(rating: rating)
-                            .listRowBackground(Color.bgCard)
+                            .listRowBackground(Color.white)
                             .listRowSeparator(.hidden)
                     }
                 }
                 .listStyle(PlainListStyle())
-                .background(Color.bgSurface)
+                .background(Color.white)
                 .scrollContentBackground(.hidden)
             }
             .navigationTitle("All Reviews")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.bgCard, for: .navigationBar)
+            .toolbarBackground(Color.white, for: .navigationBar)
             .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(Color.black)
                 }
             }
         }

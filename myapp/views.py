@@ -1427,43 +1427,65 @@ def delete_study_event(request):
     Only the host of the event can delete it.
     """
     if request.method == "POST":
-        data = json.loads(request.body)
-        user = request.user  # Use authenticated user
-        event_id = data.get("event_id")
-
-        # Try to find the event by ID (handle both UUID and non-UUID formats)
         try:
-            # First try as UUID
-            event_uuid = uuid.UUID(event_id)
-            event = StudyEvent.objects.get(id=event_uuid)
-        except (ValueError, StudyEvent.DoesNotExist):
-            # If UUID parsing fails, try to find by string ID (for legacy events)
+            data = json.loads(request.body)
+            user = request.user  # Use authenticated user
+            event_id = data.get("event_id")
+            
+            # Debug logging
+            print(f"🔍 DELETE EVENT DEBUG: User: {user.username}, Event ID: {event_id}")
+
+            # Try to find the event by ID (handle both UUID and non-UUID formats)
             try:
-                event = StudyEvent.objects.get(id=event_id)
+                # First try as UUID
+                event_uuid = uuid.UUID(event_id)
+                event = StudyEvent.objects.get(id=event_uuid)
+                print(f"🔍 DELETE EVENT DEBUG: Found event as UUID: {event.id}")
+            except ValueError as e:
+                print(f"🔍 DELETE EVENT DEBUG: UUID parsing failed: {e}")
+                # If UUID parsing fails, try to find by string ID (for legacy events)
+                try:
+                    event = StudyEvent.objects.get(id=event_id)
+                    print(f"🔍 DELETE EVENT DEBUG: Found event as string: {event.id}")
+                except StudyEvent.DoesNotExist:
+                    print(f"🔍 DELETE EVENT DEBUG: Event not found with string ID")
+                    return JsonResponse({"error": "Event not found"}, status=404)
             except StudyEvent.DoesNotExist:
+                print(f"🔍 DELETE EVENT DEBUG: Event not found with UUID")
                 return JsonResponse({"error": "Event not found"}, status=404)
 
-        # Check if the user is actually the host
-        if event.host != user:
-            return JsonResponse({"error": "Only the host can delete this event"}, status=403)
+            # Check if the user is actually the host
+            if event.host != user:
+                print(f"🔍 DELETE EVENT DEBUG: User {user.username} is not host {event.host.username}")
+                return JsonResponse({"error": "Only the host can delete this event"}, status=403)
 
-        # Store attendees and invited friends before deleting the event
-        host_username = event.host.username
-        attendees = [u.username for u in event.attendees.all()]
-        invited_friends = [u.username for u in event.invited_friends.all()]
-        
-        # Delete the event
-        event.delete()
-        
-        # Broadcast event deletion to WebSocket clients
-        broadcast_event_deleted(
-            event_id=str(event.id),  # Convert to string for WebSocket
-            host_username=host_username,
-            attendees=attendees,
-            invited_friends=invited_friends
-        )
-        
-        return JsonResponse({"success": True, "message": "Event deleted successfully"}, status=200)
+            # Store attendees and invited friends before deleting the event
+            host_username = event.host.username
+            attendees = [u.username for u in event.attendees.all()]
+            invited_friends = [u.username for u in event.invited_friends.all()]
+            
+            print(f"🔍 DELETE EVENT DEBUG: About to delete event {event.id}")
+            
+            # Delete the event
+            event.delete()
+            
+            print(f"🔍 DELETE EVENT DEBUG: Event deleted successfully")
+            
+            # Broadcast event deletion to WebSocket clients
+            broadcast_event_deleted(
+                event_id=str(event_id),  # Use original event_id string
+                host_username=host_username,
+                attendees=attendees,
+                invited_friends=invited_friends
+            )
+            
+            return JsonResponse({"success": True, "message": "Event deleted successfully"}, status=200)
+            
+        except Exception as e:
+            print(f"🔍 DELETE EVENT DEBUG: Exception occurred: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({"error": f"Server error: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 

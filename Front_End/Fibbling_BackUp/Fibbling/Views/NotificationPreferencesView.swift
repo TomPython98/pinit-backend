@@ -58,9 +58,13 @@ struct NotificationPreferencesView: View {
                                             .foregroundStyle(Color.pinItTextPrimary)
                                         Picker("Reminder Time", selection: $reminderTime) {
                                             Text("5 minutes").tag(5.0)
+                                                .foregroundStyle(Color.pinItTextPrimary)
                                             Text("15 minutes").tag(15.0)
+                                                .foregroundStyle(Color.pinItTextPrimary)
                                             Text("30 minutes").tag(30.0)
+                                                .foregroundStyle(Color.pinItTextPrimary)
                                             Text("1 hour").tag(60.0)
+                                                .foregroundStyle(Color.pinItTextPrimary)
                                         }
                                         .pickerStyle(.segmented)
                                         .accentColor(theme.primaryColor)

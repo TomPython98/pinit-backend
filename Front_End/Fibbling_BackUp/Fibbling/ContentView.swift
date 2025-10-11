@@ -2960,6 +2960,12 @@ struct SocialActivityFeedView: View {
     @State private var selectedEvent: StudyEvent? = nil
     @State private var showEventDetail = false
     
+    // Quick Actions Navigation States
+    @State private var showEventCreation = false
+    @State private var showFriendsView = false
+    @State private var showMapView = false
+    @State private var showProfileView = false
+    
     private let baseURL = APIConfig.primaryBaseURL
     
     var body: some View {
@@ -2989,6 +2995,36 @@ struct SocialActivityFeedView: View {
                 NavigationStack {
                     EventDetailView(event: event, studyEvents: .constant([]), onRSVP: { _ in })
                 }
+            }
+        }
+        .sheet(isPresented: $showEventCreation) {
+            NavigationStack {
+                EventCreationView(coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)) { _ in
+                    // Event created - could refresh data here
+                }
+                .environmentObject(accountManager)
+                .environmentObject(CalendarManager(accountManager: accountManager))
+            }
+        }
+        .sheet(isPresented: $showFriendsView) {
+            NavigationStack {
+                FriendsListView()
+                    .environmentObject(accountManager)
+                    .environmentObject(ChatManager())
+            }
+        }
+        .sheet(isPresented: $showMapView) {
+            NavigationStack {
+                StudyMapView()
+                    .environmentObject(accountManager)
+                    .environmentObject(CalendarManager(accountManager: accountManager))
+            }
+        }
+        .sheet(isPresented: $showProfileView) {
+            NavigationStack {
+                ProfileView()
+                    .environmentObject(accountManager)
+                    .environmentObject(CalendarManager(accountManager: accountManager))
             }
         }
     }
@@ -3154,7 +3190,7 @@ struct SocialActivityFeedView: View {
                     subtitle: "Start something new",
                     color: .brandPrimary
                 ) {
-                    // Navigate to event creation - would need navigation state
+                    showEventCreation = true
                 }
                 
                 QuickActionCard(
@@ -3163,7 +3199,7 @@ struct SocialActivityFeedView: View {
                     subtitle: "Connect with others",
                     color: .brandSecondary
                 ) {
-                    // Navigate to friends - would need navigation state
+                    showFriendsView = true
                 }
                 
                 QuickActionCard(
@@ -3172,7 +3208,7 @@ struct SocialActivityFeedView: View {
                     subtitle: "Discover local",
                     color: .brandSuccess
                 ) {
-                    // Navigate to map - would need navigation state
+                    showMapView = true
                 }
                 
                 QuickActionCard(
@@ -3181,7 +3217,7 @@ struct SocialActivityFeedView: View {
                     subtitle: "Share feedback",
                     color: .brandWarning
                 ) {
-                    // Navigate to ratings - would need navigation state
+                    showProfileView = true
                 }
             }
         }
