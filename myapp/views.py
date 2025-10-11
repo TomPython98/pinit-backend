@@ -1428,6 +1428,7 @@ def delete_study_event(request):
     """
     if request.method == "POST":
         try:
+            print(f"🔍 DELETE EVENT DEBUG: Starting delete event request")
             data = json.loads(request.body)
             user = request.user  # Use authenticated user
             event_id = data.get("event_id")
@@ -1485,12 +1486,17 @@ def delete_study_event(request):
                     raise delete_error
             
             # Broadcast event deletion to WebSocket clients
-            broadcast_event_deleted(
-                event_id=str(event_id),  # Use original event_id string
-                host_username=host_username,
-                attendees=attendees,
-                invited_friends=invited_friends
-            )
+            try:
+                broadcast_event_deleted(
+                    event_id=str(event_id),  # Use original event_id string
+                    host_username=host_username,
+                    attendees=attendees,
+                    invited_friends=invited_friends
+                )
+                print(f"🔍 DELETE EVENT DEBUG: WebSocket broadcast completed")
+            except Exception as broadcast_error:
+                print(f"🔍 DELETE EVENT DEBUG: WebSocket broadcast error: {str(broadcast_error)}")
+                # Don't fail the entire request for WebSocket errors
             
             return JsonResponse({"success": True, "message": "Event deleted successfully"}, status=200)
             
