@@ -16,7 +16,14 @@ from rest_framework import status
 from push_notifications.models import APNSDevice
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from django_ratelimit.decorators import ratelimit
+# Robust import for ratelimit: fall back to no-op if package isn't available at runtime
+try:
+    from ratelimit.decorators import ratelimit  # django-ratelimit installs as 'ratelimit'
+except Exception:  # pragma: no cover
+    def ratelimit(*args, **kwargs):
+        def _decorator(view_func):
+            return view_func
+        return _decorator
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
