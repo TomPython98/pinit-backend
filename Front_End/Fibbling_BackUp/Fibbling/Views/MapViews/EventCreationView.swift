@@ -39,6 +39,11 @@ struct EventCreationView: View {
     @State private var isSearchingSuggestions = false
     @State private var isLocationSelected = false
     @State private var suppressLocationOnChange = false // prevent TextField onChange from clearing selection when set programmatically
+    @State private var showVisibilityHint = false
+    @State private var showAutoMatchHint = false
+    @State private var showValidationAlert = false
+    @State private var validationMessage = ""
+    @State private var audienceSelection: Audience = .publicEvent
     
     var onSave: (StudyEvent) -> Void
     
@@ -47,6 +52,7 @@ struct EventCreationView: View {
         self.initialCoordinate = coordinate
         self._selectedCoordinate = State(initialValue: coordinate)
         self.onSave = onSave
+        self._audienceSelection = State(initialValue: .publicEvent)
     }
     
     var body: some View {
@@ -120,6 +126,13 @@ struct EventCreationView: View {
             .sheet(isPresented: $showFriendPicker) {
                 FriendPickerView(selectedFriends: $selectedFriends)
                     .environmentObject(accountManager)
+            }
+            .alert(isPresented: $showValidationAlert) {
+                Alert(
+                    title: Text("Cannot Create Event"),
+                    message: Text(validationMessage),
+                    dismissButton: .default(Text("OK"))
+                )
             }
             .animation(.easeInOut(duration: 0.3), value: showLocationSuggestions)
             .animation(.easeInOut(duration: 0.3), value: isGeocoding)
@@ -548,22 +561,62 @@ struct EventCreationView: View {
             cardHeader("Settings", icon: "gearshape.fill", color: .purple)
             
             VStack(spacing: 16) {
-                // Privacy Setting
-                HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                        Text("Event Visibility")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.textPrimary)
-                                
-                        Text(isPublic ? "Anyone can see and join" : "Only invited people can see")
-                                    .font(.caption)
-                                    .foregroundColor(.textSecondary)
+                // Audience selector
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Audience")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.textPrimary)
+                    Picker("Audience", selection: $audienceSelection) {
+                        Text("Public").tag(Audience.publicEvent)
+                        Text("Private").tag(Audience.privateEvent)
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: audienceSelection) { newValue in
+                        switch newValue {
+                        case .publicEvent:
+                            isPublic = true
+                        case .privateEvent:
+                            isPublic = false
+                            // Auto-matching is now allowed for private events too
+                        }
+                    }
+                    Text(audienceSelection == .publicEvent ? "Anyone nearby can discover and join." : "Only invited friends and auto-matched users can see this event.")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                // Private visibility callout + Invite CTA
+                if audienceSelection == .privateEvent {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "lock.fill")
+                            .foregroundColor(.orange)
+                            .font(.caption)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Private event")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.textPrimary)
+                            Text("Only invited friends and auto-matched users will be able to see this event.")
+                                .font(.caption)
+                                .foregroundColor(.textSecondary)
+                            Button(action: { showFriendPicker = true }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "person.crop.circle.badge.plus")
+                                        .font(.caption)
+                                    Text("Invite friends")
+                                        .font(.footnote.weight(.semibold))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(Color.brandPrimary.opacity(0.12))
+                                .foregroundColor(.brandPrimary)
+                                .cornerRadius(8)
                             }
-                    
-                    Spacer()
-                    
-                    Toggle("", isOn: $isPublic)
-                        .toggleStyle(SwitchToggleStyle(tint: .brandPrimary))
+                        }
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(Color.orange.opacity(0.12))
+                    .cornerRadius(10)
                 }
                         
                 // Friend Invitations (only show if private)
@@ -651,14 +704,16 @@ struct EventCreationView: View {
             cardHeader("Optional Features", icon: "star.fill", color: .yellow)
             
             VStack(spacing: 16) {
-                // Auto-matching Toggle
-                                    HStack {
+                // Boost Reach (Smart Matching) - available for both Public and Private
+                HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Smart Matching")
+                        Text("Boost Reach")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.textPrimary)
                         
-                        Text("Automatically invite people with similar interests")
+                        Text(audienceSelection == .publicEvent ? 
+                             "Invite relevant users to help your public event reach more people." :
+                             "Auto-match with users who share similar interests. Only matched users will see this event.")
                             .font(.caption)
                             .foregroundColor(.textSecondary)
                     }
@@ -1273,6 +1328,13 @@ struct EventCreationView: View {
     
     // MARK: - Event Creation
     private func createEvent() {
+        // Client-side validation: prevent private events without invitees or auto-matching
+        if !isPublic && selectedFriends.isEmpty && !enableAutoMatching {
+            validationMessage = "Private events require at least one invited friend or auto-matching enabled."
+            showValidationAlert = true
+            return
+        }
+
         isLoading = true
 
         // Prepare the API request
@@ -1371,6 +1433,12 @@ struct EventCreationView: View {
             }
         }.resume()
     }
+}
+
+// MARK: - Audience Enum
+fileprivate enum Audience: Hashable {
+    case publicEvent
+    case privateEvent
 }
 
 // MARK: - Supporting Views

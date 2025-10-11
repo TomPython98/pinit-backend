@@ -411,6 +411,7 @@ def create_study_event(request):
             auto_matching_enabled = data.get("auto_matching_enabled", False)
             
             # Create the event
+            # Auto-matched events are not forced to be public - they're visible only to matched users
             event = StudyEvent.objects.create(
                 title=data.get("title") or "Untitled Event",  # Ensure title is never None
                 description=data.get("description", ""),
@@ -419,7 +420,7 @@ def create_study_event(request):
                 longitude=data.get("longitude"),
                 time=datetime.fromisoformat(data.get("time")),
                 end_time=datetime.fromisoformat(data.get("end_time")),
-                is_public=data.get("is_public", True) if not auto_matching_enabled else True,
+                is_public=data.get("is_public", True),
                 event_type=data.get("event_type", "other"),
                 max_participants=max_participants,
                 auto_matching_enabled=auto_matching_enabled,
@@ -921,11 +922,10 @@ def get_study_events(request, username):
         from django.db.models import Q
         
         # Get events that the user should see:
-        # 1. Public events (not declined, not expired)
-        # 2. Events hosted by user
-        # 3. Events hosted by friends
-        # 4. Events where user is explicitly invited
-        # 5. Events where user has auto-matched invitations
+        # 1. Public events (not declined, not expired) - visible to everyone
+        # 2. Events hosted by user - always visible to host
+        # 3. Events where user is explicitly invited - always visible
+        # 4. Events where user has auto-matched invitations - visible only to matched users
         
         events = StudyEvent.objects.select_related('host', 'host__userprofile').prefetch_related(
             'invited_friends', 'attendees', 'invitation_records'
@@ -934,11 +934,10 @@ def get_study_events(request, username):
             end_time__gt=now
         ).filter(
             # Include events that match at least one of these criteria
-            Q(is_public=True) |                                    # Public events
-            Q(host=user) |                                         # User's own events
-            Q(host__username__in=friend_list) |                    # Friends' events
-            Q(invited_friends=user) |                              # Directly invited
-            Q(invitation_records__user=user)                       # Auto-matched invitations
+            Q(is_public=True) |                                    # Public events (visible to everyone)
+            Q(host=user) |                                         # User's own events (always visible)
+            Q(invited_friends=user) |                              # Directly invited (always visible)
+            Q(invitation_records__user=user)                       # Auto-matched invitations (visible only to matched users)
         ).exclude(
             # Exclude declined events
             id__in=declined_event_ids
