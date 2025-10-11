@@ -1072,14 +1072,13 @@ def get_trending_events(request):
         # Get current time to exclude past events
         now = timezone.now()
         
-        # Get events from the last 7 days, sorted by popularity
+        # Get events from the last 7 days OR upcoming events, sorted by popularity
         from datetime import timedelta
         week_ago = now - timedelta(days=7)
         
         events = StudyEvent.objects.select_related('host', 'host__userprofile').prefetch_related(
             'attendees', 'invited_friends'
         ).filter(
-            time__gte=week_ago,  # Events from last week
             end_time__gt=now,    # Not yet ended
             is_public=True       # Only public events for trending
         ).distinct()
