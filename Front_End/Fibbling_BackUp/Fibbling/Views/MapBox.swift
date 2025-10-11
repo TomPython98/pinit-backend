@@ -650,7 +650,10 @@ func clusterEvents(_ events: [StudyEvent], region: MKCoordinateRegion) -> [Clust
     }
     
     // Now proceed with clustering using the deduplicated events
-    let threshold = region.span.longitudeDelta * 0.2
+    // Use a smaller multiplier and cap at a reasonable maximum
+    // 0.001 degrees ≈ 111 meters - only cluster events at nearly identical locations
+    let zoomBasedThreshold = region.span.longitudeDelta * 0.02  // 2% instead of 20%
+    let threshold = min(zoomBasedThreshold, 0.001)  // Cap at ~111 meters
     var clusters: [Cluster] = []
     var unclustered = uniqueEvents
     

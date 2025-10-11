@@ -36,6 +36,7 @@ struct ContentView: View {
     @State private var showNotesView = false
     @State private var showFlashcardsView = false
     @State private var showProfileView = false
+    @State private var showMapView = false
     @State private var selectedEvent: StudyEvent? = nil
     @State private var showEventDetailSheet = false
     @AppStorage("isLoggedIn") private var isLoggedIn = true
@@ -585,46 +586,69 @@ struct ContentView: View {
     // Quick access row with refined spacing
     var quickAccessRow: some View {
         HStack(spacing: 16) {
-            quickAccessButton("Library", systemImage: "books.vertical.fill")
-            quickAccessButton("Forum", systemImage: "bubble.left.and.bubble.right.fill")
-            quickAccessButton("Grades", systemImage: "chart.bar.fill")
-            quickAccessButton("Map", systemImage: "mappin.circle.fill")
+            quickAccessButton("Events", systemImage: "books.vertical.fill") {
+                showNotesView = true
+            }
+            
+            quickAccessButton("Friends", systemImage: "bubble.left.and.bubble.right.fill") {
+                showFriendsView = true
+            }
+            
+            quickAccessButton("Profile", systemImage: "chart.bar.fill") {
+                showProfileView = true
+            }
+            
+            quickAccessButton("Map", systemImage: "mappin.circle.fill") {
+                showMapView = true
+            }
+        }
+        .sheet(isPresented: $showMapView) {
+            StudyMapView()
+                .environmentObject(accountManager)
+                .environmentObject(calendarManager)
+        }
+        .sheet(isPresented: $showProfileView) {
+            ProfileView()
+                .environmentObject(accountManager)
+                .environmentObject(calendarManager)
         }
     }
     
     // Quick access button with enhanced styling and shadow
-    func quickAccessButton(_ title: String, systemImage: String) -> some View {
-        VStack(spacing: 14) {
-            // Icon with refined gradient and shadow
-            Image(systemName: systemImage)
-                .font(.system(size: 20))
-                .foregroundColor(.textLight)
-                .frame(width: 48, height: 48)
-                .background(
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.gradientStart, .gradientMiddle, .gradientEnd],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+    func quickAccessButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 14) {
+                // Icon with refined gradient and shadow
+                Image(systemName: systemImage)
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 48, height: 48)
+                    .background(
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.gradientStart, .gradientMiddle, .gradientEnd],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                 )
-                            )
-                            .shadow(color: Color.coloredShadow, radius: 8, x: 0, y: 4)
-                    }
-                )
-            
-            Text(title)
-                .font(.footnote.weight(.medium))
-                .foregroundColor(.textPrimary)
+                                .shadow(color: Color.coloredShadow, radius: 8, x: 0, y: 4)
+                        }
+                    )
+                
+                Text(title)
+                    .font(.footnote.weight(.medium))
+                    .foregroundColor(.textPrimary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color.bgCard)
+                    .shadow(color: Color.cardShadow, radius: 10, x: 0, y: 5)
+            )
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color.bgCard)
-                .shadow(color: Color.cardShadow, radius: 10, x: 0, y: 5)
-        )
         .buttonStyle(ScaleButtonStyle())
     }
     

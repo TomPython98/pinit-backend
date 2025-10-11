@@ -23,7 +23,7 @@ struct FriendsListView: View {
     @State private var selectedUserProfile: String? = nil
     
     private var tabs: [String] {
-        ["friends".localized, "friend_requests".localized, "discover_friends".localized]
+        ["Friends", "Requests", "Discover"]
     }
     private let baseURL = APIConfig.primaryBaseURL
 
@@ -155,12 +155,12 @@ struct FriendsListView: View {
             Spacer()
             
             VStack(spacing: 2) {
-                Text("friends_social".localized)
+                Text("Friends & Social")
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(Color.textPrimary)
                 
-                Text("connect_with_students".localized)
+                Text("Connect with students")
                     .font(.caption)
                                 .foregroundColor(Color.textSecondary)
                         }
@@ -258,7 +258,7 @@ struct FriendsListView: View {
     private var friendsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("friends".localized)
+                Text("Friends")
                     .font(.headline)
                     .fontWeight(.bold)
                         .foregroundColor(Color.textPrimary)
@@ -288,7 +288,7 @@ struct FriendsListView: View {
     private var requestsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("friend_requests".localized)
+                Text("Friend Requests")
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(Color.textPrimary)
@@ -318,7 +318,7 @@ struct FriendsListView: View {
     private var discoverSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("discover_friends".localized)
+                Text("Discover Friends")
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(Color.textPrimary)
@@ -390,7 +390,7 @@ struct FriendsListView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "message.fill")
                             .font(.caption)
-                            Text("chat".localized)
+                            Text("Chat")
                                 .font(.caption)
                                 .fontWeight(.medium)
                     }
