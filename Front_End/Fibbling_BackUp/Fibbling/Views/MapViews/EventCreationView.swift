@@ -126,6 +126,9 @@ struct EventCreationView: View {
             .animation(.easeInOut(duration: 0.3), value: isSearchingSuggestions)
             .animation(.easeInOut(duration: 0.3), value: showSuccessAnimation)
             .animation(.easeInOut(duration: 0.3), value: isLoading)
+            .onTapGesture {
+                hideKeyboard()
+            }
         }
         .overlay {
             if isLoading {
@@ -1261,6 +1264,11 @@ struct EventCreationView: View {
         case .language_exchange: return .teal
         case .other: return .gray
         }
+    }
+    
+    // MARK: - Helper Functions
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
     // MARK: - Event Creation

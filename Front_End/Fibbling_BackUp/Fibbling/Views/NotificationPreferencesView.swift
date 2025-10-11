@@ -58,16 +58,14 @@ struct NotificationPreferencesView: View {
                                             .foregroundStyle(Color.pinItTextPrimary)
                                         Picker("Reminder Time", selection: $reminderTime) {
                                             Text("5 minutes").tag(5.0)
-                                                .foregroundStyle(Color.pinItTextPrimary)
                                             Text("15 minutes").tag(15.0)
-                                                .foregroundStyle(Color.pinItTextPrimary)
                                             Text("30 minutes").tag(30.0)
-                                                .foregroundStyle(Color.pinItTextPrimary)
                                             Text("1 hour").tag(60.0)
-                                                .foregroundStyle(Color.pinItTextPrimary)
                                         }
                                         .pickerStyle(.segmented)
                                         .accentColor(theme.primaryColor)
+                                        .background(Color.pinItBackground)
+                                        .cornerRadius(8)
                                     }
                                 }
                             }
@@ -113,6 +111,8 @@ struct NotificationPreferencesView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.bgCard, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {

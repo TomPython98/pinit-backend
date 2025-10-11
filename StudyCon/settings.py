@@ -23,6 +23,12 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
 ]
 
+# ✅ SECURITY: CSRF trusted origins for Railway
+CSRF_TRUSTED_ORIGINS = [
+    'https://pinit-backend-production.up.railway.app',
+    'https://healthcheck.railway.app',
+]
+
 INSTALLED_APPS = [
     "daphne",  # Django Channels
     'django.contrib.admin',
@@ -93,13 +99,25 @@ else:
 # Set Django Channels as the ASGI server
 ASGI_APPLICATION = "StudyCon.asgi.application"
 
-# SQLite Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database Configuration
+# Use PostgreSQL on Railway, fallback to SQLite for local development
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.parse(
+            os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+    DATABASES['default']['ATOMIC_REQUESTS'] = True
+else:
+    # SQLite for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {

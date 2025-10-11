@@ -357,105 +357,116 @@ struct ReportContentView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                // Header
-                VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(.brandWarning)
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(.brandWarning)
+                        
+                        Text("Report \(contentType.displayName)")
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.textPrimary)
+                        
+                        Text("Help us keep PinIt safe by reporting inappropriate content")
+                            .font(.body)
+                            .foregroundColor(.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 20)
                     
-                    Text("Report \(contentType.displayName)")
-                        .font(.title2.weight(.bold))
-                        .foregroundColor(.textPrimary)
-                    
-                    Text("Help us keep PinIt safe by reporting inappropriate content")
-                        .font(.body)
-                        .foregroundColor(.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 20)
-                
-                // Reason Selection
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Why are you reporting this?")
-                        .font(.headline)
-                        .foregroundColor(.textPrimary)
-                    
-                    ForEach(ReportReason.allCases, id: \.self) { reason in
-                        Button(action: {
-                            selectedReason = reason
-                        }) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(reason.displayName)
-                                        .font(.body.weight(.medium))
-                                        .foregroundColor(.textPrimary)
+                    // Reason Selection
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Why are you reporting this?")
+                            .font(.headline)
+                            .foregroundColor(.textPrimary)
+                        
+                        ForEach(ReportReason.allCases, id: \.self) { reason in
+                            Button(action: {
+                                selectedReason = reason
+                                // Dismiss keyboard when selecting reason
+                                hideKeyboard()
+                            }) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(reason.displayName)
+                                            .font(.body.weight(.medium))
+                                            .foregroundColor(.textPrimary)
+                                        
+                                        Text(reason.description)
+                                            .font(.caption)
+                                            .foregroundColor(.textSecondary)
+                                    }
                                     
-                                    Text(reason.description)
-                                        .font(.caption)
-                                        .foregroundColor(.textSecondary)
+                                    Spacer()
+                                    
+                                    if selectedReason == reason {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.brandPrimary)
+                                    } else {
+                                        Image(systemName: "circle")
+                                            .foregroundColor(.textMuted)
+                                    }
                                 }
-                                
-                                Spacer()
-                                
-                                if selectedReason == reason {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.brandPrimary)
-                                } else {
-                                    Image(systemName: "circle")
-                                        .foregroundColor(.textMuted)
-                                }
+                                .padding()
+                                .background(Color.bgCard)
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(selectedReason == reason ? Color.brandPrimary : Color.cardStroke, lineWidth: 1)
+                                )
                             }
-                            .padding()
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    
+                    // Additional Details
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Additional Details (Optional)")
+                            .font(.headline)
+                            .foregroundColor(.textPrimary)
+                        
+                        TextEditor(text: $description)
+                            .scrollContentBackground(.hidden)
+                            .frame(minHeight: 100)
+                            .padding(12)
                             .background(Color.bgCard)
                             .cornerRadius(12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(selectedReason == reason ? Color.brandPrimary : Color.cardStroke, lineWidth: 1)
+                                    .stroke(Color.cardStroke, lineWidth: 1)
                             )
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                            .foregroundColor(.textPrimary) // Ensure text is visible
+                            .onTapGesture {
+                                // Allow keyboard to show for text editing
+                            }
                     }
-                }
-                
-                // Additional Details
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Additional Details (Optional)")
-                        .font(.headline)
-                        .foregroundColor(.textPrimary)
                     
-                    TextEditor(text: $description)
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 100)
-                        .padding(12)
-                        .background(Color.bgCard)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.cardStroke, lineWidth: 1)
-                        )
+                    // Submit Button
+                    Button(action: {
+                        hideKeyboard()
+                        showingConfirmation = true
+                    }) {
+                        Text("Submit Report")
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(selectedReason != nil ? Color.brandPrimary : Color.textMuted)
+                            .cornerRadius(12)
+                    }
+                    .disabled(selectedReason == nil)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
                 }
-                
-                Spacer()
-                
-                // Submit Button
-                Button(action: {
-                    showingConfirmation = true
-                }) {
-                    Text("Submit Report")
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(selectedReason != nil ? Color.brandPrimary : Color.textMuted)
-                        .cornerRadius(12)
-                }
-                .disabled(selectedReason == nil)
                 .padding(.horizontal, 20)
-                .padding(.bottom, 40)
             }
             .background(Color.bgSurface.ignoresSafeArea())
             .navigationBarHidden(true)
+            .onTapGesture {
+                hideKeyboard()
+            }
             .alert("Report Submitted", isPresented: $showingConfirmation) {
                 Button("OK") {
                     submitReport()
@@ -465,6 +476,11 @@ struct ReportContentView: View {
                 Text("Thank you for helping keep PinIt safe. We'll review your report.")
             }
         }
+    }
+    
+    // Helper function to hide keyboard
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
     private func submitReport() {

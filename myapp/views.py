@@ -1426,96 +1426,68 @@ def delete_study_event(request):
     }
     Only the host of the event can delete it.
     """
-    if request.method == "POST":
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        user = request.user
+        event_id = data.get("event_id")
+        
+        logger.info(f"Delete event request: user={user.username}, event_id={event_id}")
+
+        # Try to find the event by ID (handle both UUID and non-UUID formats)
         try:
-            print(f"🔍 DELETE EVENT DEBUG: Starting delete event request")
-            data = json.loads(request.body)
-            user = request.user  # Use authenticated user
-            event_id = data.get("event_id")
-            
-            # Debug logging
-            print(f"🔍 DELETE EVENT DEBUG: User: {user.username}, Event ID: {event_id}")
-
-            # Try to find the event by ID (handle both UUID and non-UUID formats)
+            # First try as UUID
+            event_uuid = uuid.UUID(event_id)
+            event = StudyEvent.objects.get(id=event_uuid)
+        except ValueError:
+            # If UUID parsing fails, try to find by string ID (for legacy events)
             try:
-                # First try as UUID
-                event_uuid = uuid.UUID(event_id)
-                event = StudyEvent.objects.get(id=event_uuid)
-                print(f"🔍 DELETE EVENT DEBUG: Found event as UUID: {event.id}")
-            except ValueError as e:
-                print(f"🔍 DELETE EVENT DEBUG: UUID parsing failed: {e}")
-                # If UUID parsing fails, try to find by string ID (for legacy events)
-                try:
-                    event = StudyEvent.objects.get(id=event_id)
-                    print(f"🔍 DELETE EVENT DEBUG: Found event as string: {event.id}")
-                except StudyEvent.DoesNotExist:
-                    print(f"🔍 DELETE EVENT DEBUG: Event not found with string ID")
-                    return JsonResponse({"error": "Event not found"}, status=404)
+                event = StudyEvent.objects.get(id=event_id)
             except StudyEvent.DoesNotExist:
-                print(f"🔍 DELETE EVENT DEBUG: Event not found with UUID")
+                logger.warning(f"Event not found: {event_id}")
                 return JsonResponse({"error": "Event not found"}, status=404)
+        except StudyEvent.DoesNotExist:
+            logger.warning(f"Event not found: {event_id}")
+            return JsonResponse({"error": "Event not found"}, status=404)
 
-            # Check if the user is actually the host
-            if event.host != user:
-                print(f"🔍 DELETE EVENT DEBUG: User {user.username} is not host {event.host.username}")
-                return JsonResponse({"error": "Only the host can delete this event"}, status=403)
+        # Check if the user is actually the host
+        if event.host != user:
+            logger.warning(f"Unauthorized delete attempt: user={user.username}, host={event.host.username}")
+            return JsonResponse({"error": "Only the host can delete this event"}, status=403)
 
-            # Store attendees and invited friends before deleting the event
-            host_username = event.host.username
-            attendees = [u.username for u in event.attendees.all()]
-            invited_friends = [u.username for u in event.invited_friends.all()]
-            
-            print(f"🔍 DELETE EVENT DEBUG: About to delete event {event.id}")
-            
-            # Delete the event with proper error handling
-            try:
-                event.delete()
-                print(f"🔍 DELETE EVENT DEBUG: Event deleted successfully")
-            except Exception as delete_error:
-                print(f"🔍 DELETE EVENT DEBUG: Delete error: {str(delete_error)}")
-                
-                # If it's a missing table error, try manual deletion
-                if "no such table" in str(delete_error).lower():
-                    print(f"🔍 DELETE EVENT DEBUG: Missing database table detected, attempting manual cleanup")
-                    try:
-                        # Manually delete the event using raw SQL to bypass cascade issues
-                        from django.db import connection
-                        with connection.cursor() as cursor:
-                            # Delete the event directly
-                            cursor.execute("DELETE FROM myapp_studyevent WHERE id = %s", [str(event.id)])
-                            print(f"🔍 DELETE EVENT DEBUG: Event deleted manually via SQL")
-                    except Exception as manual_error:
-                        print(f"🔍 DELETE EVENT DEBUG: Manual deletion also failed: {str(manual_error)}")
-                        return JsonResponse({
-                            "error": "Event deletion failed due to database issues. Please contact support.",
-                            "details": "Database migration required"
-                        }, status=500)
-                else:
-                    # Re-raise other errors
-                    raise delete_error
-            
-            # Broadcast event deletion to WebSocket clients
-            try:
-                broadcast_event_deleted(
-                    event_id=str(event_id),  # Use original event_id string
-                    host_username=host_username,
-                    attendees=attendees,
-                    invited_friends=invited_friends
-                )
-                print(f"🔍 DELETE EVENT DEBUG: WebSocket broadcast completed")
-            except Exception as broadcast_error:
-                print(f"🔍 DELETE EVENT DEBUG: WebSocket broadcast error: {str(broadcast_error)}")
-                # Don't fail the entire request for WebSocket errors
-            
-            return JsonResponse({"success": True, "message": "Event deleted successfully"}, status=200)
-            
-        except Exception as e:
-            print(f"🔍 DELETE EVENT DEBUG: Exception occurred: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({"error": f"Server error: {str(e)}"}, status=500)
-
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+        # Store attendees and invited friends before deleting the event
+        host_username = event.host.username
+        attendees = [u.username for u in event.attendees.all()]
+        invited_friends = [u.username for u in event.invited_friends.all()]
+        
+        # Delete the event atomically
+        from django.db import transaction
+        with transaction.atomic():
+            event.delete()
+            logger.info(f"Event deleted successfully: {event_id}")
+        
+        # Broadcast event deletion to WebSocket clients
+        try:
+            broadcast_event_deleted(
+                event_id=str(event_id),
+                host_username=host_username,
+                attendees=attendees,
+                invited_friends=invited_friends
+            )
+        except Exception as broadcast_error:
+            logger.error(f"WebSocket broadcast failed: {broadcast_error}")
+            # Don't fail the entire request for WebSocket errors
+        
+        return JsonResponse({"success": True, "message": "Event deleted successfully"}, status=200)
+        
+    except Exception as e:
+        logger.error(f"Delete event failed: {str(e)}")
+        return JsonResponse({"error": "Server error"}, status=500)
 
 @ratelimit(key='user', rate='5/h', method='POST', block=True)
 @api_view(['POST'])
@@ -1528,87 +1500,26 @@ def delete_account(request):
     Security:
     - Requires JWT auth
     - POST only
-    - Handles missing database tables gracefully
+    - Uses atomic transactions for data integrity
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if request.method != 'POST':
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
     try:
-        print(f"🔍 DELETE ACCOUNT DEBUG: Starting delete account request")
         user = request.user
         username = user.username
         
-        print(f"🔍 DELETE ACCOUNT DEBUG: User details - Username: {username}, ID: {user.id}, Is Active: {user.is_active}")
-        
-        # Check user's related objects before deletion
-        try:
-            print(f"🔍 DELETE ACCOUNT DEBUG: Checking user's related objects...")
-            
-            # Check StudyEvents hosted by this user
-            hosted_events = StudyEvent.objects.filter(host=user)
-            print(f"🔍 DELETE ACCOUNT DEBUG: User hosts {hosted_events.count()} events")
-            
-            # Check StudyEvents user is attending
-            attending_events = StudyEvent.objects.filter(attendees=user)
-            print(f"🔍 DELETE ACCOUNT DEBUG: User is attending {attending_events.count()} events")
-            
-            # Check UserRatings
-            try:
-                user_ratings = UserRating.objects.filter(user=user)
-                print(f"🔍 DELETE ACCOUNT DEBUG: User has {user_ratings.count()} ratings")
-            except Exception as rating_error:
-                print(f"🔍 DELETE ACCOUNT DEBUG: Error checking ratings: {str(rating_error)}")
-            
-            # Check UserTrustLevel
-            try:
-                trust_level = UserTrustLevel.objects.filter(user=user)
-                print(f"🔍 DELETE ACCOUNT DEBUG: User has {trust_level.count()} trust level records")
-            except Exception as trust_error:
-                print(f"🔍 DELETE ACCOUNT DEBUG: Error checking trust level: {str(trust_error)}")
-            
-            # Check UserReputationStats
-            try:
-                reputation_stats = UserReputationStats.objects.filter(user=user)
-                print(f"🔍 DELETE ACCOUNT DEBUG: User has {reputation_stats.count()} reputation stats")
-            except Exception as rep_error:
-                print(f"🔍 DELETE ACCOUNT DEBUG: Error checking reputation stats: {str(rep_error)}")
-                
-        except Exception as check_error:
-            print(f"🔍 DELETE ACCOUNT DEBUG: Error checking related objects: {str(check_error)}")
-            # Continue with deletion even if checks fail
+        logger.info(f"Delete account request: user={username}, id={user.id}")
 
-        print(f"🔍 DELETE ACCOUNT DEBUG: About to delete user {username}")
-
-        # Delete the user account with proper error handling
-        try:
+        # Delete the user account atomically
+        from django.db import transaction
+        with transaction.atomic():
             user.delete()
-            print(f"🔍 DELETE ACCOUNT DEBUG: User {username} deleted successfully")
-        except Exception as delete_error:
-            print(f"🔍 DELETE ACCOUNT DEBUG: Delete error: {str(delete_error)}")
-            print(f"🔍 DELETE ACCOUNT DEBUG: Delete error type: {type(delete_error)}")
-            
-            # If it's a missing table error, try manual deletion
-            if "no such table" in str(delete_error).lower():
-                print(f"🔍 DELETE ACCOUNT DEBUG: Missing database table detected, attempting manual cleanup")
-                try:
-                    # Manually delete the user using raw SQL to bypass cascade issues
-                    from django.db import connection
-                    with connection.cursor() as cursor:
-                        # Delete the user directly
-                        cursor.execute("DELETE FROM auth_user WHERE id = %s", [user.id])
-                        print(f"🔍 DELETE ACCOUNT DEBUG: User deleted manually via SQL")
-                except Exception as manual_error:
-                    print(f"🔍 DELETE ACCOUNT DEBUG: Manual deletion also failed: {str(manual_error)}")
-                    return JsonResponse({
-                        "error": "Account deletion failed due to database issues. Please contact support.",
-                        "details": "Database migration required"
-                    }, status=500)
-            else:
-                # Re-raise other errors
-                raise delete_error
+            logger.info(f"Account deleted successfully: {username}")
 
-        print(f"🔍 DELETE ACCOUNT DEBUG: Returning success response")
-        # Return success response
         return JsonResponse({
             "success": True,
             "message": "Account deleted successfully",
@@ -1616,13 +1527,10 @@ def delete_account(request):
         }, status=200)
         
     except Exception as e:
-        print(f"🔍 DELETE ACCOUNT DEBUG: Exception occurred: {str(e)}")
-        print(f"🔍 DELETE ACCOUNT DEBUG: Exception type: {type(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Delete account failed: {str(e)}")
         return JsonResponse({
             "error": "Account deletion failed",
-            "details": str(e)
+            "details": "Server error"
         }, status=500)
 
 @ratelimit(key='user', rate='10/h', method='POST', block=True)
