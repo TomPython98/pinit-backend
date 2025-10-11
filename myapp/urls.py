@@ -12,6 +12,7 @@ urlpatterns = [
     path('report_content/', views.report_content, name='report_content'),
     path('block_user/', views.block_user, name='block_user'),
     path('unblock_user/', views.unblock_user, name='unblock_user'),
+    path('delete_account/', views.delete_account, name='delete_account'),
     
     # PinIt User Preferences and Settings API Endpoints
     path('api/user_preferences/<str:username>/', views.get_user_preferences, name='get_user_preferences'),

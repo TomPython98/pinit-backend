@@ -50,7 +50,8 @@ struct APIConfig {
         "getUserRatings": "/get_user_ratings/",
         "rateUser": "/rate_user/",
         "getPotentialMatches": "/get_potential_matches/",
-        "getMatchDetails": "/get_match_details/"
+        "getMatchDetails": "/get_match_details/",
+        "deleteAccount": "/delete_account/"
     ]
     
     // MARK: - Helper Methods

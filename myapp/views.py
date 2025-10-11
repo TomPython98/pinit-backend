@@ -1456,6 +1456,38 @@ def delete_study_event(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+@ratelimit(key='user', rate='5/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def delete_account(request):
+    """
+    Permanently delete the authenticated user's account.
+
+    Security:
+    - Requires JWT auth
+    - POST only
+    - Cascades via on_delete=models.CASCADE for related objects
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    try:
+        user = request.user
+        username = user.username
+
+        # Optionally log user info, then delete the account
+        user.delete()
+
+        # Return success response
+        return JsonResponse({
+            "success": True,
+            "message": "Account deleted successfully",
+            "username": username
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 @ratelimit(key='user', rate='10/h', method='POST', block=True)
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])

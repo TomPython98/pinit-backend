@@ -468,7 +468,7 @@ struct SettingsView: View {
         .alert("Delete Account", isPresented: $showDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                // Implement account deletion
+                deleteAccount()
             }
         } message: {
             Text("This action cannot be undone. All your data will be permanently deleted from PinIt.")
@@ -677,19 +677,6 @@ struct SettingsView: View {
     
     private var appSettings: some View {
         VStack(spacing: 16) {
-            HStack {
-                Text("Dark Mode")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(Color.pinItTextPrimary)
-                Spacer()
-                Toggle("", isOn: $darkMode)
-                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItAcademic))
-                    .onChange(of: darkMode) { newValue in
-                        theme.isDarkMode = newValue
-                    }
-            }
-            .padding(.vertical, 4)
-            
             Divider()
                 .padding(.vertical, 8)
             
@@ -802,6 +789,23 @@ struct SettingsView: View {
                 showDeleteAlert = true
             })
         }
+    }
+
+    // MARK: - Delete Account
+    private func deleteAccount() {
+        guard let url = URL(string: APIConfig.fullURL(for: "deleteAccount")) else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        accountManager.addAuthHeader(to: &request)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let http = response as? HTTPURLResponse, http.statusCode == 200 {
+                    // Log out locally after successful deletion
+                    isLoggedIn = false
+                }
+            }
+        }.resume()
     }
     
     // MARK: - Legal Documents Sheet
