@@ -1986,6 +1986,7 @@ struct EventSocialFeedView: View {
                                 onLike: { likePost(postID: post.id) },
                                 onReply: { showReplySheet(for: post) }
                             )
+                            .id("\(post.id)-\(post.likes)-\(post.isLikedByCurrentUser)")
                             .padding(.bottom, 1)
                         }
                     }
@@ -2472,6 +2473,9 @@ struct EventSocialFeedView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // Add authentication header
+        accountManager.addAuthHeader(to: &request)
+        
         // IMPORTANT: The backend expects 'post_id' for comment likes
         let body: [String: Any] = [
             "username": currentUser,
@@ -2741,6 +2745,8 @@ struct EventPostView: View {
     let onLike: () -> Void
     let onReply: () -> Void
     
+    @State private var isAnimatingLike = false
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
@@ -2763,7 +2769,7 @@ struct EventPostView: View {
                     // Post text
                     Text(post.text)
                         .font(.body)
-                        .foregroundColor(Color.textPrimary)
+                        .foregroundColor(Color.black)
                         .multilineTextAlignment(.leading)
                     
                     // Image grid if present
@@ -2780,16 +2786,31 @@ struct EventPostView: View {
                             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                             impactFeedback.impactOccurred()
                             
+                            // Trigger animation
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                isAnimatingLike = true
+                            }
+                            
+                            // Reset animation after a short delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                withAnimation {
+                                    isAnimatingLike = false
+                                }
+                            }
+                            
                             // Call the like action
                             onLike()
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: post.isLikedByCurrentUser ? "heart.fill" : "heart")
                                     .foregroundColor(post.isLikedByCurrentUser ? .red : .gray)
+                                    .scaleEffect(isAnimatingLike ? 1.3 : 1.0)
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isAnimatingLike)
                                 
                                 Text("\(post.likes)")
                                     .font(.caption)
                                     .foregroundColor(post.isLikedByCurrentUser ? .red : .gray)
+                                    .contentTransition(.numericText())
                             }
                             .padding(.vertical, 6)
                             .padding(.horizontal, 10)
@@ -2797,7 +2818,8 @@ struct EventPostView: View {
                             .cornerRadius(15)
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .animation(.spring(), value: post.isLikedByCurrentUser)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: post.isLikedByCurrentUser)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: post.likes)
                         
                         // Reply button
                         Button(action: onReply) {
@@ -2889,6 +2911,7 @@ struct EventPostView: View {
                 HStack {
                     Text(reply.username)
                         .font(.subheadline.bold())
+                        .foregroundColor(.black)
                     Spacer()
                     Text(formatDate(reply.created_at))
                         .font(.caption2)
@@ -2897,6 +2920,7 @@ struct EventPostView: View {
                 
                 Text(reply.text)
                     .font(.subheadline)
+                    .foregroundColor(.black)
             }
         }
         .padding(8)
@@ -2966,6 +2990,7 @@ struct PostDetailView: View {
                 
                 Text("Post")
                     .font(.headline)
+                    .foregroundColor(.black)
                 
                 Spacer()
                 
@@ -3327,7 +3352,7 @@ struct EnhancedEventPostView: View {
                     // Post text
                     Text(post.text)
                         .font(.body)
-                        .foregroundColor(Color.textPrimary)
+                        .foregroundColor(Color.black)
                         .multilineTextAlignment(.leading)
                     
                     // Debug info during development

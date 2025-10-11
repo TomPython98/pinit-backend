@@ -2285,12 +2285,8 @@ def add_event_comment(request):
 
 
 # New: Upload event post image to R2 and return a public URL
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from ratelimit.decorators import ratelimit
+# (Imports already at top of file: api_view, IsAuthenticated, JWTAuthentication, ratelimit)
 from uuid import uuid4
-from django.conf import settings
 from .storage import R2Storage
 
 
@@ -3196,6 +3192,13 @@ def send_push_notification(user_id, notification_type, **kwargs):
                         event_title = kwargs.get('event_title', 'your event')
                         attendee_name = kwargs.get('attendee_name', 'Someone')
                         message = f"{attendee_name} joined your event: {event_title}"
+                    elif notification_type == 'review_reminder':
+                        event_title = kwargs.get('event_title', 'an event')
+                        reviewable_count = kwargs.get('reviewable_count', 0)
+                        if reviewable_count > 1:
+                            message = f"Rate {reviewable_count} attendees from {event_title}"
+                        else:
+                            message = f"Rate attendees from {event_title}"
                     
                     # Send notification
                     apns_device.send_message(
