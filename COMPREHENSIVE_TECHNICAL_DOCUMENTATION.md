@@ -11299,14 +11299,16 @@ class UserRating(models.Model):
 @api_view(['GET'])
 def get_user_reputation(request, username):
     """
-    Get comprehensive reputation statistics for a user
+    Get comprehensive reputation statistics for a user.
+    FIXED: Always updates event counts to ensure fresh, accurate data.
     """
     user = User.objects.get(username=username)
     reputation, created = UserReputationStats.objects.get_or_create(user=user)
     
-    if created:
-        reputation.update_trust_level()
-        reputation.update_event_counts()
+    # Always update stats to ensure fresh, accurate data
+    # Previously only updated when record was newly created (causing stale data)
+    reputation.update_trust_level()
+    reputation.update_event_counts()
     
     data = {
         "username": user.username,
@@ -11354,6 +11356,52 @@ def rate_user(request):
         "message": "Rating submitted successfully",
         "rating_id": str(user_rating.id)
     })
+```
+
+### Backend API Fixes & Improvements
+
+#### User Reputation API Bug Fix (December 2024)
+
+**Issue Identified:**
+The `get_user_reputation` API was returning stale event counts due to a logic bug in the `UserReputationStats` update mechanism.
+
+**Root Cause:**
+```python
+# BROKEN CODE (before fix):
+reputation, created = UserReputationStats.objects.get_or_create(user=user)
+if created:  # Only updated when record was newly created
+    reputation.update_event_counts()  # Stale data after first event
+```
+
+**Problem:**
+- First event creation: `UserReputationStats` created → `events_hosted = 1` ✅
+- Second event creation: Record exists → `update_event_counts()` not called ❌
+- API response: `events_hosted = 1` (stale data) instead of `2`
+
+**Solution Implemented:**
+```python
+# FIXED CODE (after fix):
+reputation, created = UserReputationStats.objects.get_or_create(user=user)
+# Always update stats to ensure fresh, accurate data
+reputation.update_trust_level()
+reputation.update_event_counts()  # Always called
+```
+
+**Impact:**
+- ✅ **Accurate Data**: API now returns correct event counts
+- ✅ **Consistent Experience**: All profile views show accurate statistics
+- ✅ **Best Practice**: APIs always return fresh, current data
+- ✅ **Future-Proof**: Prevents similar stale data issues
+
+**Testing Verification:**
+```bash
+# Before fix:
+curl "https://pinit-backend-production.up.railway.app/api/get_user_reputation/tom/"
+# Response: {"events_hosted": 0, "events_attended": 0} ❌
+
+# After fix:
+curl "https://pinit-backend-production.up.railway.app/api/get_user_reputation/tom/"
+# Response: {"events_hosted": 1, "events_attended": 1} ✅
 ```
 
 ### Advanced Matching Features
