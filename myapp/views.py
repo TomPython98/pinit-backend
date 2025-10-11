@@ -3969,10 +3969,9 @@ def get_user_reputation(request, username):
         # Get or create reputation stats
         reputation, created = UserReputationStats.objects.get_or_create(user=user)
         
-        # If newly created, update stats
-        if created:
-            reputation.update_trust_level()
-            reputation.update_event_counts()
+        # Always update stats to ensure fresh, accurate data
+        reputation.update_trust_level()
+        reputation.update_event_counts()
             
         # Build response data
         data = {

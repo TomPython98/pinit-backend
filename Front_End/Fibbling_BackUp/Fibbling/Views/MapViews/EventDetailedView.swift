@@ -4281,16 +4281,44 @@ struct UserProfileView: View {
     
     // MARK: - Fetch Reputation Data
     private func fetchReputationData() {
-        guard let url = URL(string: "\(baseURL)/get_user_reputation/\(username)/") else { return }
+        // Use direct counting instead of reputation API to avoid stale data issue
+        // The reputation API only updates counts when UserReputationStats is newly created
+        guard let url = URL(string: "\(baseURL)/get_study_events/\(username)/") else { return }
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let data = data {
                     do {
-                        let reputation = try JSONDecoder().decode(ReputationData.self, from: data)
+                        let eventsResponse = try JSONDecoder().decode(EventsResponse.self, from: data)
+                        
+                        // Count events where user is the host (all events they created)
+                        let hostedCount = eventsResponse.events.filter { event in
+                            event.host == username
+                        }.count
+                        
+                        // Count events where user is an attendee
+                        let attendedCount = eventsResponse.events.filter { event in
+                            event.attendees.contains(username)
+                        }.count
+                        
+                        // Create reputation data with correct counts
+                        let reputation = ReputationData(
+                            username: username,
+                            total_ratings: 0, // We don't have this from events API
+                            average_rating: 0.0, // We don't have this from events API
+                            events_hosted: hostedCount,
+                            events_attended: attendedCount,
+                            trust_level: TrustLevelInfo(level: 0, title: "Member")
+                        )
+                        
                         self.reputationData = reputation
+                        print("🔍 UserProfileView - Direct count - Hosted: \(hostedCount), Attended: \(attendedCount)")
                     } catch {
-                        print("Reputation parsing error: \(error)")
+                        print("Events parsing error: \(error)")
                     }
                 }
             }
