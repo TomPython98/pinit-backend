@@ -877,7 +877,7 @@ struct StudyMapView: View {
     
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816), // Default to Buenos Aires
-        span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+        span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5) // Much wider default view
     )
     @State private var showLocationPermission = false
     @State private var showEventCreationSheet = false
@@ -1204,7 +1204,7 @@ struct StudyMapView: View {
                 if let location = newLocation, region.center.latitude == -34.6037 && region.center.longitude == -58.3816 {
                     withAnimation(.easeInOut(duration: 1.0)) {
                         region.center = location.coordinate
-                        region.span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05) // Zoom in closer
+                        region.span = MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2) // Reasonable zoom level
                     }
                 }
             }
@@ -1302,7 +1302,7 @@ struct StudyMapView: View {
                 if let coordinate = targetCoord {
                     withAnimation(.easeInOut(duration: 0.8)) {
                         region.center = coordinate
-                        region.span = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                        region.span = MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
                     }
                 }
                 
@@ -1377,9 +1377,9 @@ struct StudyMapView: View {
             longitude: (minLon + maxLon) / 2.0
         )
         
-        // Add padding and enforce a reasonable minimum span
-        let latDelta = max((maxLat - minLat) * 1.4, 0.1)
-        let lonDelta = max((maxLon - minLon) * 1.4, 0.1)
+        // Add padding and enforce a reasonable minimum span (much wider)
+        let latDelta = max((maxLat - minLat) * 1.4, 0.3) // Increased from 0.1 to 0.3
+        let lonDelta = max((maxLon - minLon) * 1.4, 0.3) // Increased from 0.1 to 0.3
         
         return MKCoordinateRegion(
             center: center,

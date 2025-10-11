@@ -57,7 +57,16 @@ def register_user(request):
 
             # ✅ Create user without email
             user = User.objects.create_user(username=username, password=password)
-            return JsonResponse({"success": True, "message": "User registered successfully."}, status=201)
+            
+            # Generate JWT tokens for immediate login after registration
+            refresh = RefreshToken.for_user(user)
+            return JsonResponse({
+                "success": True, 
+                "message": "User registered successfully.",
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh),
+                "username": username
+            }, status=201)
 
         except json.JSONDecodeError:
             return JsonResponse({"success": False, "message": "Invalid JSON data."}, status=400)

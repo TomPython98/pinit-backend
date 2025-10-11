@@ -26,14 +26,24 @@ class UserAccountManager: ObservableObject {
             self.accessToken = UserDefaults.standard.string(forKey: accessTokenKey)
             self.refreshToken = UserDefaults.standard.string(forKey: refreshTokenKey)
             
+            print("🔍 🔐 DEBUG: App startup - User: \(savedUsername), AccessToken: \(self.accessToken != nil ? "Present" : "Nil"), RefreshToken: \(self.refreshToken != nil ? "Present" : "Nil")")
+            
             // Only fetch data if we have valid tokens
             if self.accessToken != nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     self.fetchFriends()
                     self.fetchFriendRequests()
                 }
+            } else {
+                print("❌ 🔐 DEBUG: No access token found at startup - user needs to login again")
+                // Clear invalid login state
+                self.clearTokens()
+                UserDefaults.standard.set(false, forKey: "isLoggedIn")
+                UserDefaults.standard.removeObject(forKey: "username")
+                self.currentUser = nil
             }
         } else {
+            print("🔍 🔐 DEBUG: No saved login state found at startup")
         }
     }
     
@@ -181,11 +191,31 @@ class UserAccountManager: ObservableObject {
                 let success = json?["success"] as? Bool ?? false
                 let message = json?["message"] as? String ?? "Unknown error."
                 
+                // Extract JWT tokens if registration successful
+                let accessToken = json?["access_token"] as? String
+                let refreshToken = json?["refresh_token"] as? String
+                
                 AppLogger.logAuth("Registration result: \(success ? "success" : "failed")")
 
                 DispatchQueue.main.async {
                     if success {
                         self.currentUser = username
+                        
+                        // Save JWT tokens if provided (same as login flow)
+                        if let access = accessToken, let refresh = refreshToken {
+                            print("🔍 🔐 DEBUG: Saving registration tokens to UserDefaults")
+                            self.saveTokens(access: access, refresh: refresh)
+                            print("🔍 🔐 DEBUG: Registration tokens saved. Current accessToken: \(self.accessToken != nil ? "Present" : "Nil")")
+                            
+                            // Fetch user data after tokens are saved
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                self.fetchFriends()
+                                self.fetchFriendRequests()
+                            }
+                        } else {
+                            print("❌ 🔐 DEBUG: No JWT tokens received from registration response!")
+                        }
+                        
                         // Also save to UserDefaults for persistence
                         UserDefaults.standard.set(true, forKey: "isLoggedIn")
                         UserDefaults.standard.set(username, forKey: "username")
