@@ -1466,10 +1466,23 @@ def delete_study_event(request):
             
             print(f"🔍 DELETE EVENT DEBUG: About to delete event {event.id}")
             
-            # Delete the event
-            event.delete()
-            
-            print(f"🔍 DELETE EVENT DEBUG: Event deleted successfully")
+            # Delete the event with proper error handling
+            try:
+                event.delete()
+                print(f"🔍 DELETE EVENT DEBUG: Event deleted successfully")
+            except Exception as delete_error:
+                print(f"🔍 DELETE EVENT DEBUG: Delete error: {str(delete_error)}")
+                
+                # If it's a missing table error, provide helpful message
+                if "no such table" in str(delete_error).lower():
+                    print(f"🔍 DELETE EVENT DEBUG: Missing database table detected")
+                    return JsonResponse({
+                        "error": "Event deletion failed due to missing database tables. Please contact support.",
+                        "details": "Database migration required"
+                    }, status=500)
+                else:
+                    # Re-raise other errors
+                    raise delete_error
             
             # Broadcast event deletion to WebSocket clients
             broadcast_event_deleted(
@@ -1500,7 +1513,7 @@ def delete_account(request):
     Security:
     - Requires JWT auth
     - POST only
-    - Cascades via on_delete=models.CASCADE for related objects
+    - Handles missing database tables gracefully
     """
     if request.method != 'POST':
         return JsonResponse({"error": "Invalid request method"}, status=405)
@@ -1508,9 +1521,26 @@ def delete_account(request):
     try:
         user = request.user
         username = user.username
+        
+        print(f"🔍 DELETE ACCOUNT DEBUG: Attempting to delete user: {username}")
 
-        # Optionally log user info, then delete the account
-        user.delete()
+        # Delete the user account with proper error handling
+        try:
+            user.delete()
+            print(f"🔍 DELETE ACCOUNT DEBUG: User {username} deleted successfully")
+        except Exception as delete_error:
+            print(f"🔍 DELETE ACCOUNT DEBUG: Delete error: {str(delete_error)}")
+            
+            # If it's a missing table error, provide helpful message
+            if "no such table" in str(delete_error).lower():
+                print(f"🔍 DELETE ACCOUNT DEBUG: Missing database table detected")
+                return JsonResponse({
+                    "error": "Account deletion failed due to missing database tables. Please contact support.",
+                    "details": "Database migration required"
+                }, status=500)
+            else:
+                # Re-raise other errors
+                raise delete_error
 
         # Return success response
         return JsonResponse({
@@ -1518,8 +1548,15 @@ def delete_account(request):
             "message": "Account deleted successfully",
             "username": username
         }, status=200)
+        
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        print(f"🔍 DELETE ACCOUNT DEBUG: Exception occurred: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "error": "Account deletion failed",
+            "details": str(e)
+        }, status=500)
 
 @ratelimit(key='user', rate='10/h', method='POST', block=True)
 @api_view(['POST'])
