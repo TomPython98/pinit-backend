@@ -12,16 +12,16 @@ struct OnboardingView: View {
             description: "Discover and create events that match your interests and meet amazing people in your area."
         ),
         OnboardingPage(
-            title: "Find Your Community",
-            subtitle: "Smart matching based on your interests",
+            title: "Smart Matching",
+            subtitle: "Privacy-focused auto-matching",
             image: "heart.fill",
-            description: "Our intelligent matching system connects you with people who share your passions and goals."
+            description: "Our intelligent system matches you with relevant events and people. Auto-matched events are only visible to matched users, ensuring privacy and meaningful connections."
         ),
         OnboardingPage(
             title: "Create & Join Events",
-            subtitle: "From study groups to social gatherings",
+            subtitle: "Public, private, or auto-matched",
             image: "calendar.badge.plus",
-            description: "Host your own events or join others. From academic study sessions to cultural meetups."
+            description: "Create public events for everyone, private events for friends, or use auto-matching for targeted discovery. Choose your privacy level and let smart matching find the right people."
         ),
         OnboardingPage(
             title: "Stay Connected",

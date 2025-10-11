@@ -3291,16 +3291,16 @@ struct OnboardingView: View {
             description: "Discover and create events that match your interests and meet amazing people in your area."
         ),
         OnboardingPage(
-            title: "Find Your Community",
-            subtitle: "Smart matching based on your interests",
+            title: "Smart Matching",
+            subtitle: "Privacy-focused auto-matching",
             image: "heart.fill",
-            description: "Our intelligent matching system connects you with people who share your passions and goals."
+            description: "Our intelligent system matches you with relevant events and people. Auto-matched events are only visible to matched users, ensuring privacy and meaningful connections."
         ),
         OnboardingPage(
             title: "Create & Join Events",
-            subtitle: "From study groups to social gatherings",
+            subtitle: "Public, private, or auto-matched",
             image: "calendar.badge.plus",
-            description: "Host your own events or join others. From academic study sessions to cultural meetups."
+            description: "Create public events for everyone, private events for friends, or use auto-matching for targeted discovery. Choose your privacy level and let smart matching find the right people."
         ),
         OnboardingPage(
             title: "Stay Connected",
@@ -3400,15 +3400,23 @@ struct EventCreationView: View {
 ```
 
 **Key Features:**
-- **Comprehensive Event Creation**: All event fields with validation
+- **Audience-Centric Design**: Clear Public/Private segmented control with intuitive descriptions
+- **Privacy-Focused Auto-Matching**: Auto-matching works for both public and private events
+- **Smart Validation**: Prevents private events without invitees or auto-matching
 - **Location Integration**: Map-based location selection with geocoding
 - **Image Upload**: Multiple image upload for events
-- **Friend Invitations**: Invite friends to events
-- **Auto-matching**: Enable/disable auto-matching for events
+- **Friend Invitations**: Invite friends to events with prominent CTA
+- **Boost Reach**: Renamed auto-matching with contextual descriptions
 - **Event Types**: Visual event type selection
 - **Date/Time Selection**: Custom date and time pickers
 - **Location Suggestions**: Real-time location search and suggestions
 - **Professional UI**: Card-based design with smooth animations
+
+**🔒 New Privacy Model:**
+- **Public Events**: Visible to everyone + auto-matched users
+- **Private Events**: Visible only to invited friends + auto-matched users
+- **Auto-matched Events**: Only visible to matched users (not exposed to everyone)
+- **Enhanced Privacy**: Users only see events they're actually matched for
 
 **Key Interactions:**
 - **CalendarManager**: Event creation and management
@@ -10249,6 +10257,13 @@ wss://pinit-backend-production.up.railway.app/ws/group_chat/{event_id}/
 
 #### Overview
 The auto-matching system uses sophisticated algorithms to automatically invite users to events based on multiple compatibility factors. It implements a weighted scoring system that considers interests, location, social connections, academic background, and user reputation.
+
+**🔒 Privacy-Focused Design:**
+- **Auto-matched events are only visible to matched users** - not exposed to everyone
+- **Public events**: Visible to everyone + auto-matched users
+- **Private events**: Visible only to invited friends + auto-matched users
+- **Enhanced privacy**: Users only see events they're actually matched for
+- **Reduced noise**: More targeted, relevant event discovery
 
 #### Complete Scoring Algorithm
 
