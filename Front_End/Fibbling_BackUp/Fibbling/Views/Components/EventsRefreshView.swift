@@ -44,7 +44,7 @@ struct EventsRefreshView: View {
                 withAnimation {
                     isRefreshing = true
                 }
-                refreshEvents()
+                refreshEvents(forceUpdate: true)
             }
         }
         .onChange(of: calendarManager.isLoading) { oldValue, newValue in
@@ -93,7 +93,7 @@ struct EventsRefreshView: View {
             return
         }
         
-        calendarManager.fetchEvents()
+        calendarManager.fetchEvents(force: forceUpdate)
     }
     
     private func timeAgoString(from date: Date) -> String {

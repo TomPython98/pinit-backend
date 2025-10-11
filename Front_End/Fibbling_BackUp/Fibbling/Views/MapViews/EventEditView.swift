@@ -771,7 +771,7 @@ struct EventEditView: View {
                     
                     // Notify map to recenter to the updated location immediately
                     NotificationCenter.default.post(
-                        name: Notification.Name("EventLocationUpdated"),
+                        name: Notification.Name("FocusEventOnMap"),
                         object: nil,
                         userInfo: [
                             "eventID": self.event.id.uuidString,

@@ -60,6 +60,8 @@ class CalendarManager: ObservableObject {
     private let baseURL = APIConfig.primaryBaseURL
     private var cancellable: AnyCancellable?
     private var webSocketManager: EventsWebSocketManager?
+    private var lastFetchAttempt: Date? = nil
+    private let minimumFetchInterval: TimeInterval = 30.0
     
     // Automatic refresh timer
     private var autoRefreshTimer: Timer?
@@ -208,23 +210,11 @@ class CalendarManager: ObservableObject {
     
     // MARK: - Automatic Refresh Timer
     
-    /// Start automatic refresh timer
+    /// Start automatic refresh timer (DISABLED - relying on WebSockets + manual refresh)
     private func startAutoRefresh() {
-        // Stop any existing timer first
-        stopAutoRefresh()
-        
-        guard !username.isEmpty else {
-            return
-        }
-        
-        autoRefreshTimer = Timer.scheduledTimer(withTimeInterval: autoRefreshInterval, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            
-            // Only refresh if we have a username and we're not already loading
-            if !self.username.isEmpty && !self.isLoading {
-                self.fetchEvents()
-            }
-        }
+        // Auto-refresh timer disabled to reduce redundant fetches
+        // Relying on WebSocket updates and manual refresh button instead
+        print("🔄 Auto-refresh timer disabled - using WebSocket + manual refresh")
     }
     
     /// Stop automatic refresh timer
@@ -233,13 +223,19 @@ class CalendarManager: ObservableObject {
         autoRefreshTimer = nil
     }
     
-    /// Fetch initial events for the current user. Should only be called once on login.
-    func fetchEvents() {
+    /// Fetch events for the current user. Uses a cooldown to avoid rapid polling.
+    func fetchEvents(force: Bool = false) {
         guard !username.isEmpty,
               let url = URL(string: "\(baseURL)/get_study_events/\(username)/")
         else {
             return
         }
+        // Cooldown: prevent frequent calls unless forced (e.g., manual refresh)
+        let now = Date()
+        if !force, let last = lastFetchAttempt, now.timeIntervalSince(last) < minimumFetchInterval {
+            return
+        }
+        lastFetchAttempt = now
         
         
         DispatchQueue.main.async {
@@ -595,13 +591,13 @@ extension CalendarManager: EventsWebSocketManagerDelegate {
     }
     
     /// Fetch a specific event by its ID and update it in the local array
-    private func fetchSpecificEvent(eventID: UUID) {
+    func fetchSpecificEvent(eventID: UUID) {
         guard !username.isEmpty else {
             return
         }
         
         // First try using the multi-event endpoint with the current username
-        let url = URL(string: "\(baseURL)get_study_events/\(username)/")
+        let url = URL(string: "\(baseURL)/get_study_events/\(username)/")
         var request = URLRequest(url: url!)
         // Add JWT for protected endpoint
         accountManager?.addAuthHeader(to: &request)

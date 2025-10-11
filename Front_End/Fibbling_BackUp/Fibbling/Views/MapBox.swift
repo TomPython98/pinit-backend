@@ -5,6 +5,34 @@ import CoreLocation
 import MapKit
 import UIKit
 
+// MARK: - RefreshController for debouncing
+class RefreshController: ObservableObject {
+    private var refreshWorkItem: DispatchWorkItem?
+    private var refreshCount = 0
+    private var lastRefreshTime = Date()
+    
+    func debouncedRefresh(delay: TimeInterval = 0.3, action: @escaping () -> Void) {
+        // Cancel previous work item
+        refreshWorkItem?.cancel()
+        
+        // Create new work item
+        refreshWorkItem = DispatchWorkItem {
+            self.refreshCount += 1
+            self.lastRefreshTime = Date()
+            print("🔄 RefreshController: Executing refresh #\(self.refreshCount)")
+            action()
+        }
+        
+        // Schedule with delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: refreshWorkItem!)
+    }
+    
+    func getRefreshStats() -> String {
+        let timeSinceLastRefresh = Date().timeIntervalSince(lastRefreshTime)
+        return "Refreshes: \(refreshCount), Last: \(String(format: "%.1f", timeSinceLastRefresh))s ago"
+    }
+}
+
 // MARK: - Dummy Model Definitions
 
 // For simplicity, extend CLLocationCoordinate2D to conform to Codable.
@@ -886,6 +914,8 @@ struct StudyMapView: View {
     @State private var showSearchSheet = false
     @State private var selectedEvent: StudyEvent?
     @State private var mapRefreshVersion: Int = 0
+    @StateObject private var refreshController = RefreshController()
+    @State private var refreshStats = ""
     
     @State private var mapSearchQuery = ""
     @State private var mapSearchResults: [MapSearchResult] = []
@@ -1041,24 +1071,12 @@ struct StudyMapView: View {
                 .id(mapRefreshVersion)
                 .edgesIgnoringSafeArea(.all)
                 .onChange(of: calendarManager.events) { oldValue, newValue in
-                    // Always recenter when events change to ensure visibility
+                    // Debounced recenter when events change to ensure visibility
                     if !filteredEvents.isEmpty {
-                        print("🗺️ Events changed, recentering to fit \(filteredEvents.count) events")
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        print("🗺️ Events changed, scheduling recenter for \(filteredEvents.count) events")
+                        refreshController.debouncedRefresh(delay: 0.3) {
                             withAnimation(.easeInOut(duration: 0.8)) {
                                 region = regionThatFits(events: filteredEvents)
-                            }
-                            mapRefreshVersion += 1
-                        }
-                    }
-                }
-                .onChange(of: filteredEvents) { oldValue, newValue in
-                    // When the visible set changes (e.g., after fetch), ensure pins are brought into view
-                    if !newValue.isEmpty {
-                        print("🗺️ Filtered events changed to \(newValue.count), recentering")
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                            withAnimation(.easeInOut(duration: 0.8)) {
-                                region = regionThatFits(events: newValue)
                             }
                             mapRefreshVersion += 1
                         }
@@ -1270,48 +1288,49 @@ struct StudyMapView: View {
                 )
             }
             // Recenter when we receive a location update from the edit screen
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("EventLocationUpdated"))) { notification in
-                guard let userInfo = notification.userInfo,
-                      let lat = userInfo["lat"] as? CLLocationDegrees,
-                      let lon = userInfo["lon"] as? CLLocationDegrees else { return }
-                let coord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    region.center = coord
-                    region.span = MKCoordinateSpan(latitudeDelta: max(region.span.latitudeDelta, 0.05),
-                                                   longitudeDelta: max(region.span.longitudeDelta, 0.05))
-                }
-                // Ensure map re-renders annotations even if cluster signature didn't change
-                mapRefreshVersion += 1
-            }
-            // Center map on event when "Show on Map" is tapped from event detail
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowEventOnMap"))) { notification in
-                guard let userInfo = notification.userInfo,
-                      let eventIDString = userInfo["eventID"] as? String,
-                      let eventID = UUID(uuidString: eventIDString) else { return }
+            // Unified notification handler for focusing on events
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("FocusEventOnMap"))) { notification in
+                guard let userInfo = notification.userInfo else { return }
                 
-                // Support payloads with explicit lat/lon to avoid type bridging issues
-                var targetCoord: CLLocationCoordinate2D? = nil
+                // Handle coordinate-based focus (from event edit)
                 if let lat = userInfo["lat"] as? CLLocationDegrees,
                    let lon = userInfo["lon"] as? CLLocationDegrees {
-                    targetCoord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                } else if let coordinate = userInfo["coordinate"] as? CLLocationCoordinate2D {
-                    targetCoord = coordinate
-                }
-                
-                // Center the map with a closer zoom
-                if let coordinate = targetCoord {
-                    withAnimation(.easeInOut(duration: 0.8)) {
-                        region.center = coordinate
-                        region.span = MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
+                    let coord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                    withAnimation(.easeInOut(duration: 0.6)) {
+                        region.center = coord
+                        region.span = MKCoordinateSpan(latitudeDelta: max(region.span.latitudeDelta, 0.05),
+                                                       longitudeDelta: max(region.span.longitudeDelta, 0.05))
                     }
+                    mapRefreshVersion += 1
                 }
-                
-                // Ensure the correct event is selected (do not reopen detail sheet here per user request)
-                if let event = calendarManager.events.first(where: { $0.id == eventID }) {
-                    selectedEvent = event
+                // Handle event ID-based focus (from event detail)
+                else if let eventIDString = userInfo["eventID"] as? String,
+                        let eventID = UUID(uuidString: eventIDString) {
+                    
+                    // Support payloads with explicit lat/lon to avoid type bridging issues
+                    var targetCoord: CLLocationCoordinate2D? = nil
+                    if let lat = userInfo["lat"] as? CLLocationDegrees,
+                       let lon = userInfo["lon"] as? CLLocationDegrees {
+                        targetCoord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                    } else if let coordinate = userInfo["coordinate"] as? CLLocationCoordinate2D {
+                        targetCoord = coordinate
+                    }
+                    
+                    // Center the map with a closer zoom
+                    if let coordinate = targetCoord {
+                        withAnimation(.easeInOut(duration: 0.8)) {
+                            region.center = coordinate
+                            region.span = MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
+                        }
+                    }
+                    
+                    // Ensure the correct event is selected
+                    if let event = calendarManager.events.first(where: { $0.id == eventID }) {
+                        selectedEvent = event
+                    }
+                    
+                    mapRefreshVersion += 1
                 }
-                
-                mapRefreshVersion += 1
             }
             // Add confirmation dialog for view mode selection
             .confirmationDialog(
@@ -1593,6 +1612,33 @@ struct StudyMapView: View {
                     .cornerRadius(10)
                     .padding()
                 }
+                
+                // Debug overlay for refresh statistics (only in debug builds)
+                #if DEBUG
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("Debug Stats")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            Text(refreshController.getRefreshStats())
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                            Text("Map Version: \(mapRefreshVersion)")
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                        }
+                        .padding(8)
+                        .background(Color.black.opacity(0.7))
+                        .cornerRadius(8)
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 100)
+                    }
+                }
+                #endif
             }
         }
         .animation(.easeInOut, value: showHotPosts)
@@ -1622,11 +1668,22 @@ struct StudyMapView: View {
                 self.alertMessage = "Your event has been created successfully!"
                 self.showAlert = true
                 
-                // 🔧 FIX: Refresh events from backend to ensure we have the correct backend ID
+                // 🔧 FIX: Fetch only the specific event instead of all events
                 // This ensures the event list is synchronized with the backend
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.calendarManager.fetchEvents()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.calendarManager.fetchSpecificEvent(eventID: localEvent.id)
                 }
+                
+                // Post unified notification to focus on the new event
+                NotificationCenter.default.post(
+                    name: Notification.Name("FocusEventOnMap"),
+                    object: nil,
+                    userInfo: [
+                        "eventID": localEvent.id.uuidString,
+                        "lat": localEvent.coordinate.latitude,
+                        "lon": localEvent.coordinate.longitude
+                    ]
+                )
             }
         }
     }

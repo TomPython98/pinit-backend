@@ -101,9 +101,9 @@ struct ContentView: View {
                         withAnimation {
                             isAnimating = true
                         }
-                        // Ensure events are loaded before finding next event
+                        // Ensure events are loaded once before finding next event
                         if calendarManager.events.isEmpty && !calendarManager.isLoading && !calendarManager.username.isEmpty {
-                            calendarManager.fetchEvents()
+                            calendarManager.fetchEvents(force: false)
                         }
                         // Find next RSVP'd event from CalendarManager
                         findNextRSVPEvent()
@@ -155,7 +155,7 @@ struct ContentView: View {
         let lon = coordinate.longitude
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             NotificationCenter.default.post(
-                name: Notification.Name("ShowEventOnMap"),
+                name: Notification.Name("FocusEventOnMap"),
                 object: nil,
                 userInfo: [
                     "eventID": eventIDString,
@@ -391,10 +391,7 @@ struct ContentView: View {
                     isEventDetailLoading = true
                     selectedEvent = event
                     
-                    // Always fetch events to ensure we have the latest data
-                    if !calendarManager.isLoading && !calendarManager.username.isEmpty {
-                        calendarManager.fetchEvents()
-                    }
+                    // Removed unconditional fetch; rely on WebSocket and existing state
                     
                     // Show the detail view after a short delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {

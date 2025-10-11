@@ -10,7 +10,6 @@ class UserAccountManager: ObservableObject {
     @Published var refreshToken: String?
     
     // MARK: - Configuration
-    // 🔧 FIX: Use consistent backend URL
     private let baseURL = APIConfig.primaryBaseURL
     
     private let accessTokenKey = "access_token"
@@ -26,7 +25,7 @@ class UserAccountManager: ObservableObject {
             self.accessToken = UserDefaults.standard.string(forKey: accessTokenKey)
             self.refreshToken = UserDefaults.standard.string(forKey: refreshTokenKey)
             
-            print("🔍 🔐 DEBUG: App startup - User: \(savedUsername), AccessToken: \(self.accessToken != nil ? "Present" : "Nil"), RefreshToken: \(self.refreshToken != nil ? "Present" : "Nil")")
+            // Debug logging removed for production
             
             // Only fetch data if we have valid tokens
             if self.accessToken != nil {
@@ -35,7 +34,7 @@ class UserAccountManager: ObservableObject {
                     self.fetchFriendRequests()
                 }
             } else {
-                print("❌ 🔐 DEBUG: No access token found at startup - user needs to login again")
+                // No access token found - user needs to login again
                 // Clear invalid login state
                 self.clearTokens()
                 UserDefaults.standard.set(false, forKey: "isLoggedIn")
@@ -43,7 +42,7 @@ class UserAccountManager: ObservableObject {
                 self.currentUser = nil
             }
         } else {
-            print("🔍 🔐 DEBUG: No saved login state found at startup")
+            // No saved login state found at startup
         }
     }
     
