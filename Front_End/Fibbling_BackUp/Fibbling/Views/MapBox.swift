@@ -1068,26 +1068,17 @@ struct StudyMapView: View {
                         selectedEvent = event
                     }
                 })
-                .id(mapRefreshVersion)
                 .edgesIgnoringSafeArea(.all)
                 .onChange(of: calendarManager.events) { oldValue, newValue in
-                    // Debounced recenter when events change to ensure visibility
+                    // Update map annotations when events change, but don't recenter
                     if !filteredEvents.isEmpty {
-                        print("🗺️ Events changed, scheduling recenter for \(filteredEvents.count) events")
-                        refreshController.debouncedRefresh(delay: 0.3) {
-                            withAnimation(.easeInOut(duration: 0.8)) {
-                                region = regionThatFits(events: filteredEvents)
-                            }
-                            mapRefreshVersion += 1
-                        }
+                        print("🗺️ Events changed, updating annotations for \(filteredEvents.count) events")
+                        mapRefreshVersion += 1
                     }
                 }
-                .onChange(of: eventViewMode) { _ in
-                    // Refocus when switching view modes to ensure visibility
+                .onChange(of: eventViewMode) { oldValue, newValue in
+                    // Update map annotations when view mode changes, but don't recenter
                     if !filteredEvents.isEmpty {
-                        withAnimation(.easeInOut(duration: 0.6)) {
-                            region = regionThatFits(events: filteredEvents)
-                        }
                         mapRefreshVersion += 1
                     }
                 }
@@ -2135,3 +2126,4 @@ struct EventSearchView: View {
         }
     }
 }
+

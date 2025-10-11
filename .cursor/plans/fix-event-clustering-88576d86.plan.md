@@ -1,34 +1,86 @@
-<!-- 88576d86-1167-4eee-a979-697d1b0e5c51 4377eb28-5094-4b83-837f-24f134bdc050 -->
-# Stop Excessive Event Polling and Fix URL Bug
+<!-- 88576d86-1167-4eee-a979-697d1b0e5c51 11dd3bf8-a36c-464f-9ed5-ef49889873df -->
+# Comprehensive Developer Documentation Refresh
 
-#### What we'll change
-- CalendarManager.swift
-  - Add a cooldown guard in `fetchEvents()` so it won’t run more than once every 30s unless explicitly forced.
-  - Fix the missing slash in `fetchSpecificEvent` URL: change `"\(baseURL)get_study_events/…"` to `"\(baseURL)/get_study_events/…"`.
-- ContentView.swift
-  - Remove unconditional calls to `calendarManager.fetchEvents()` (two spots found) and replace with a one-time "ensure-initial-load" using a local `@State private var didEnsureInitialEvents = false` guard.
-- CalendarView.swift
-  - Remove the delayed `fetchEvents()` on RSVP success; rely on WebSocket and local state instead.
-- MapBox.swift
-  - Remove the delayed `fetchEvents()` after certain actions; rely on WebSocket.
-- EventsRefreshView.swift
-  - Keep manual refresh only (no auto-refresh on appear).
+#### Deliverable
 
-#### Why this fixes the loop
-- After an event delete, some views re-render and currently re-trigger `fetchEvents()` whenever `events` becomes empty or on generic UI transitions. The cooldown + removing unconditional fetch sites stops repeated API calls. WebSocket remains the real-time source of truth.
+- One authoritative, developer-focused document that fully reflects the current codebase and deployment, replacing fragmented/obsolete docs.
+- Location: `COMPREHENSIVE_TECHNICAL_DOCUMENTATION.md` (repo root).
 
-#### Tests (manual)
-- Create → list → delete an event. Confirm:
-  - WebSocket deletion removes it locally without triggering a fetch loop.
-  - No repeated GET /api/get_study_events/... in server logs.
-  - Pull-to-refresh still works via EventsRefreshView.
+#### Source of Truth (to review exhaustively)
 
+- Backend: `StudyCon/`, `myapp/` (models, views, urls, routing, consumers, settings, migrations, storage, utils)
+- iOS Frontend: `Front_End/Fibbling_BackUp/Fibbling/` (Config, Managers, Views, ViewModels, Utilities, Models)
+- Deployment: `Procfile`, `railway.json`, `requirements.txt`, `runtime.txt`
+- Existing docs: `/complete_documentation`, `/Documentation`, root readmes
+
+#### Document Structure (high-level)
+
+1. Architecture overview and data flow
+2. Backend
+
+- Project layout, settings, env vars
+- Database (Postgres via Railway), migrations
+- Auth (JWT via SimpleJWT), rate limits, CORS/CSRF
+- Models and relationships (incl. `EventReviewReminder` CASCADE)
+- REST endpoints (paths, methods, request/response)
+- Real-time: Channels, routing, consumers, broadcast utils, message schema
+- Storage (R2/S3), static/media handling
+- Logging, security considerations
+
+3. iOS Frontend
+
+- App structure (SwiftUI), key managers
+- APIConfig (base URLs, endpoints, WebSocket URL)
+- Auth/token lifecycle (register/login/save tokens)
+- Calendar/events: `CalendarManager`, WebSocket-first updates, 30s cooldown
+- Map & clustering behavior, region defaults
+- Settings, Notification Preferences (colors/toolbar), Profile/Reviews fixes
+- UI/UX patterns (sheets, quick actions wiring, keyboard dismissal)
+
+4. Deployment & Ops
+
+- Railway services, `DATABASE_URL`, `RAILWAY_RUN_COMMAND`
+- Healthcheck endpoint, daphne startup, migrations on deploy
+- Python 3.13 `psycopg[binary]` version pin
+
+5. Testing & Runbooks
+
+- cURL flows (register/login/create/delete event/account)
+- Common errors (401s, migration issues, psycopg import) and fixes
+
+6. Change log (recent critical changes)
+7. Glossary
+
+#### Acceptance Criteria
+
+- Every endpoint documented with method, path, auth, payload, response
+- WebSocket data contract and flows documented
+- All environment variables and deployment steps verified against current code
+- iOS flows (auth, event CRUD, real-time updates) matched to code
+
+#### Out-of-Scope
+
+- Android deep dive (keep pointers), future features/speculations
+
+#### Notes
+
+- Obsolete/contradictory content in `complete_documentation` and `Documentation` will be superseded; the new doc will point out deprecations.
+
+#### Timeline (single pass, then refine)
+
+- Pass 1: Full code scan and notes
+- Pass 2: Draft full master doc
+- Pass 3: Verify endpoints against live server and finalize
 
 ### To-dos
 
-- [ ] Fix missing slash in fetchSpecificEvent URL in CalendarManager.swift
-- [ ] Add 30s cooldown guard to CalendarManager.fetchEvents()
-- [ ] Remove unconditional fetchEvents calls from ContentView.swift and guard initial load
-- [ ] Remove delayed fetchEvents from CalendarView.swift RSVP flow
-- [ ] Remove delayed fetchEvents from MapBox.swift after actions
-- [ ] Ensure EventsRefreshView stays manual-only and still works
+- [ ] Read all backend code (models, views, urls, routing, consumers, settings, migrations)
+- [ ] Read all iOS Swift code (Config, Managers, Views, ViewModels, Utilities, Models)
+- [ ] Review Procfile, railway.json, requirements, runtime, env expectations
+- [ ] Review complete_documentation and Documentation to capture/replace content
+- [ ] Enumerate endpoints, auth, payloads, responses, errors
+- [ ] Document Channels setup, WS URLs, consumers, broadcast utils, message formats
+- [ ] Document APIConfig, token lifecycle, CalendarManager cooldown and WebSocket flow
+- [ ] Document Railway setup, env vars, migrations, daphne, healthchecks
+- [ ] Author COMPREHENSIVE_TECHNICAL_DOCUMENTATION.md end-to-end
+- [ ] Cross-check doc vs code/servers and mark deprecated older docs
