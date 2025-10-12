@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.conf import settings
 import json
-from .models import FriendRequest, UserProfile, StudyEvent, EventInvitation, DeclinedInvitation, Device, UserRating, UserReputationStats, UserTrustLevel, UserImage
+from .models import FriendRequest, UserProfile, StudyEvent, EventInvitation, DeclinedInvitation, Device, UserRating, UserReputationStats, UserTrustLevel, UserImage, EventJoinRequest
 from django.utils import timezone
 from myapp.utils import broadcast_event_created, broadcast_event_updated, broadcast_event_deleted
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -1383,38 +1383,87 @@ def rsvp_study_event(request):
                     "event": event_data
                 })
             else:
-                # Join event
-                event.attendees.add(user)
+                # Check if user is invited or auto-matched (can join directly)
+                is_invited = event.invited_friends.filter(id=user.id).exists()
+                is_auto_matched = EventInvitation.objects.filter(
+                    event=event, 
+                    user=user, 
+                    is_auto_matched=True
+                ).exists()
                 
-                # If there was an invitation, mark it as accepted
-                try:
-                    invitation = EventInvitation.objects.get(event=event, user=user)
-                    invitation.accepted = True
-                    invitation.save()
-                except EventInvitation.DoesNotExist:
-                    # No invitation exists, which is fine
-                    pass
-                
-                event.save()
-                event_data = {
-                    "id": str(event.id),
-                    "title": event.title,
-                    "event_type": event.event_type.lower(),  # Ensure lowercase
-                }
-                
-                # Broadcast event update (user joined the event)
-                broadcast_event_updated(
-                    event_id=event.id,
-                    host_username=event.host.username,
-                    attendees=[u.username for u in event.attendees.all()],
-                    invited_friends=[u.username for u in event.invited_friends.all()]
-                )
-                
-                return JsonResponse({
-                    "success": True,
-                    "action": "joined",
-                    "event": event_data
-                })
+                if is_invited or is_auto_matched:
+                    # User is invited or auto-matched, can join directly
+                    event.attendees.add(user)
+                    
+                    # If there was an invitation, mark it as accepted
+                    try:
+                        invitation = EventInvitation.objects.get(event=event, user=user)
+                        invitation.accepted = True
+                        invitation.save()
+                    except EventInvitation.DoesNotExist:
+                        pass
+                    
+                    event.save()
+                    event_data = {
+                        "id": str(event.id),
+                        "title": event.title,
+                        "event_type": event.event_type.lower(),
+                    }
+                    
+                    # Broadcast event update (user joined the event)
+                    broadcast_event_updated(
+                        event_id=event.id,
+                        host_username=event.host.username,
+                        attendees=[u.username for u in event.attendees.all()],
+                        invited_friends=[u.username for u in event.invited_friends.all()]
+                    )
+                    
+                    return JsonResponse({
+                        "success": True,
+                        "action": "joined",
+                        "event": event_data
+                    })
+                else:
+                    # User is not invited, create a join request
+                    # Check if there's already a pending request
+                    existing_request = EventJoinRequest.objects.filter(
+                        event=event, 
+                        user=user, 
+                        status='pending'
+                    ).first()
+                    
+                    if existing_request:
+                        return JsonResponse({
+                            "success": False,
+                            "action": "request_pending",
+                            "message": "You already have a pending request for this event"
+                        })
+                    
+                    # Create the join request
+                    join_request = EventJoinRequest.objects.create(
+                        event=event,
+                        user=user,
+                        message=data.get("message", "")
+                    )
+                    
+                    # Send notification to event host
+                    try:
+                        send_push_notification(
+                            user_id=event.host.id,
+                            notification_type='event_join_request',
+                            event_id=str(event.id),
+                            event_title=event.title,
+                            requester=user.username
+                        )
+                    except Exception as e:
+                        pass  # Don't fail if notification fails
+                    
+                    return JsonResponse({
+                        "success": True,
+                        "action": "request_sent",
+                        "message": "Join request sent to event host",
+                        "request_id": str(join_request.id)
+                    })
 
         except User.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
@@ -4945,4 +4994,288 @@ def update_existing_images(request):
             "success": False,
             "error": str(e)
         }, status=500)
+
+
+# ============================================================================
+# EVENT JOIN REQUESTS ENDPOINTS
+# ============================================================================
+
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def request_to_join_event(request):
+    """
+    Create a join request for an event
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            event_id = data.get("event_id")
+            message = data.get("message", "")
+            
+            if not event_id:
+                return JsonResponse({"error": "Event ID is required"}, status=400)
+            
+            try:
+                event = StudyEvent.objects.get(id=uuid.UUID(event_id))
+                user = request.user
+            except StudyEvent.DoesNotExist:
+                return JsonResponse({"error": "Event not found"}, status=404)
+            except ValueError:
+                return JsonResponse({"error": "Invalid event ID format"}, status=400)
+            
+            # Check if user is already an attendee
+            if event.attendees.filter(id=user.id).exists():
+                return JsonResponse({"error": "You are already attending this event"}, status=400)
+            
+            # Check if user is the host
+            if event.host == user:
+                return JsonResponse({"error": "You cannot request to join your own event"}, status=400)
+            
+            # Check if there's already a pending request
+            existing_request = EventJoinRequest.objects.filter(
+                event=event, 
+                user=user, 
+                status='pending'
+            ).first()
+            
+            if existing_request:
+                return JsonResponse({"error": "You already have a pending request for this event"}, status=400)
+            
+            # Create the join request
+            join_request = EventJoinRequest.objects.create(
+                event=event,
+                user=user,
+                message=message
+            )
+            
+            # Send notification to event host
+            try:
+                send_push_notification(
+                    user_id=event.host.id,
+                    notification_type='event_join_request',
+                    event_id=str(event.id),
+                    event_title=event.title,
+                    requester=user.username
+                )
+            except Exception as e:
+                pass  # Don't fail if notification fails
+            
+            return JsonResponse({
+                "success": True,
+                "message": "Join request sent successfully",
+                "request_id": str(join_request.id)
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@ratelimit(key='user', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_event_join_requests(request, event_id):
+    """
+    Get all join requests for an event (host only)
+    """
+    try:
+        event = StudyEvent.objects.get(id=uuid.UUID(event_id))
+        
+        # Only the host can see join requests
+        if event.host != request.user:
+            return JsonResponse({"error": "Only the event host can view join requests"}, status=403)
+        
+        # Get all pending requests
+        requests = EventJoinRequest.objects.filter(
+            event=event,
+            status='pending'
+        ).select_related('user', 'user__userprofile').order_by('-created_at')
+        
+        requests_data = []
+        for req in requests:
+            requests_data.append({
+                "id": str(req.id),
+                "user": {
+                    "username": req.user.username,
+                    "full_name": req.user.userprofile.full_name if hasattr(req.user, 'userprofile') else req.user.username,
+                    "university": req.user.userprofile.university if hasattr(req.user, 'userprofile') else "",
+                    "is_certified": req.user.userprofile.is_certified if hasattr(req.user, 'userprofile') else False,
+                },
+                "message": req.message,
+                "created_at": req.created_at.isoformat(),
+            })
+        
+        return JsonResponse({
+            "success": True,
+            "requests": requests_data,
+            "total_count": len(requests_data)
+        })
+        
+    except StudyEvent.DoesNotExist:
+        return JsonResponse({"error": "Event not found"}, status=404)
+    except ValueError:
+        return JsonResponse({"error": "Invalid event ID format"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def approve_join_request(request):
+    """
+    Approve a join request (host only)
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            request_id = data.get("request_id")
+            
+            if not request_id:
+                return JsonResponse({"error": "Request ID is required"}, status=400)
+            
+            try:
+                join_request = EventJoinRequest.objects.get(id=uuid.UUID(request_id))
+            except EventJoinRequest.DoesNotExist:
+                return JsonResponse({"error": "Join request not found"}, status=404)
+            except ValueError:
+                return JsonResponse({"error": "Invalid request ID format"}, status=400)
+            
+            # Only the event host can approve requests
+            if join_request.event.host != request.user:
+                return JsonResponse({"error": "Only the event host can approve requests"}, status=403)
+            
+            # Check if request is still pending
+            if join_request.status != 'pending':
+                return JsonResponse({"error": "Request has already been processed"}, status=400)
+            
+            # Check if event is full
+            if join_request.event.attendees.count() >= join_request.event.max_participants:
+                return JsonResponse({"error": "Event is full"}, status=400)
+            
+            # Approve the request
+            join_request.approve(request.user)
+            
+            # Broadcast event update
+            broadcast_event_updated(
+                event_id=join_request.event.id,
+                host_username=join_request.event.host.username,
+                attendees=[u.username for u in join_request.event.attendees.all()],
+                invited_friends=[u.username for u in join_request.event.invited_friends.all()]
+            )
+            
+            return JsonResponse({
+                "success": True,
+                "message": f"Join request from {join_request.user.username} approved"
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def reject_join_request(request):
+    """
+    Reject a join request (host only)
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            request_id = data.get("request_id")
+            
+            if not request_id:
+                return JsonResponse({"error": "Request ID is required"}, status=400)
+            
+            try:
+                join_request = EventJoinRequest.objects.get(id=uuid.UUID(request_id))
+            except EventJoinRequest.DoesNotExist:
+                return JsonResponse({"error": "Join request not found"}, status=404)
+            except ValueError:
+                return JsonResponse({"error": "Invalid request ID format"}, status=400)
+            
+            # Only the event host can reject requests
+            if join_request.event.host != request.user:
+                return JsonResponse({"error": "Only the event host can reject requests"}, status=403)
+            
+            # Check if request is still pending
+            if join_request.status != 'pending':
+                return JsonResponse({"error": "Request has already been processed"}, status=400)
+            
+            # Reject the request
+            join_request.reject(request.user)
+            
+            return JsonResponse({
+                "success": True,
+                "message": f"Join request from {join_request.user.username} rejected"
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@ratelimit(key='user', rate='50/h', method='GET', block=True)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_user_join_requests(request, username):
+    """
+    Get all join requests made by a user
+    """
+    try:
+        # Only users can see their own requests
+        if request.user.username != username:
+            return JsonResponse({"error": "Forbidden"}, status=403)
+        
+        user = User.objects.get(username=username)
+        
+        # Get all requests made by this user
+        requests = EventJoinRequest.objects.filter(
+            user=user
+        ).select_related('event', 'event__host').order_by('-created_at')
+        
+        requests_data = []
+        for req in requests:
+            requests_data.append({
+                "id": str(req.id),
+                "event": {
+                    "id": str(req.event.id),
+                    "title": req.event.title,
+                    "host": req.event.host.username,
+                    "time": req.event.time.isoformat(),
+                    "event_type": req.event.event_type,
+                },
+                "status": req.status,
+                "message": req.message,
+                "created_at": req.created_at.isoformat(),
+                "processed_at": req.processed_at.isoformat() if req.processed_at else None,
+            })
+        
+        return JsonResponse({
+            "success": True,
+            "requests": requests_data,
+            "total_count": len(requests_data)
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 

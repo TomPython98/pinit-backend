@@ -37,5 +37,12 @@ urlpatterns = [
     path('api/rsvp_study_event/', views.rsvp_study_event, name='rsvp_study_event'),
     path('api/search_events/', views.search_events, name='search_events'),
     path('api/enhanced_search_events/', views.enhanced_search_events, name='enhanced_search_events'),
+    
+    # Event Join Requests Endpoints
+    path('api/request_to_join_event/', views.request_to_join_event, name='request_to_join_event'),
+    path('api/get_event_join_requests/<str:event_id>/', views.get_event_join_requests, name='get_event_join_requests'),
+    path('api/approve_join_request/', views.approve_join_request, name='approve_join_request'),
+    path('api/reject_join_request/', views.reject_join_request, name='reject_join_request'),
+    path('api/get_user_join_requests/<str:username>/', views.get_user_join_requests, name='get_user_join_requests'),
 ]
 

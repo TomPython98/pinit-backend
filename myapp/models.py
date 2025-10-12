@@ -299,6 +299,55 @@ class EventInvitation(models.Model):
         return f"{self.user.username} invited to {self.event.title} (auto-matched: {self.is_auto_matched})"
 
 
+# Model for tracking join requests to events
+class EventJoinRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    event = models.ForeignKey('StudyEvent', on_delete=models.CASCADE, related_name='join_requests')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_join_requests')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    message = models.TextField(blank=True, null=True, help_text="Optional message from the requester")
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_requests')
+    
+    class Meta:
+        unique_together = ('event', 'user')
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f"{self.user.username} requests to join {self.event.title} ({self.status})"
+    
+    def approve(self, processed_by_user):
+        """Approve the join request and add user to attendees"""
+        self.status = 'approved'
+        self.processed_at = timezone.now()
+        self.processed_by = processed_by_user
+        self.save()
+        
+        # Add user to event attendees
+        self.event.attendees.add(self.user)
+        
+        # If there was an invitation, mark it as accepted
+        try:
+            invitation = EventInvitation.objects.get(event=self.event, user=self.user)
+            invitation.accepted = True
+            invitation.save()
+        except EventInvitation.DoesNotExist:
+            pass
+    
+    def reject(self, processed_by_user):
+        """Reject the join request"""
+        self.status = 'rejected'
+        self.processed_at = timezone.now()
+        self.processed_by = processed_by_user
+        self.save()
+
+
 # Study Event Model - KEEP ONLY THIS ONE VERSION
 class StudyEvent(models.Model):
     EVENT_TYPE_CHOICES = [
