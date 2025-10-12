@@ -1383,16 +1383,11 @@ def rsvp_study_event(request):
                     "event": event_data
                 })
             else:
-                # Check if user is invited or auto-matched (can join directly)
+                # Check if user is invited (can join directly)
                 is_invited = event.invited_friends.filter(id=user.id).exists()
-                is_auto_matched = EventInvitation.objects.filter(
-                    event=event, 
-                    user=user, 
-                    is_auto_matched=True
-                ).exists()
                 
-                if is_invited or is_auto_matched:
-                    # User is invited or auto-matched, can join directly
+                if is_invited:
+                    # User is invited, can join directly
                     event.attendees.add(user)
                     
                     # If there was an invitation, mark it as accepted
@@ -1424,7 +1419,7 @@ def rsvp_study_event(request):
                         "event": event_data
                     })
                 else:
-                    # User is not invited, create a join request
+                    # User is not invited (including auto-matched users), create a join request
                     # Check if there's already a pending request
                     existing_request = EventJoinRequest.objects.filter(
                         event=event, 
@@ -1439,18 +1434,26 @@ def rsvp_study_event(request):
                             "message": "You already have a pending request for this event"
                         })
                     
-                    # Create the join request
+                    # Check if user is auto-matched to include that info in the request
+                    is_auto_matched = EventInvitation.objects.filter(
+                        event=event, 
+                        user=user, 
+                        is_auto_matched=True
+                    ).exists()
+                    
+                    # Create the join request with auto-match info
                     join_request = EventJoinRequest.objects.create(
                         event=event,
                         user=user,
                         message=data.get("message", "")
                     )
                     
-                    # Send notification to event host
+                    # Send notification to event host with auto-match info
                     try:
+                        notification_type = 'event_join_request_auto_matched' if is_auto_matched else 'event_join_request'
                         send_push_notification(
                             user_id=event.host.id,
-                            notification_type='event_join_request',
+                            notification_type=notification_type,
                             event_id=str(event.id),
                             event_title=event.title,
                             requester=user.username
@@ -1458,11 +1461,13 @@ def rsvp_study_event(request):
                     except Exception as e:
                         pass  # Don't fail if notification fails
                     
+                    request_type = "Auto-matched join request" if is_auto_matched else "Join request"
                     return JsonResponse({
                         "success": True,
                         "action": "request_sent",
-                        "message": "Join request sent to event host",
-                        "request_id": str(join_request.id)
+                        "message": f"{request_type} sent to event host",
+                        "request_id": str(join_request.id),
+                        "is_auto_matched": is_auto_matched
                     })
 
         except User.DoesNotExist:
@@ -5099,6 +5104,13 @@ def get_event_join_requests(request, event_id):
         
         requests_data = []
         for req in requests:
+            # Check if this user is auto-matched for this event
+            is_auto_matched = EventInvitation.objects.filter(
+                event=req.event,
+                user=req.user,
+                is_auto_matched=True
+            ).exists()
+            
             requests_data.append({
                 "id": str(req.id),
                 "user": {
@@ -5109,6 +5121,7 @@ def get_event_join_requests(request, event_id):
                 },
                 "message": req.message,
                 "created_at": req.created_at.isoformat(),
+                "is_auto_matched": is_auto_matched,
             })
         
         return JsonResponse({
