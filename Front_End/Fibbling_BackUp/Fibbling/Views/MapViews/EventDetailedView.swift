@@ -4320,7 +4320,7 @@ struct UserProfileView: View {
     
     // MARK: - Fetch Recent Events
     private func fetchRecentEvents() {
-        guard let url = URL(string: "\(baseURL)/get_study_events/\(username)/") else { return }
+        guard let url = URL(string: "\(baseURL)/get_user_recent_activity/\(username)/") else { return }
         
         URLSession.shared.dataTask(with: url) { data, response, error in
             DispatchQueue.main.async {
