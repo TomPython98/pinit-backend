@@ -284,38 +284,43 @@ final class AnimatedAnnotationView: UIView {
         let pinTintColor: UIColor
         switch eventType {
         case .study:
-            pinImageName = "Study"
+            pinImageName = "book.fill"
             pinTintColor = .systemBlue
         case .party:
-            pinImageName = "Party"
+            pinImageName = "party.popper.fill"
             pinTintColor = .systemPurple
         case .business:
-            pinImageName = "Business"
+            pinImageName = "briefcase.fill"
             pinTintColor = .systemIndigo
         case .cultural:
-            pinImageName = "Cultural"
+            pinImageName = "theatermasks.fill"
             pinTintColor = .systemOrange
         case .academic:
-            pinImageName = "Academic"
+            pinImageName = "graduationcap.fill"
             pinTintColor = .systemGreen
         case .networking:
-            pinImageName = "Networking"
+            pinImageName = "person.2.fill"
             pinTintColor = .systemPink
         case .social:
-            pinImageName = "Social"
+            pinImageName = "person.3.fill"
             pinTintColor = .systemRed
         case .language_exchange:
-            pinImageName = "LanguageExchange"
+            pinImageName = "globe"
             pinTintColor = .systemTeal
         case .other:
-            pinImageName = "Other"
+            pinImageName = "ellipsis.circle.fill"
             pinTintColor = .systemGray
         }
-        if let image = UIImage(named: pinImageName) {
-            pinImageView.image = image
+        
+        // Use SF Symbol instead of PNG image
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        if let symbolImage = UIImage(systemName: pinImageName, withConfiguration: config) {
+            pinImageView.image = symbolImage
             pinImageView.tintColor = pinTintColor
         } else {
-            pinImageView.image = UIImage(named: "dest-pin")
+            // Fallback to a default SF Symbol
+            pinImageView.image = UIImage(systemName: "mappin.circle.fill", withConfiguration: config)
+            pinImageView.tintColor = .systemBlue
         }
         certifiedBadge.isHidden = !isCertified
         privateBadge.isHidden = isPublic

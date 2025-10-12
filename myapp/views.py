@@ -1383,92 +1383,66 @@ def rsvp_study_event(request):
                     "event": event_data
                 })
             else:
-                # Check if user is invited (can join directly)
-                is_invited = event.invited_friends.filter(id=user.id).exists()
+                # ALL RSVPs now require host approval - no direct joining
+                # Check if there's already a pending request
+                existing_request = EventJoinRequest.objects.filter(
+                    event=event, 
+                    user=user, 
+                    status='pending'
+                ).first()
                 
-                if is_invited:
-                    # User is invited, can join directly
-                    event.attendees.add(user)
-                    
-                    # If there was an invitation, mark it as accepted
-                    try:
-                        invitation = EventInvitation.objects.get(event=event, user=user)
-                        invitation.accepted = True
-                        invitation.save()
-                    except EventInvitation.DoesNotExist:
-                        pass
-                    
-                    event.save()
-                    event_data = {
-                        "id": str(event.id),
-                        "title": event.title,
-                        "event_type": event.event_type.lower(),
-                    }
-                    
-                    # Broadcast event update (user joined the event)
-                    broadcast_event_updated(
-                        event_id=event.id,
-                        host_username=event.host.username,
-                        attendees=[u.username for u in event.attendees.all()],
-                        invited_friends=[u.username for u in event.invited_friends.all()]
-                    )
-                    
+                if existing_request:
                     return JsonResponse({
-                        "success": True,
-                        "action": "joined",
-                        "event": event_data
+                        "success": False,
+                        "action": "request_pending",
+                        "message": "You already have a pending request for this event"
                     })
-                else:
-                    # User is not invited (including auto-matched users), create a join request
-                    # Check if there's already a pending request
-                    existing_request = EventJoinRequest.objects.filter(
-                        event=event, 
-                        user=user, 
-                        status='pending'
-                    ).first()
+                
+                # Check if user is invited or auto-matched
+                is_invited = event.invited_friends.filter(id=user.id).exists()
+                is_auto_matched = EventInvitation.objects.filter(
+                    event=event, 
+                    user=user, 
+                    is_auto_matched=True
+                ).exists()
+                
+                # Create the join request (all RSVPs go through approval)
+                join_request = EventJoinRequest.objects.create(
+                    event=event,
+                    user=user,
+                    message=data.get("message", "")
+                )
+                
+                # Send notification to event host
+                try:
+                    if is_invited:
+                        notification_type = 'event_join_request_invited'
+                        request_type = "Invited user join request"
+                    elif is_auto_matched:
+                        notification_type = 'event_join_request_auto_matched'
+                        request_type = "Auto-matched join request"
+                    else:
+                        notification_type = 'event_join_request'
+                        request_type = "Join request"
                     
-                    if existing_request:
-                        return JsonResponse({
-                            "success": False,
-                            "action": "request_pending",
-                            "message": "You already have a pending request for this event"
-                        })
-                    
-                    # Check if user is auto-matched to include that info in the request
-                    is_auto_matched = EventInvitation.objects.filter(
-                        event=event, 
-                        user=user, 
-                        is_auto_matched=True
-                    ).exists()
-                    
-                    # Create the join request with auto-match info
-                    join_request = EventJoinRequest.objects.create(
-                        event=event,
-                        user=user,
-                        message=data.get("message", "")
+                    send_push_notification(
+                        user_id=event.host.id,
+                        notification_type=notification_type,
+                        event_id=str(event.id),
+                        event_title=event.title,
+                        requester=user.username
                     )
-                    
-                    # Send notification to event host with auto-match info
-                    try:
-                        notification_type = 'event_join_request_auto_matched' if is_auto_matched else 'event_join_request'
-                        send_push_notification(
-                            user_id=event.host.id,
-                            notification_type=notification_type,
-                            event_id=str(event.id),
-                            event_title=event.title,
-                            requester=user.username
-                        )
-                    except Exception as e:
-                        pass  # Don't fail if notification fails
-                    
-                    request_type = "Auto-matched join request" if is_auto_matched else "Join request"
-                    return JsonResponse({
-                        "success": True,
-                        "action": "request_sent",
-                        "message": f"{request_type} sent to event host",
-                        "request_id": str(join_request.id),
-                        "is_auto_matched": is_auto_matched
-                    })
+                except Exception as e:
+                    pass  # Don't fail if notification fails
+                
+                return JsonResponse({
+                    "success": True,
+                    "action": "request_sent",
+                    "message": f"{request_type} sent to event host",
+                    "request_id": str(join_request.id),
+                    "is_invited": is_invited,
+                    "is_auto_matched": is_auto_matched
+                })
 
         except User.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
@@ -3679,7 +3653,7 @@ def accept_invitation(request, invitation_id):
         
         # Add the user to the event's attendees
         event = invitation.event
-        event.add_attendee(request.user)
+        event.attendees.add(request.user)
         
         # Send a push notification to the event host
         try:

@@ -104,7 +104,7 @@ struct EventSelectionCard: View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 // Event Type Icon
-                Image(eventTypeImageName(event.eventType))
+                Image(systemName: eventTypeSystemName(event.eventType))
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 40, height: 40)
@@ -198,26 +198,26 @@ struct EventSelectionCard: View {
         }
     }
     
-    private func eventTypeImageName(_ eventType: EventType) -> String {
+    private func eventTypeSystemName(_ eventType: EventType) -> String {
         switch eventType {
         case .study:
-            return "Study"
+            return "book.fill"
         case .party:
-            return "Party"
+            return "party.popper.fill"
         case .business:
-            return "Business"
+            return "briefcase.fill"
         case .cultural:
-            return "Cultural"
+            return "theatermasks.fill"
         case .academic:
-            return "Academic"
+            return "graduationcap.fill"
         case .networking:
-            return "Networking"
+            return "person.2.fill"
         case .social:
-            return "Social"
+            return "person.3.fill"
         case .language_exchange:
-            return "LanguageExchange"
+            return "globe"
         case .other:
-            return "Other"
+            return "ellipsis.circle.fill"
         }
     }
 }

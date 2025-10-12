@@ -29,22 +29,16 @@ urlpatterns = [
     path('api/user_image/<str:image_id>/set_primary/', views.set_primary_image, name='set_primary_image'),
     path('api/update-existing-images/', views.update_existing_images, name='update_existing_images'),
     
-    # User Profile Endpoints
-    path('api/get_user_profile/<str:username>/', views.get_user_profile, name='get_user_profile'),
-    path('api/get_user_reputation/<str:username>/', views.get_user_reputation, name='get_user_reputation'),
-    path('api/get_study_events/<str:username>/', views.get_study_events, name='get_study_events'),
-    path('api/get_friends/<str:username>/', views.get_friends, name='get_friends'),
-    path('api/get_user_recent_activity/<str:username>/', views.get_user_recent_activity, name='get_user_recent_activity'),
-    
     # Event Management Endpoints
     path('api/create_study_event/', views.create_study_event, name='create_study_event'),
     path('api/update_study_event/', views.update_study_event, name='update_study_event'),
     path('api/delete_study_event/', views.delete_study_event, name='delete_study_event'),
+    path('api/get_study_events/<str:username>/', views.get_study_events, name='get_study_events'),
     path('api/rsvp_study_event/', views.rsvp_study_event, name='rsvp_study_event'),
     path('api/search_events/', views.search_events, name='search_events'),
     path('api/enhanced_search_events/', views.enhanced_search_events, name='enhanced_search_events'),
     
-    # Event Join Requests Endpoints
+    # Event Join Request Management Endpoints
     path('api/request_to_join_event/', views.request_to_join_event, name='request_to_join_event'),
     path('api/get_event_join_requests/<str:event_id>/', views.get_event_join_requests, name='get_event_join_requests'),
     path('api/approve_join_request/', views.approve_join_request, name='approve_join_request'),

@@ -474,11 +474,12 @@ def add_review(from_token, to_username, event_id, rating, reference):
         log(f"Failed to add review for {to_username}")
         return False
 
-def add_comment(token, event_id, text, parent_id=None):
+def add_comment(token, username, event_id, text, parent_id=None):
     """Add a comment to an event"""
     log(f"Adding comment to event {event_id}")
     
     comment_data = {
+        "username": username,
         "event_id": event_id,
         "text": text,
         "parent_id": parent_id
@@ -492,11 +493,16 @@ def add_comment(token, event_id, text, parent_id=None):
         log(f"Failed to add comment to event {event_id}")
         return False
 
-def like_event(token, event_id):
+def like_event(token, username, event_id):
     """Like an event"""
     log(f"Liking event {event_id}")
     
-    result = make_request("POST", "/api/events/like/", {"event_id": event_id}, token)
+    like_data = {
+        "username": username,
+        "event_id": event_id
+    }
+    
+    result = make_request("POST", "/api/events/like/", like_data, token)
     if result:
         log(f"Successfully liked event {event_id}")
         return True
@@ -521,22 +527,29 @@ def share_event(token, event_id, platform):
         log(f"Failed to share event {event_id} on {platform}")
         return False
 
-def send_message(token, receiver_username, message):
-    """Send a direct message"""
-    log(f"Sending message to {receiver_username}")
-    
-    message_data = {
-        "receiver": receiver_username,
-        "message": message
-    }
-    
-    result = make_request("POST", "/api/chat/send/", message_data, token)
-    if result:
-        log(f"Successfully sent message to {receiver_username}")
+def invite_friends_to_event(token, event_id, friend_usernames):
+    """Invite friends to an event"""
+    if not friend_usernames:
         return True
-    else:
-        log(f"Failed to send message to {receiver_username}")
-        return False
+    
+    log(f"Inviting {len(friend_usernames)} friends to event {event_id}")
+    
+    success_count = 0
+    for friend_username in friend_usernames:
+        invite_data = {
+            "event_id": event_id,
+            "username": friend_username
+        }
+        
+        result = make_request("POST", "/invite_to_event/", invite_data, token)
+        if result:
+            success_count += 1
+            log(f"Successfully invited {friend_username} to event {event_id}")
+        else:
+            log(f"Failed to invite {friend_username} to event {event_id}")
+    
+    log(f"Successfully invited {success_count}/{len(friend_usernames)} friends to event {event_id}")
+    return success_count > 0
 
 def generate_argentine_users():
     """Generate 25 Argentine users with realistic data"""
@@ -596,8 +609,16 @@ def generate_events():
     events = []
     
     for i, template in enumerate(EVENT_TEMPLATES):
-        # Select random location
+        # Select random location and add small randomization to avoid exact duplicates
         location = random.choice(BA_LOCATIONS)
+        
+        # Add small random offset to coordinates to avoid exact duplicates
+        # This adds ±0.001 degrees (roughly ±100m) to each coordinate
+        lat_offset = random.uniform(-0.001, 0.001)
+        lon_offset = random.uniform(-0.001, 0.001)
+        
+        randomized_lat = location["latitude"] + lat_offset
+        randomized_lon = location["longitude"] + lon_offset
         
         # Generate event time (next 1-30 days, reasonable hours)
         days_ahead = random.randint(1, 30)
@@ -610,8 +631,8 @@ def generate_events():
         event_data = {
             "title": template["title"],
             "description": template["description"],
-            "latitude": location["latitude"],
-            "longitude": location["longitude"],
+            "latitude": randomized_lat,
+            "longitude": randomized_lon,
             "time": event_time.isoformat(),
             "end_time": end_time.isoformat(),
             "event_type": template["event_type"],
@@ -808,7 +829,7 @@ def main():
         for commenter in commenters:
             if commenter["username"] != event["host"]:
                 comment_text = random.choice(comment_templates)
-                add_comment(commenter["token"], event["id"], comment_text)
+                add_comment(commenter["token"], commenter["username"], event["id"], comment_text)
                 time.sleep(0.2)
         
         # Add likes
@@ -816,7 +837,7 @@ def main():
         likers = random.sample(created_users, min(num_likes, len(created_users)))
         
         for liker in likers:
-            like_event(liker["token"], event["id"])
+            like_event(liker["token"], liker["username"], event["id"])
             time.sleep(0.1)
         
         # Add shares
@@ -829,39 +850,12 @@ def main():
             share_event(sharer["token"], event["id"], platform)
             time.sleep(0.2)
     
-    # 8. Direct messages
-    log("Sending direct messages...")
-    message_count = 0
-    
-    for i in range(20):  # Send 20 messages
-        sender = random.choice(created_users)
-        receiver = random.choice([u for u in created_users if u["username"] != sender["username"]])
-        
-        message_templates = [
-            "¡Hola! ¿Cómo estás?",
-            "¿Vas al evento de mañana?",
-            "Gracias por la invitación",
-            "¿Quieres estudiar juntos?",
-            "¡Qué buena la clase de tango!",
-            "¿Conoces algún buen lugar para estudiar?",
-            "¿Te gusta el mate?",
-            "¡Hacemos otro asado pronto!"
-        ]
-        
-        message = random.choice(message_templates)
-        if send_message(sender["token"], receiver["username"], message):
-            message_count += 1
-        time.sleep(0.3)
-    
-    log(f"Sent {message_count} direct messages")
-    
-    # 9. Summary
+    # 8. Summary
     log("=== DATA GENERATION COMPLETE ===")
     log(f"Created {len(created_users)} users")
     log(f"Created {len(friendship_pairs)} friendships")
     log(f"Created {len(created_events)} events")
     log(f"Added {review_count} reviews")
-    log(f"Sent {message_count} messages")
     log("All PinIt features have been tested with realistic Buenos Aires data!")
 
 if __name__ == "__main__":

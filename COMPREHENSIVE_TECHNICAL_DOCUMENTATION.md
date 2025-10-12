@@ -12067,6 +12067,200 @@ REDIS_URL=redis://localhost:6379
 - **Advanced Features**: Documented auto-matching and semantic search
 - **Deployment Guide**: Railway-specific configuration details
 
+## 🚀 Railway-Optimized Data Generation Script
+
+### Overview
+The `final_comprehensive_data_generation.py` script is a production-ready data generation tool specifically optimized for Railway deployment. It creates comprehensive test data while respecting Railway's connection limits and PostgreSQL constraints.
+
+### Key Features
+- **Railway-Friendly**: Uses connection pooling and batch processing
+- **Comprehensive Data**: Creates users, events, comments, likes, shares, invitations, RSVPs, and ratings
+- **Complete Profiles**: Includes bios, university info, degrees, skills, and interests
+- **Realistic Interactions**: Generates friend connections, event participation, and social engagement
+- **Error Handling**: Robust error handling with retry mechanisms
+
+### Script Configuration
+```python
+# Railway-friendly settings
+BATCH_SIZE = 3  # Process 3 users at a time
+DELAY_BETWEEN_OPERATIONS = 2  # 2 seconds between operations
+DELAY_BETWEEN_BATCHES = 5  # 5 seconds between batches
+
+# Test users to create (reduced from 17 to 10 for Railway)
+TEST_USERS = [
+    {"username": f"alex_cs_stanford_{timestamp}", "full_name": "Alex Chen", "university": "Stanford University", "degree": "Computer Science"},
+    {"username": f"sarah_med_harvard_{timestamp}", "full_name": "Sarah Johnson", "university": "Harvard Medical School", "degree": "Medicine"},
+    {"username": f"mike_business_wharton_{timestamp}", "full_name": "Mike Rodriguez", "university": "Wharton School", "degree": "Business Administration"},
+    {"username": f"emma_arts_nyu_{timestamp}", "full_name": "Emma Williams", "university": "NYU Tisch", "degree": "Fine Arts"},
+    {"username": f"david_eng_mit_{timestamp}", "full_name": "David Kim", "university": "MIT", "degree": "Mechanical Engineering"},
+    {"username": f"anna_physics_mit_{timestamp}", "full_name": "Anna Schmidt", "university": "MIT", "degree": "Physics"},
+    {"username": f"james_law_yale_{timestamp}", "full_name": "James Thompson", "university": "Yale Law School", "degree": "Law"},
+    {"username": f"sophie_psych_stanford_{timestamp}", "full_name": "Sophie Davis", "university": "Stanford University", "degree": "Psychology"},
+    {"username": f"carlos_med_johns_hopkins_{timestamp}", "full_name": "Carlos Martinez", "university": "Johns Hopkins", "degree": "Medicine"},
+    {"username": f"lisa_eng_caltech_{timestamp}", "full_name": "Lisa Wang", "university": "Caltech", "degree": "Computer Engineering"}
+]
+```
+
+### Connection Pooling Implementation
+```python
+def create_session():
+    """Create a requests session with connection pooling"""
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=1, pool_maxsize=1)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+```
+
+### Data Generated
+The script creates comprehensive test data including:
+
+#### Users (10)
+- Complete profiles with bios, university info, degrees, and academic years
+- Personalized interests based on field of study
+- Random skills with proficiency levels
+- Auto-matching preferences
+
+#### Events (15)
+- Study events with realistic titles and descriptions
+- US university locations (Stanford, Harvard, MIT, etc.)
+- Various event types (Study, Academic, Business, Cultural)
+- Interest tags and auto-matching enabled
+
+#### Social Interactions
+- **Friend Requests**: 28 sent, 18 accepted
+- **Comments**: 21 (reduced from 200+ for Railway optimization)
+- **Likes**: 110 event likes
+- **Shares**: 60 event shares
+- **Invitations**: 68 event invitations
+- **RSVPs**: 37 direct RSVPs + 18 join requests
+- **Ratings**: 31 user ratings
+
+### Bio Generation
+The script generates personalized bios for each user:
+```python
+bio_templates = [
+    f"Passionate {user_data.get('degree', 'student')} student at {user_data.get('university', 'university')}. Love learning and connecting with like-minded people!",
+    f"Studying {user_data.get('degree', 'my field')} at {user_data.get('university', 'my university')}. Always excited to collaborate on projects and study sessions.",
+    f"Current {user_data.get('degree', 'student')} at {user_data.get('university', 'university')}. Looking forward to meeting new people and sharing knowledge!",
+    f"Enthusiastic learner pursuing {user_data.get('degree', 'my studies')} at {user_data.get('university', 'university')}. Love working in groups and helping others succeed.",
+    f"Focused on {user_data.get('degree', 'my academic goals')} at {user_data.get('university', 'university')}. Always up for productive study sessions and meaningful connections."
+]
+```
+
+### Usage Instructions
+
+#### Prerequisites
+1. Ensure Railway services are running (PostgreSQL + App)
+2. Wait 2-3 minutes after Railway restart for services to stabilize
+3. Have Python 3.13+ installed
+
+#### Running the Script
+```bash
+cd /Users/tombesinger/Desktop/PinItApp
+python3 final_comprehensive_data_generation.py
+```
+
+#### Expected Output
+```
+🚀 Creating OPTIMIZED test data for Railway deployment...
+📊 Creating 10 test users in batches of 3
+
+👥 Registering users in batches...
+   Processing batch 1/4
+✅ Registered user: alex_cs_stanford_1760310792
+✅ Registered user: sarah_med_harvard_1760310792
+✅ Registered user: mike_business_wharton_1760310792
+   ⏳ Waiting 5 seconds before next batch...
+   ...
+
+🎉 COMPREHENSIVE test data generation completed!
+
+📊 Final Summary:
+   👥 Users: 10
+   📅 Events: 15
+   🤝 Friend Requests: 28 sent, 18 accepted
+   💬 Comments: 21
+   ❤️ Likes: 110
+   📤 Shares: 60
+   📨 Invitations: 68 ✅ WORKING!
+   📝 RSVPs: 37
+   ⭐ Ratings: 31
+
+🚀 RAILWAY-OPTIMIZED deployment ready!
+   ⚡ Connection pooling enabled
+   ⏱️ Proper delays between operations
+   📦 Batch processing implemented
+   💬 Reduced comment load (200+ → ~30)
+   🔗 Session properly closed
+```
+
+### Test User Credentials
+After running the script, you can log in with any of these users:
+
+| Username | Password | University | Degree |
+|----------|----------|------------|---------|
+| `alex_cs_stanford_1760310792` | `password123` | Stanford University | Computer Science |
+| `sarah_med_harvard_1760310792` | `password123` | Harvard Medical School | Medicine |
+| `mike_business_wharton_1760310792` | `password123` | Wharton School | Business Administration |
+| `emma_arts_nyu_1760310792` | `password123` | NYU Tisch | Fine Arts |
+| `david_eng_mit_1760310792` | `password123` | MIT | Mechanical Engineering |
+| `anna_physics_mit_1760310792` | `password123` | MIT | Physics |
+| `james_law_yale_1760310792` | `password123` | Yale Law School | Law |
+| `sophie_psych_stanford_1760310792` | `password123` | Stanford University | Psychology |
+| `carlos_med_johns_hopkins_1760310792` | `password123` | Johns Hopkins | Medicine |
+| `lisa_eng_caltech_1760310792` | `password123` | Caltech | Computer Engineering |
+
+### Railway Optimization Features
+
+#### Connection Management
+- **Session Reuse**: Single session for all requests
+- **Connection Pooling**: Limited to 1 connection per session
+- **Retry Strategy**: Automatic retry on failed requests
+- **Proper Cleanup**: Session closed at end
+
+#### Batch Processing
+- **User Registration**: 3 users per batch
+- **Delays**: 2 seconds between operations, 5 seconds between batches
+- **Rate Limiting**: Respects Railway's connection limits
+
+#### Reduced Load
+- **Comments**: Reduced from 200+ to ~21 (90% reduction)
+- **Users**: Reduced from 17 to 10 (41% reduction)
+- **Operations**: Optimized timing to prevent connection exhaustion
+
+### Troubleshooting
+
+#### "Too Many Clients" Error
+If you encounter this error:
+1. Restart Railway PostgreSQL service
+2. Restart Railway app service
+3. Wait 2-3 minutes for services to stabilize
+4. Re-run the script
+
+#### Events Not Visible on Map
+Events are created with US coordinates (Stanford, Harvard, MIT, etc.). To see them:
+1. Zoom out significantly on the map
+2. Pan to the United States
+3. Or run `create_buenos_aires_events.py` for local events
+
+#### Missing User Bios
+If users don't have bios after running the script:
+1. Run `update_user_bios.py` to add bios to existing users
+2. Or re-run the main script (it now includes bio generation)
+
+### Success Metrics
+- ✅ **No Connection Errors**: Successfully handles Railway's connection limits
+- ✅ **Complete Data**: All features tested with realistic data
+- ✅ **Performance**: Runs in ~10-15 minutes with proper delays
+- ✅ **Reliability**: Robust error handling and retry mechanisms
+- ✅ **Scalability**: Can be easily modified for different data volumes
+
 ### Historical Changes
 - **2024**: Initial development and basic features
 - **2024**: WebSocket implementation and real-time updates
@@ -12074,6 +12268,7 @@ REDIS_URL=redis://localhost:6379
 - **2024**: Trust and reputation system implementation
 - **2025**: PostgreSQL migration and Railway deployment
 - **2025**: Comprehensive documentation creation
+- **2025**: Railway-optimized data generation script development
 
 ---
 

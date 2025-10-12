@@ -1808,7 +1808,7 @@ struct MapboxMapView: UIViewRepresentable {
         var pointAnnotation = PointAnnotation(coordinate: coordinate)
         
         // Use the destination pin image (same as main map)
-        if let pinImage = UIImage(named: "dest-pin")?.withTintColor(.systemBlue, renderingMode: .alwaysOriginal) {
+        if let pinImage = UIImage(systemName: "mappin.circle.fill")?.withTintColor(.systemBlue, renderingMode: .alwaysOriginal) {
             pointAnnotation.image = .init(image: pinImage, name: "event-pin")
             pointAnnotation.iconAnchor = .bottom
             pointAnnotation.iconSize = 0.8

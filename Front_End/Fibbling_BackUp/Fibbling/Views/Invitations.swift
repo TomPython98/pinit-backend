@@ -1,5 +1,40 @@
 import SwiftUI
 
+// MARK: - Event Join Request Model
+struct EventJoinRequest: Identifiable, Codable {
+    let id: String
+    let event: EventRequestInfo
+    let status: String
+    let message: String?
+    let createdAt: String
+    let processedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case event
+        case status
+        case message
+        case createdAt = "created_at"
+        case processedAt = "processed_at"
+    }
+}
+
+struct EventRequestInfo: Codable {
+    let id: String
+    let title: String
+    let host: String
+    let time: String
+    let eventType: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case host
+        case time
+        case eventType = "event_type"
+    }
+}
+
 // MARK: - Invitation Model
 
 /// Represents an invitation for a StudyEvent.
@@ -25,16 +60,30 @@ struct InvitationsResponse: Codable {
     let invitations: [StudyEvent]
 }
 
+// MARK: - Join Requests Response
+struct JoinRequestsResponse: Codable {
+    let success: Bool
+    let requests: [EventJoinRequest]
+    let totalCount: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case requests
+        case totalCount = "total_count"
+    }
+}
+
 // MARK: - InvitationsView
 
 struct InvitationsView: View {
     @EnvironmentObject var accountManager: UserAccountManager
     @EnvironmentObject var calendarManager: CalendarManager
     @State private var invitations: [Invitation] = []
+    @State private var joinRequests: [EventJoinRequest] = []
     @State private var isLoading = false
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var selectedTab = 0 // 0 = Direct Invites, 1 = Potential Matches
+    @State private var selectedTab = 0 // 0 = Direct Invites, 1 = Potential Matches, 2 = Requests
     
     private var directInvitations: [Invitation] {
         return invitations.filter { !$0.isAutoMatched }
@@ -42,6 +91,15 @@ struct InvitationsView: View {
     
     private var potentialMatches: [Invitation] {
         return invitations.filter { $0.isAutoMatched }
+    }
+    
+    private var navigationTitle: String {
+        switch selectedTab {
+        case 0: return "Direct Invitations"
+        case 1: return "Potential Matches"
+        case 2: return "My Requests"
+        default: return "Events"
+        }
     }
     
     var body: some View {
@@ -79,7 +137,7 @@ struct InvitationsView: View {
                                         )
                                     }
                                 }
-                            } else {
+                            } else if selectedTab == 1 {
                                 // Potential Matches Tab
                                 if potentialMatches.isEmpty {
                                     emptyStateView(
@@ -96,6 +154,19 @@ struct InvitationsView: View {
                                         )
                                     }
                                 }
+                            } else {
+                                // My Requests Tab
+                                if joinRequests.isEmpty {
+                                    emptyStateView(
+                                        icon: "paperplane",
+                                        title: "No Join Requests",
+                                        subtitle: "Your join requests will appear here"
+                                    )
+                                } else {
+                                    ForEach(joinRequests) { request in
+                                        ModernJoinRequestCard(request: request)
+                                    }
+                                }
                             }
                         }
                         .padding(.horizontal, 16)
@@ -103,7 +174,7 @@ struct InvitationsView: View {
                     }
                 }
             }
-            .navigationTitle(selectedTab == 0 ? "Direct Invitations" : "Potential Matches")
+            .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.bgCard, for: .navigationBar)
             .toolbarColorScheme(.light, for: .navigationBar)
@@ -121,7 +192,10 @@ struct InvitationsView: View {
                     loadingOverlay
                 }
             }
-            .onAppear(perform: fetchInvitations)
+            .onAppear {
+                fetchInvitations()
+                fetchJoinRequests()
+            }
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Invitation Update"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
@@ -310,18 +384,57 @@ struct InvitationsView: View {
         }.resume()
     }
     
+    // MARK: - Fetch Join Requests
+    private func fetchJoinRequests() {
+        guard let username = accountManager.currentUser else { return }
+        
+        isLoading = true
+        
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_user_join_requests/\(username)/") else {
+            isLoading = false
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                isLoading = false
+                
+                if let error = error {
+                    print("❌ Join requests fetch error: \(error)")
+                    return
+                }
+                
+                if let data = data {
+                    do {
+                        let response = try JSONDecoder().decode(JoinRequestsResponse.self, from: data)
+                        self.joinRequests = response.requests
+                        print("✅ Join requests loaded: \(response.requests.count) requests")
+                    } catch {
+                        print("❌ Join requests JSON decode error: \(error)")
+                        if let jsonString = String(data: data, encoding: .utf8) {
+                            print("Raw response: \(jsonString)")
+                        }
+                    }
+                }
+            }
+        }.resume()
+    }
+    
     // MARK: - Modern UI Components
     
     private var modernTabSelector: some View {
         HStack(spacing: 0) {
-            ForEach(0..<2) { index in
+            ForEach(0..<3) { index in
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         selectedTab = index
                     }
                 }) {
                     VStack(spacing: 8) {
-                        Text(index == 0 ? "Direct Invites" : "Potential Matches")
+                        Text(tabTitle(for: index))
                             .font(.system(size: 16, weight: selectedTab == index ? .semibold : .medium))
                             .foregroundColor(selectedTab == index ? Color.textPrimary : Color.textSecondary)
                         
@@ -341,6 +454,15 @@ struct InvitationsView: View {
         .padding(.horizontal, 16)
         .padding(.top, 16)
         .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+    }
+    
+    private func tabTitle(for index: Int) -> String {
+        switch index {
+        case 0: return "Direct Invites"
+        case 1: return "Potential Matches"
+        case 2: return "My Requests"
+        default: return ""
+        }
     }
     
     private func emptyStateView(icon: String, title: String, subtitle: String) -> some View {
@@ -679,6 +801,149 @@ struct ModernPotentialMatchCard: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d, h:mm a"
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Modern Join Request Card
+struct ModernJoinRequestCard: View {
+    let request: EventJoinRequest
+    
+    private var statusColor: Color {
+        switch request.status {
+        case "pending": return .orange
+        case "approved": return .green
+        case "rejected": return .red
+        default: return .gray
+        }
+    }
+    
+    private var statusIcon: String {
+        switch request.status {
+        case "pending": return "clock"
+        case "approved": return "checkmark.circle.fill"
+        case "rejected": return "xmark.circle.fill"
+        default: return "questionmark.circle"
+        }
+    }
+    
+    private var statusText: String {
+        switch request.status {
+        case "pending": return "Pending"
+        case "approved": return "Approved"
+        case "rejected": return "Rejected"
+        default: return "Unknown"
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header with event info
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(request.event.title)
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("Host: \(request.event.host)")
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                Spacer()
+                
+                // Status indicator
+                HStack(spacing: 6) {
+                    Image(systemName: statusIcon)
+                        .font(.caption)
+                        .foregroundColor(statusColor)
+                    
+                    Text(statusText)
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(statusColor)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(statusColor.opacity(0.1))
+                )
+            }
+            
+            // Event details
+            HStack(spacing: 16) {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                        .font(.caption)
+                        .foregroundColor(.textMuted)
+                    
+                    Text(formatEventTime(request.event.time))
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                HStack(spacing: 6) {
+                    Image(systemName: "tag")
+                        .font(.caption)
+                        .foregroundColor(.textMuted)
+                    
+                    Text(request.event.eventType.capitalized)
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                Spacer()
+            }
+            
+            // Message if available
+            if let message = request.message, !message.isEmpty {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundColor(.textSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.bgSecondary.opacity(0.5))
+                    )
+            }
+            
+            // Request date
+            Text("Requested: \(formatRequestDate(request.createdAt))")
+                .font(.caption)
+                .foregroundColor(.textMuted)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+        )
+    }
+    
+    private func formatEventTime(_ timeString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"
+        
+        if let date = formatter.date(from: timeString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MMM d, h:mm a"
+            return displayFormatter.string(from: date)
+        }
+        
+        return timeString
+    }
+    
+    private func formatRequestDate(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"
+        
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MMM d, h:mm a"
+            return displayFormatter.string(from: date)
+        }
+        
+        return dateString
     }
 }
 
