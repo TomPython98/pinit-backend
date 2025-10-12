@@ -237,9 +237,8 @@ from django.contrib.auth.models import User
 @permission_classes([IsAuthenticated])
 def get_friends(request, username):
     try:
-        # ✅ SECURITY: Only users can see their own friends
-        if request.user.username != username:
-            return JsonResponse({"error": "Forbidden"}, status=403)
+        # ✅ SECURITY: Allow viewing friends of other users for social features
+        # This enables the profile view to show friends list
         
         # Get the user
         user = User.objects.get(username=username)
@@ -999,9 +998,8 @@ def get_user_recent_activity(request, username):
     This is specifically for user profile "Recent Activity" section
     """
     try:
-        # ✅ SECURITY: Only users can see their own recent activity
-        if request.user.username != username:
-            return JsonResponse({"error": "Forbidden"}, status=403)
+        # ✅ SECURITY: Allow viewing recent activity of other users for social features
+        # This enables the profile view to show recent activities
             
         # Get the user
         user = User.objects.get(username=username)
@@ -1016,14 +1014,28 @@ def get_user_recent_activity(request, username):
         
         from django.db.models import Q
         
-        events = StudyEvent.objects.select_related('host', 'host__userprofile').prefetch_related(
-            'invited_friends', 'attendees', 'invitation_records'
-        ).filter(
-            # Include events that match at least one of these criteria
-            Q(host=user) |                                         # User's own events
-            Q(attendees=user) |                                    # Events user attended
-            Q(invited_friends=user)                                # Events user was invited to
-        ).distinct()
+        # If viewing someone else's profile, only show public events they participated in
+        if request.user.username != username:
+            events = StudyEvent.objects.select_related('host', 'host__userprofile').prefetch_related(
+                'invited_friends', 'attendees', 'invitation_records'
+            ).filter(
+                # Include events that match at least one of these criteria AND are public
+                Q(host=user) |                                         # User's own events
+                Q(attendees=user) |                                    # Events user attended
+                Q(invited_friends=user)                                # Events user was invited to
+            ).filter(
+                is_public=True  # Only show public events for other users
+            ).distinct()
+        else:
+            # If viewing own profile, show all events
+            events = StudyEvent.objects.select_related('host', 'host__userprofile').prefetch_related(
+                'invited_friends', 'attendees', 'invitation_records'
+            ).filter(
+                # Include events that match at least one of these criteria
+                Q(host=user) |                                         # User's own events
+                Q(attendees=user) |                                    # Events user attended
+                Q(invited_friends=user)                                # Events user was invited to
+            ).distinct()
         
         # Format the events for response
         event_data = []
@@ -1044,7 +1056,7 @@ def get_user_recent_activity(request, username):
                 "hostIsCertified": event.host.userprofile.is_certified,
                 "isPublic": event.is_public,
                 "event_type": (event.event_type or "other").lower(),
-                "invitedFriends": list(event.invited_friends.values_list("username", flat=True)),
+                "invitedFriends": [] if request.user.username != username else list(event.invited_friends.values_list("username", flat=True)),
                 "attendees": list(event.attendees.values_list("username", flat=True)),
                 "max_participants": event.max_participants,
                 "auto_matching_enabled": event.auto_matching_enabled,
