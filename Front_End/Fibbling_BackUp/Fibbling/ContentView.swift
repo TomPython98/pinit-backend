@@ -2591,51 +2591,21 @@ struct ProfileView: View {
     }
     
     private func loadReputationData(username: String) {
-        // Always use direct counting since reputation API has stale data issue
-        // The reputation API only updates counts when UserReputationStats is newly created
-        // but not when additional events are created later
-        loadEventCountsDirectly(username: username)
-    }
-    
-    private func loadEventCountsDirectly(username: String) {
-        // Direct approach: get all events and count them properly
-        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_study_events/\(username)/") else { return }
+        // Use the correct API endpoint for user reputation data
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_user_reputation/\(username)/") else { return }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        accountManager.addAuthHeader(to: &request)
-        
-        print("🔍 Loading event counts for user: \(username)")
-        print("🔍 Current user: \(accountManager.currentUser ?? "nil")")
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        URLSession.shared.dataTask(with: url) { data, response, error in
             DispatchQueue.main.async {
                 if let data = data {
                     do {
-                        let eventsResponse = try JSONDecoder().decode(EventsResponse.self, from: data)
+                        let reputationResponse = try JSONDecoder().decode(UserReputationResponse.self, from: data)
                         
-                        print("🔍 Total events returned: \(eventsResponse.events.count)")
-                        print("🔍 Events: \(eventsResponse.events.map { "\($0.title) (host: \($0.host), public: \($0.isPublic))" })")
-                        
-                        // Count events where user is the host (this should include all events they created)
-                        let hostedCount = eventsResponse.events.filter { event in
-                            event.host == username
-                        }.count
-                        
-                        // Count events where user is an attendee
-                        let attendedCount = eventsResponse.events.filter { event in
-                            event.attendees.contains(username)
-                        }.count
-                        
-                        self.eventsHosted = hostedCount
-                        self.eventsAttended = attendedCount
-                        
-                        print("🔍 Direct count - Hosted: \(hostedCount), Attended: \(attendedCount)")
+                        // Use the correct counts from the reputation API
+                        self.eventsHosted = reputationResponse.events_hosted
+                        self.eventsAttended = reputationResponse.events_attended
                     } catch {
-                        print("Error decoding events data: \(error)")
                     }
                 } else {
-                    print("Error fetching events data: \(error?.localizedDescription ?? "Unknown error")")
                 }
             }
         }.resume()
@@ -3374,11 +3344,9 @@ struct SocialActivityFeedView: View {
                             .prefix(5)
                             .map { $0 }
                     } catch {
-                        print("Error parsing trending events: \(error)")
                         self.trendingEvents = []
                     }
                 } else {
-                    print("Failed to load trending events")
                     self.trendingEvents = []
                 }
             }
@@ -3405,11 +3373,9 @@ struct SocialActivityFeedView: View {
                             .prefix(8)
                             .map { $0 }
                     } catch {
-                        print("Error parsing recent activity: \(error)")
                         self.recentActivity = []
                     }
                 } else {
-                    print("Failed to load recent activity")
                     self.recentActivity = []
                 }
             }

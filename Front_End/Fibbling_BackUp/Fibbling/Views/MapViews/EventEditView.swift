@@ -470,7 +470,6 @@ struct EventEditView: View {
                                                     locationSuggestions = []
                                                     isLocationSelected = true // Set immediately
                                                     geocodeLocation(suggestion)
-                                                    print("✅ Location selected: \(suggestion)")
                                                 }
                                             }
                                             
@@ -823,7 +822,6 @@ struct EventEditView: View {
         search.start { response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("Location search error: \(error.localizedDescription)")
                     self.locationSuggestions = []
                     self.showLocationSuggestions = false
                     return
@@ -858,7 +856,6 @@ struct EventEditView: View {
                 }
                 
                 self.showLocationSuggestions = !self.locationSuggestions.isEmpty
-                print("🔍 EventEdit search '\(query)' found \(self.locationSuggestions.count) results")
             }
         }
     }
@@ -887,7 +884,6 @@ struct EventEditView: View {
                 self.isGeocoding = false
                 
                 if let error = error {
-                    print("Mapbox geocoding error: \(error.localizedDescription)")
                     self.fallbackGeocode(address)
                     return
                 }
@@ -921,11 +917,9 @@ struct EventEditView: View {
                             self.locationName = placeName
                         }
                     } else {
-                        print("Failed to parse Mapbox geocoding response")
                         self.fallbackGeocode(address)
                     }
                 } catch {
-                    print("Mapbox geocoding JSON error: \(error.localizedDescription)")
                     self.fallbackGeocode(address)
                 }
             }
@@ -938,7 +932,6 @@ struct EventEditView: View {
         geocoder.geocodeAddressString(address) { placemarks, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("Fallback geocoding error: \(error.localizedDescription)")
                     return
                 }
                 

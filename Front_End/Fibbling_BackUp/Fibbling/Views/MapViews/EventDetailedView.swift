@@ -4130,7 +4130,15 @@ struct UserProfileView: View {
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.white, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Profile")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
@@ -4244,7 +4252,6 @@ struct UserProfileView: View {
                 isLoading = false
                 
                 if let error = error {
-                    print("Network Error: \(error.localizedDescription)")
                     self.alertMessage = "Failed to load profile: \(error.localizedDescription)"
                     self.showAlert = true
                     return
@@ -4259,7 +4266,6 @@ struct UserProfileView: View {
                 do {
                     // First, let's see what the actual response looks like
                     if let jsonString = String(data: data, encoding: .utf8) {
-                        print("Raw API response: \(jsonString)")
                     }
                     
                     let profile = try JSONDecoder().decode(UserProfile.self, from: data)
@@ -4270,7 +4276,6 @@ struct UserProfileView: View {
                     self.fetchFriendsData()
                     self.fetchRecentEvents()
                 } catch {
-                    print("JSON Decoding Error: \(error)")
                     self.alertMessage = "Failed to parse profile data: \(error.localizedDescription)"
                     self.showAlert = true
                 }
@@ -4281,47 +4286,18 @@ struct UserProfileView: View {
     
     // MARK: - Fetch Reputation Data
     private func fetchReputationData() {
-        // Use direct counting instead of reputation API to avoid stale data issue
-        // The reputation API only updates counts when UserReputationStats is newly created
-        guard let url = URL(string: "\(baseURL)/get_study_events/\(username)/") else { return }
+        guard let url = URL(string: "\(baseURL)/get_user_reputation/\(username)/") else { return }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        accountManager.addAuthHeader(to: &request)
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async(execute: {
                 if let data = data {
                     do {
-                        let eventsResponse = try JSONDecoder().decode(EventsResponse.self, from: data)
-                        
-                        // Count events where user is the host (all events they created)
-                        let hostedCount = eventsResponse.events.filter { event in
-                            event.host == username
-                        }.count
-                        
-                        // Count events where user is an attendee
-                        let attendedCount = eventsResponse.events.filter { event in
-                            event.attendees.contains(username)
-                        }.count
-                        
-                        // Create reputation data with correct counts
-                        let reputation = ReputationData(
-                            username: username,
-                            total_ratings: 0, // We don't have this from events API
-                            average_rating: 0.0, // We don't have this from events API
-                            events_hosted: hostedCount,
-                            events_attended: attendedCount,
-                            trust_level: TrustLevelInfo(level: 0, title: "Member")
-                        )
-                        
+                        let reputation = try JSONDecoder().decode(ReputationData.self, from: data)
                         self.reputationData = reputation
-                        print("🔍 UserProfileView - Direct count - Hosted: \(hostedCount), Attended: \(attendedCount)")
                     } catch {
-                        print("Events parsing error: \(error)")
                     }
                 }
-            }
+            })
         }.resume()
     }
     
@@ -4336,7 +4312,6 @@ struct UserProfileView: View {
                         let friends = try JSONDecoder().decode(FriendsData.self, from: data)
                         self.friendsData = friends
                     } catch {
-                        print("Friends parsing error: \(error)")
                     }
                 }
             }
@@ -4374,7 +4349,6 @@ struct UserProfileView: View {
                         // Take only the first 3 events for recent activity
                         self.recentEventsData = Array(userEvents.prefix(3))
                     } catch {
-                        print("Recent events parsing error: \(error)")
                     }
                 }
             }

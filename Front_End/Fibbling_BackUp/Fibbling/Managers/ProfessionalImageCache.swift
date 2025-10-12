@@ -363,7 +363,5 @@ class ProfessionalImageCache: ObservableObject {
     
     func printCacheStats() {
         let stats = getCacheSize()
-        print("   Memory: \(stats.memory) images")
-        print("   Disk: \(stats.disk / 1024 / 1024) MB")
     }
 }

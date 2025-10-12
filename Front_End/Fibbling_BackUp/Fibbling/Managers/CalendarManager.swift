@@ -214,7 +214,6 @@ class CalendarManager: ObservableObject {
     private func startAutoRefresh() {
         // Auto-refresh timer disabled to reduce redundant fetches
         // Relying on WebSocket updates and manual refresh button instead
-        print("🔄 Auto-refresh timer disabled - using WebSocket + manual refresh")
     }
     
     /// Stop automatic refresh timer

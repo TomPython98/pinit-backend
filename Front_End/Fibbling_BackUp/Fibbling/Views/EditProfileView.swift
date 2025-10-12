@@ -600,7 +600,6 @@ struct EditProfileView: View {
                 return httpResponse.statusCode == 200 || httpResponse.statusCode == 201
             }
         } catch {
-            print("Profile picture upload error: \(error)")
         }
         
         return false

@@ -191,11 +191,9 @@ class ContentModerationManager: ObservableObject {
             
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("Failed to send report: \(error)")
                 }
             }.resume()
         } catch {
-            print("Failed to encode report: \(error)")
         }
     }
     
@@ -215,11 +213,9 @@ class ContentModerationManager: ObservableObject {
             
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("Failed to block user: \(error)")
                 }
             }.resume()
         } catch {
-            print("Failed to encode block: \(error)")
         }
     }
     
@@ -239,11 +235,9 @@ class ContentModerationManager: ObservableObject {
             
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("Failed to unblock user: \(error)")
                 }
             }.resume()
         } catch {
-            print("Failed to encode unblock: \(error)")
         }
     }
     

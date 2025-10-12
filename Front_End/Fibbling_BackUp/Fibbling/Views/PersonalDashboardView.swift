@@ -242,31 +242,17 @@ struct PersonalDashboardView: View {
     }
     
     private func loadReputationData(username: String) {
-        // Use direct counting instead of reputation API to avoid stale data issue
-        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_study_events/\(username)/") else { return }
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_user_reputation/\(username)/") else { return }
         
         URLSession.shared.dataTask(with: url) { data, response, error in
             DispatchQueue.main.async {
                 if let data = data {
                     do {
-                        let eventsResponse = try JSONDecoder().decode(EventsResponse.self, from: data)
-                        
-                        // Count events where user is the host (all events they created)
-                        let hostedCount = eventsResponse.events.filter { event in
-                            event.host == username
-                        }.count
-                        
-                        // Count events where user is an attendee
-                        let attendedCount = eventsResponse.events.filter { event in
-                            event.attendees.contains(username)
-                        }.count
-                        
-                        self.userStats.eventsHosted = hostedCount
-                        self.userStats.eventsAttended = attendedCount
-                        
-                        print("🔍 PersonalDashboardView - Direct count - Hosted: \(hostedCount), Attended: \(attendedCount)")
+                        let reputationData = try JSONDecoder().decode(ReputationData.self, from: data)
+                        self.userStats.averageRating = reputationData.averageRating
+                        self.userStats.eventsHosted = reputationData.eventsHosted
+                        self.userStats.eventsAttended = reputationData.eventsAttended
                     } catch {
-                        print("Error parsing events data: \(error)")
                     }
                 }
                 self.isLoading = false
@@ -284,7 +270,6 @@ struct PersonalDashboardView: View {
                         let friendsData = try JSONDecoder().decode(FriendsData.self, from: data)
                         self.userStats.friendsCount = friendsData.friends.count
                     } catch {
-                        print("Error parsing friends data: \(error)")
                     }
                 }
             }
@@ -305,7 +290,6 @@ struct PersonalDashboardView: View {
                         }.count
                         self.userStats.eventsAttended = attendedCount
                     } catch {
-                        print("Error parsing events data: \(error)")
                     }
                 }
             }

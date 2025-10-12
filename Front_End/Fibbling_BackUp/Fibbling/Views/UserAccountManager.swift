@@ -57,9 +57,7 @@ class UserAccountManager: ObservableObject {
     func addAuthHeader(to request: inout URLRequest) {
         if let token = accessToken {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            print("🔍 🔐 DEBUG: Added JWT token to request: \(String(token.prefix(20)))...")
         } else {
-            print("❌ 🔐 DEBUG: No JWT token available for request!")
         }
     }
     
@@ -202,9 +200,7 @@ class UserAccountManager: ObservableObject {
                         
                         // Save JWT tokens if provided (same as login flow)
                         if let access = accessToken, let refresh = refreshToken {
-                            print("🔍 🔐 DEBUG: Saving registration tokens to UserDefaults")
                             self.saveTokens(access: access, refresh: refresh)
-                            print("🔍 🔐 DEBUG: Registration tokens saved. Current accessToken: \(self.accessToken != nil ? "Present" : "Nil")")
                             
                             // Fetch user data after tokens are saved
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -212,7 +208,6 @@ class UserAccountManager: ObservableObject {
                                 self.fetchFriendRequests()
                             }
                         } else {
-                            print("❌ 🔐 DEBUG: No JWT tokens received from registration response!")
                         }
                         
                         // Also save to UserDefaults for persistence
@@ -287,9 +282,6 @@ class UserAccountManager: ObservableObject {
                 let refreshToken = json?["refresh_token"] as? String
                 
                 // Debug: Log token extraction
-                print("🔍 🔐 DEBUG: Login response JSON: \(json ?? [:])")
-                print("🔍 🔐 DEBUG: Access token extracted: \(accessToken != nil ? "YES (\(String(accessToken!.prefix(20)))...)" : "NO")")
-                print("🔍 🔐 DEBUG: Refresh token extracted: \(refreshToken != nil ? "YES (\(String(refreshToken!.prefix(20)))...)" : "NO")")
 
                 AppLogger.logAuth("Login result: \(success ? "success" : "failed")")
 
@@ -298,9 +290,7 @@ class UserAccountManager: ObservableObject {
                         self.currentUser = username
                         // Save tokens if provided
                         if let access = accessToken, let refresh = refreshToken {
-                            print("🔍 🔐 DEBUG: Saving tokens to UserDefaults")
                             self.saveTokens(access: access, refresh: refresh)
-                            print("🔍 🔐 DEBUG: Tokens saved. Current accessToken: \(self.accessToken != nil ? "Present" : "Nil")")
                             
                             // Only fetch data AFTER tokens are saved
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -308,7 +298,6 @@ class UserAccountManager: ObservableObject {
                                 self.fetchFriendRequests()
                             }
                         } else {
-                            print("❌ 🔐 DEBUG: No JWT tokens received from login response!")
                         }
                         // Also save to UserDefaults for persistence
                         UserDefaults.standard.set(true, forKey: "isLoggedIn")

@@ -4,6 +4,7 @@ import Combine
 import CoreLocation
 import MapKit
 import UIKit
+import Turf
 
 // MARK: - RefreshController for debouncing
 class RefreshController: ObservableObject {
@@ -19,7 +20,6 @@ class RefreshController: ObservableObject {
         refreshWorkItem = DispatchWorkItem {
             self.refreshCount += 1
             self.lastRefreshTime = Date()
-            print("🔄 RefreshController: Executing refresh #\(self.refreshCount)")
             action()
         }
         
@@ -529,6 +529,9 @@ final class ClusterAnnotationView: UIView {
     private var hasPrivateEvents: Bool = false
     private var hasCertifiedEvents: Bool = false
     
+    // Add tap callback property
+    var onTap: (() -> Void)?
+    
     private let countLabel: UILabel = {
         let label = UILabel()
         label.font = UIFont.boldSystemFont(ofSize: 30)
@@ -594,7 +597,15 @@ final class ClusterAnnotationView: UIView {
         self.frame = CGRect(x: 0, y: 0, width: size, height: size)
         circleView.backgroundColor = color
         circleView.layer.cornerRadius = size / 2
-        countLabel.font = UIFont.boldSystemFont(ofSize: size * 0.4)
+        
+        // Scale font size based on cluster size and count
+        let fontSize: CGFloat
+        if events.count >= 100 { fontSize = size * 0.25 }  // Smaller font for very large numbers
+        else if events.count >= 50 { fontSize = size * 0.3 }
+        else if events.count >= 20 { fontSize = size * 0.35 }
+        else { fontSize = size * 0.4 }
+        
+        countLabel.font = UIFont.boldSystemFont(ofSize: fontSize)
         
         let iconSize = size * 0.25
         mixedTypesIcon.frame = CGRect(x: size * 0.15, y: size * 0.6, width: iconSize, height: iconSize)
@@ -604,14 +615,28 @@ final class ClusterAnnotationView: UIView {
         layer.shadowOpacity = 0.5
         layer.shadowRadius = 50
         layer.shadowOffset = .zero
+        
+        // Add tap gesture recognizer
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleClusterTap))
+        self.addGestureRecognizer(tapGesture)
+        self.isUserInteractionEnabled = true
+    }
+    
+    @objc private func handleClusterTap() {
+        onTap?()
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
     }
     
     private func getAppearanceForCluster(count: Int, dominantType: EventType) -> (CGFloat, UIColor) {
         let size: CGFloat
-        if count >= 15 { size = 65 }
-        else if count >= 8 { size = 55 }
-        else if count >= 3 { size = 45 }
-        else { size = 40 }
+        if count >= 100 { size = 80 }        // Very large clusters (mega-clusters)
+        else if count >= 50 { size = 70 }   // Large clusters
+        else if count >= 20 { size = 60 }   // Medium-large clusters
+        else if count >= 10 { size = 55 }   // Medium clusters
+        else if count >= 5 { size = 50 }    // Small-medium clusters
+        else if count >= 3 { size = 45 }    // Small clusters
+        else { size = 40 }                  // Very small clusters
         
         let color: UIColor
         switch dominantType {
@@ -661,7 +686,7 @@ struct Cluster: Equatable {
     }
 }
 
-/// Clusters events based on a distance threshold that scales with the current map region.
+/// Clusters events based on zoom level with proper thresholds to prevent events from disappearing
 func clusterEvents(_ events: [StudyEvent], region: MKCoordinateRegion) -> [Cluster] {
     // First, deduplicate events by ID only
     var uniqueEvents: [StudyEvent] = []
@@ -673,32 +698,72 @@ func clusterEvents(_ events: [StudyEvent], region: MKCoordinateRegion) -> [Clust
         if !seenIDs.contains(event.id) {
             uniqueEvents.append(event)
             seenIDs.insert(event.id)
-        } else {
         }
     }
     
-    // Now proceed with clustering using the deduplicated events
-    // Use a smaller multiplier and cap at a reasonable maximum
-    // 0.001 degrees ≈ 111 meters - only cluster events at nearly identical locations
-    let zoomBasedThreshold = region.span.longitudeDelta * 0.02  // 2% instead of 20%
-    let threshold = min(zoomBasedThreshold, 0.001)  // Cap at ~111 meters
+    // Calculate zoom level from region span
+    // longitudeDelta roughly corresponds to zoom level
+    let longitudeDelta = region.span.longitudeDelta
+    let zoomLevel = log2(360.0 / longitudeDelta)
+    
+    
+    // Safety check: If there's only one event, don't cluster it
+    if uniqueEvents.count == 1 {
+        return [Cluster(events: uniqueEvents)]
+    }
+    
+    // Define clustering thresholds based on zoom level - industry best practices
+    let threshold: Double
+    switch zoomLevel {
+    case 0..<3:      // World/continent view
+        threshold = 5.0      // ~550km - cluster large regions
+    case 3..<6:      // Country/region view  
+        threshold = 1.0      // ~110km - cluster cities
+    case 6..<9:      // City view
+        threshold = 0.2      // ~22km - cluster districts
+    case 9..<12:     // Neighborhood view
+        threshold = 0.05     // ~5.5km - cluster close areas
+    case 12..<15:    // Street view
+        threshold = 0.005    // ~550m - cluster same block
+    default:         // Building level (zoom 15+)
+        threshold = 0.001    // ~110m - only cluster very close events
+    }
+    
+    
     var clusters: [Cluster] = []
     var unclustered = uniqueEvents
     
     while !unclustered.isEmpty {
         let event = unclustered.removeFirst()
         var clusterEvents = [event]
-        unclustered.removeAll { otherEvent in
+        
+        // Find all events within threshold distance
+        var indicesToRemove: [Int] = []
+        for (index, otherEvent) in unclustered.enumerated() {
             let dLat = abs(event.coordinate.latitude - otherEvent.coordinate.latitude)
             let dLon = abs(event.coordinate.longitude - otherEvent.coordinate.longitude)
             if dLat < threshold && dLon < threshold {
                 clusterEvents.append(otherEvent)
-                return true
+                indicesToRemove.append(index)
             }
-            return false
         }
+        
+        // Remove clustered events from unclustered list (in reverse order to maintain indices)
+        for index in indicesToRemove.reversed() {
+            unclustered.remove(at: index)
+        }
+        
         clusters.append(Cluster(events: clusterEvents))
     }
+    
+    
+    // Safety mechanism: If we're at very low zoom and have too many clusters,
+    // create a single mega-cluster to ensure events are always visible
+    if zoomLevel < 2 && clusters.count > 50 {
+        let megaCluster = Cluster(events: uniqueEvents)
+        return [megaCluster]
+    }
+    
     return clusters
 }
 
@@ -708,6 +773,7 @@ struct StudyMapBoxView: UIViewRepresentable {
     var region: Binding<MKCoordinateRegion>
     var refreshVersion: Int = 0
     var onSelect: ((StudyEvent) -> Void)?
+    var onMultiEventSelect: (([StudyEvent]) -> Void)?
     
     func makeUIView(context: Context) -> MapView {
         MapboxOptions.accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
@@ -724,6 +790,10 @@ struct StudyMapBoxView: UIViewRepresentable {
         )
         let mapView = MapView(frame: .zero, mapInitOptions: mapInitOptions)
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // Ensure non-zero initial size to avoid 64x64 fallback
+        if mapView.frame.size == .zero {
+            mapView.frame = UIScreen.main.bounds
+        }
         
         let locationProvider = AppleLocationProvider()
         locationProvider.options.activityType = .automotiveNavigation
@@ -734,16 +804,39 @@ struct StudyMapBoxView: UIViewRepresentable {
             topImage: createCustomLocationIcon(),
             bearingImage: createCustomBearingIcon(),
             shadowImage: nil,
-            scale: .constant(1.2),
+            scale: .constant(1.0), // Reduced scale to be less intrusive
             showsAccuracyRing: true,
-            accuracyRingColor: UIColor.systemBlue.withAlphaComponent(0.2),
-            accuracyRingBorderColor: UIColor.systemBlue.withAlphaComponent(0.4)
+            accuracyRingColor: UIColor.systemBlue.withAlphaComponent(0.15), // More transparent
+            accuracyRingBorderColor: UIColor.systemBlue.withAlphaComponent(0.3) // More transparent
         )
         mapView.location.options.puckType = .puck2D(puck2DConfiguration)
         mapView.location.options.puckBearingEnabled = true
         
-        // Removed onCameraChanged observer to prevent constant recentering
-        // This was causing the map to always snap back to the center point
+        // Add camera change observer to track zoom changes and trigger re-clustering
+        mapView.mapboxMap.onCameraChanged.observe { [weak mapView] _ in
+            guard let mapView = mapView else { return }
+            let camera = mapView.mapboxMap.cameraState
+            
+            // Debounce camera changes to prevent excessive updates
+            let currentTime = Date()
+            if currentTime.timeIntervalSince(context.coordinator.lastCameraUpdateTime) < 1.0 {
+                return
+            }
+            context.coordinator.lastCameraUpdateTime = currentTime
+            
+            // Update the region binding to trigger re-clustering
+            let newRegion = MKCoordinateRegion(
+                center: camera.center,
+                span: MKCoordinateSpan(
+                    latitudeDelta: self.calculateLatitudeDelta(from: camera.zoom),
+                    longitudeDelta: self.calculateLongitudeDelta(from: camera.zoom)
+                )
+            )
+            
+            DispatchQueue.main.async {
+                self.region.wrappedValue = newRegion
+            }
+        }.store(in: &context.coordinator.cancelables)
         
         mapView.mapboxMap.onStyleLoaded
             .observeNext { _ in
@@ -772,18 +865,30 @@ struct StudyMapBoxView: UIViewRepresentable {
     
     
     func updateUIView(_ uiView: MapView, context: Context) {
-        print("🗺️ updateUIView called with \(events.count) events, refreshVersion: \(refreshVersion)")
+        
+        // Guard against invalid map view sizes (e.g., 64x64 fallback) which can hide annotations
+        let viewSize = uiView.bounds.size
+        if viewSize.width < 100 || viewSize.height < 100 {
+            uiView.setNeedsLayout()
+            return
+        }
+        
+        // Debounce rapid calls to prevent excessive clustering
+        let currentTime = Date()
+        if currentTime.timeIntervalSince(context.coordinator.lastUpdateTime) < 0.3 {
+            return
+        }
+        context.coordinator.lastUpdateTime = currentTime
+        
         let newClusters = clusterEvents(events, region: region.wrappedValue)
         
         // Simple refresh mechanism to avoid cascading calls
         if newClusters != context.coordinator.lastClusters ||
            context.coordinator.forceRefresh != refreshVersion {
             
-            print("🗺️ Refresh triggered: lastClusters changed=\(newClusters != context.coordinator.lastClusters), refreshVersion changed=\(context.coordinator.forceRefresh != refreshVersion)")
             
             // Clear all existing annotations
             uiView.viewAnnotations.removeAll()
-            print("🗺️ Cleared all annotations")
             
             // Add updated annotations
             updateAnnotations(on: uiView, region: region.wrappedValue, events: events)
@@ -795,32 +900,97 @@ struct StudyMapBoxView: UIViewRepresentable {
             // Force layout update to ensure annotations are properly displayed
             uiView.setNeedsLayout()
         } else {
-            print("🗺️ Skipping refresh - no changes detected")
         }
     }
     
 
     
     private func updateAnnotations(on mapView: MapView, region: MKCoordinateRegion, events: [StudyEvent]) {
-        print("🗺️ updateAnnotations called with \(events.count) events")
+        
+        // Special handling for single events - bypass clustering entirely
+        if events.count == 1, let event = events.first {
+            let customView = createAnnotationView(for: event)
+            customView.layer.zPosition = 1000
+            let options = ViewAnnotationOptions(
+                annotatedFeature: AnnotatedFeature.geometry(Point(event.coordinate)),
+                width: customView.bounds.width,
+                height: customView.bounds.height,
+                allowOverlap: true,
+                allowOverlapWithPuck: true,
+                visible: true,
+                priority: 1000,
+                variableAnchors: .center,
+                ignoreCameraPadding: true
+            )
+            try? mapView.viewAnnotations.add(customView, options: options)
+            return
+        }
+        
+        // Use clustering for multiple events
         let clusters = clusterEvents(events, region: region)
-        print("🗺️ Generated \(clusters.count) clusters")
         for cluster in clusters {
             if cluster.events.count == 1, let event = cluster.events.first {
-                print("🗺️ Adding single event pin: \(event.title) at (\(event.coordinate.latitude), \(event.coordinate.longitude))")
                 let customView = createAnnotationView(for: event)
-                let viewAnnotation = ViewAnnotation(coordinate: event.coordinate, view: customView)
-                viewAnnotation.allowOverlap = true
-                mapView.viewAnnotations.add(viewAnnotation)
+                customView.layer.zPosition = 1000
+                let options = ViewAnnotationOptions(
+                    annotatedFeature: AnnotatedFeature.geometry(Point(event.coordinate)),
+                    width: customView.bounds.width,
+                    height: customView.bounds.height,
+                    allowOverlap: true,
+                    allowOverlapWithPuck: true,
+                    visible: true,
+                    priority: 1000,
+                    variableAnchors: .center,
+                    ignoreCameraPadding: true
+                )
+                try? mapView.viewAnnotations.add(customView, options: options)
             } else {
-                print("🗺️ Adding cluster at (\(cluster.coordinate.latitude), \(cluster.coordinate.longitude)) with \(cluster.events.count) events")
                 let clusterView = ClusterAnnotationView(events: cluster.events, frame: CGRect(x: 0, y: 0, width: 40, height: 40))
-                let viewAnnotation = ViewAnnotation(coordinate: cluster.coordinate, view: clusterView)
-                viewAnnotation.allowOverlap = true
-                mapView.viewAnnotations.add(viewAnnotation)
+                clusterView.layer.zPosition = 1000
+                
+                // Check if all events in cluster are at nearly same location
+                let coordinates = cluster.events.map { $0.coordinate }
+                let maxLatDiff = coordinates.map { $0.latitude }.max()! - coordinates.map { $0.latitude }.min()!
+                let maxLonDiff = coordinates.map { $0.longitude }.max()! - coordinates.map { $0.longitude }.min()!
+                
+                if maxLatDiff < 0.0001 && maxLonDiff < 0.0001 && cluster.events.count > 1 {
+                    // Events are at same location - cluster tap should show multi-event selection
+                    clusterView.onTap = {
+                        // Ensure we're on the main thread and pass a copy of the events
+                        DispatchQueue.main.async {
+                            self.onMultiEventSelect?(Array(cluster.events))
+                        }
+                    }
+                } else {
+                    // Events are at different locations - cluster tap should zoom in
+                    clusterView.onTap = { [weak mapView] in
+                        // Calculate zoom level that would separate this cluster
+                        let currentZoom = mapView?.mapboxMap.cameraState.zoom ?? 12
+                        let targetZoom = min(currentZoom + 2, 18) // Zoom in by 2 levels, max 18
+                        
+                        let cameraOptions = CameraOptions(
+                            center: cluster.coordinate,
+                            zoom: CGFloat(targetZoom),
+                            bearing: 0,
+                            pitch: 0
+                        )
+                        mapView?.camera.ease(to: cameraOptions, duration: 0.8, completion: nil)
+                    }
+                }
+                let options = ViewAnnotationOptions(
+                    annotatedFeature: AnnotatedFeature.geometry(Point(cluster.coordinate)),
+                    width: clusterView.bounds.width,
+                    height: clusterView.bounds.height,
+                    allowOverlap: true,
+                    allowOverlapWithPuck: true,
+                    visible: true,
+                    priority: 900,
+                    variableAnchors: .center,
+                    ignoreCameraPadding: true
+                )
+                try? mapView.viewAnnotations.add(clusterView, options: options)
             }
         }
-        print("🗺️ Total annotations added: \(mapView.viewAnnotations.allAnnotations.count)")
     }
     
     func makeCoordinator() -> Coordinator {
@@ -836,10 +1006,21 @@ struct StudyMapBoxView: UIViewRepresentable {
         return annotationView
     }
     
+    // MARK: - Helper Functions for Zoom Conversion
+    private func calculateLatitudeDelta(from zoom: CGFloat) -> CLLocationDegrees {
+        return 360.0 / pow(2.0, Double(zoom))
+    }
+    
+    private func calculateLongitudeDelta(from zoom: CGFloat) -> CLLocationDegrees {
+        return 360.0 / pow(2.0, Double(zoom))
+    }
+    
     class Coordinator: NSObject {
         var cancelables = Set<AnyCancellable>()
         var lastClusters: [Cluster] = []
         var forceRefresh: Int = 0
+        var lastUpdateTime: Date = Date()
+        var lastCameraUpdateTime: Date = Date()
     }
     
     // MARK: - Custom Icon Creation
@@ -913,6 +1094,9 @@ struct StudyMapView: View {
     @State private var isSearchExpanded = false
     @State private var showSearchSheet = false
     @State private var selectedEvent: StudyEvent?
+    @State private var showMultiEventSelection = false
+    @State private var multiEventSelectionEvents: [StudyEvent] = []
+    @State private var multiEventSelectionId = UUID()
     @State private var mapRefreshVersion: Int = 0
     @StateObject private var refreshController = RefreshController()
     @State private var refreshStats = ""
@@ -1067,12 +1251,16 @@ struct StudyMapView: View {
                     } else {
                         selectedEvent = event
                     }
+                }, onMultiEventSelect: { events in
+                    // Set events and generate new ID to force view recreation
+                    multiEventSelectionEvents = Array(events)
+                    multiEventSelectionId = UUID()
+                    showMultiEventSelection = true
                 })
                 .edgesIgnoringSafeArea(.all)
                 .onChange(of: calendarManager.events) { oldValue, newValue in
                     // Update map annotations when events change, but don't recenter
                     if !filteredEvents.isEmpty {
-                        print("🗺️ Events changed, updating annotations for \(filteredEvents.count) events")
                         mapRefreshVersion += 1
                     }
                 }
@@ -1270,6 +1458,16 @@ struct StudyMapView: View {
                     onSearch: { searchEvents() },
                     isPresented: $showSearchSheet
                 )
+            }
+            .sheet(isPresented: $showMultiEventSelection) {
+                MultiEventSelectionView(
+                    events: multiEventSelectionEvents,
+                    onEventSelected: { event in
+                        selectedEvent = event
+                        showMultiEventSelection = false
+                    }
+                )
+                .id(multiEventSelectionId)
             }
             .alert(isPresented: $showAlert) {
                 Alert(
@@ -1830,7 +2028,6 @@ struct StudyMapView: View {
         search.start { response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("Map location search error: \(error.localizedDescription)")
                     self.mapSearchResults = []
                     return
                 }
@@ -1865,7 +2062,6 @@ struct StudyMapView: View {
                     )
                 }
                 
-                print("🔍 MapBox search '\(self.mapSearchQuery)' found \(self.mapSearchResults.count) results")
             }
         }
     }

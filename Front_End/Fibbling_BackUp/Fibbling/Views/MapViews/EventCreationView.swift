@@ -440,12 +440,10 @@ struct EventCreationView: View {
                                             if let coord = locationSuggestionsCoords[suggestion] {
                                                 selectedCoordinate = coord
                                                 isLocationSelected = true
-                                                print("✅ Location selected immediately: \(suggestion)")
                                             } else {
                                                 // Still set as selected while geocoding
                                                 isLocationSelected = true
                                                 geocodeLocation(suggestion)
-                                                print("⏳ Geocoding: \(suggestion)")
                                             }
                                         }
                                     }
@@ -1049,7 +1047,6 @@ struct EventCreationView: View {
             self.locationSuggestionsCoords = Dictionary(uniqueKeysWithValues: combinedResults.prefix(10).map { ($0.0, $0.1) })
             self.showLocationSuggestions = !self.locationSuggestions.isEmpty
             
-            print("🔍 Search '\(query)' found \(appleResults.count) Apple + \(mapboxResults.count) Mapbox = \(combinedResults.count) total results")
         }
     }
     
@@ -1078,7 +1075,6 @@ struct EventCreationView: View {
         
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("Mapbox search error: \(error.localizedDescription)")
                 completion([])
                 return
             }
@@ -1124,7 +1120,6 @@ struct EventCreationView: View {
                     completion([])
                 }
             } catch {
-                print("Mapbox JSON parsing error: \(error.localizedDescription)")
                 completion([])
             }
         }.resume()
@@ -1155,7 +1150,6 @@ struct EventCreationView: View {
         let search = MKLocalSearch(request: searchRequest)
         search.start { response, error in
             if let error = error {
-                print("Apple Maps search error: \(error.localizedDescription)")
                 completion([])
                 return
             }
@@ -1191,7 +1185,6 @@ struct EventCreationView: View {
                 return (displayName, coordinate)
             }
             
-            print("🍎 Apple Maps found \(results.count) results for '\(query)'")
             completion(Array(results))
         }
     }
