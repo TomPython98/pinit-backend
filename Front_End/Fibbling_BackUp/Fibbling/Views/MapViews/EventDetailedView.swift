@@ -4037,6 +4037,23 @@ struct EventFeedView: View {
 }
 
 // MARK: - User Profile View - Professional Design with Backend Integration
+// MARK: - User Ratings Response Model
+struct UserRatingsResponse: Codable {
+    let username: String
+    let ratingsReceived: [UserRating]
+    let ratingsGiven: [UserRating]
+    let totalReceived: Int
+    let totalGiven: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case username
+        case ratingsReceived = "ratings_received"
+        case ratingsGiven = "ratings_given"
+        case totalReceived = "total_received"
+        case totalGiven = "total_given"
+    }
+}
+
 struct UserProfileView: View {
     let username: String
     @EnvironmentObject var accountManager: UserAccountManager
@@ -4052,6 +4069,10 @@ struct UserProfileView: View {
     @State private var reputationData: ReputationData?
     @State private var friendsData: FriendsData?
     @State private var recentEventsData: [StudyEvent]?
+    
+    // Reviews state
+    @State private var showReviewsList = false
+    @State private var userRatings: [UserRating] = []
     
     // Action states
     @State private var showChatView = false
@@ -4115,6 +4136,10 @@ struct UserProfileView: View {
             // Friends Card (instead of mutual connections)
             friendsCard(profile: profile)
                 .padding(.horizontal)
+            
+            // Reviews Card
+            reviewsCard(profile: profile)
+                .padding(.horizontal)
                             
                             // Action Buttons Card
                             actionButtonsCard(profile: profile)
@@ -4177,6 +4202,9 @@ struct UserProfileView: View {
                     }
                     .sheet(isPresented: $showFullScreenImage) {
                         FullScreenImageView(username: username)
+                    }
+                    .sheet(isPresented: $showReviewsList) {
+                        UserRatingsListView(ratings: userRatings)
                     }
         }
     }
@@ -4247,7 +4275,10 @@ struct UserProfileView: View {
             return
         }
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 isLoading = false
                 
@@ -4266,15 +4297,18 @@ struct UserProfileView: View {
                 do {
                     // First, let's see what the actual response looks like
                     if let jsonString = String(data: data, encoding: .utf8) {
+                        print("🔍 Profile response: \(jsonString)")
                     }
                     
                     let profile = try JSONDecoder().decode(UserProfile.self, from: data)
+                    print("🔍 Decoded profile skills: \(profile.skills ?? [:])")
                     self.userProfile = profile
                     
                     // Fetch additional data in parallel
                     self.fetchReputationData()
                     self.fetchFriendsData()
                     self.fetchRecentEvents()
+                    self.fetchUserRatings()
                 } catch {
                     self.alertMessage = "Failed to parse profile data: \(error.localizedDescription)"
                     self.showAlert = true
@@ -4288,7 +4322,10 @@ struct UserProfileView: View {
     private func fetchReputationData() {
         guard let url = URL(string: "\(baseURL)/get_user_reputation/\(username)/") else { return }
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async(execute: {
                 if let data = data {
                     do {
@@ -4305,7 +4342,10 @@ struct UserProfileView: View {
     private func fetchFriendsData() {
         guard let url = URL(string: "\(baseURL)/get_friends/\(username)/") else { return }
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let data = data {
                     do {
@@ -4318,11 +4358,46 @@ struct UserProfileView: View {
         }.resume()
     }
     
+    // MARK: - Fetch User Ratings
+    private func fetchUserRatings() {
+        guard let url = URL(string: "\(baseURL)/get_user_ratings/\(username)/") else { return }
+        
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("❌ User ratings fetch error: \(error)")
+                    return
+                }
+                
+                if let data = data {
+                    do {
+                        // Decode the response structure
+                        let response = try JSONDecoder().decode(UserRatingsResponse.self, from: data)
+                        // Use ratings_received for the profile view
+                        self.userRatings = response.ratingsReceived
+                        print("✅ User ratings loaded: \(response.ratingsReceived.count) ratings")
+                    } catch {
+                        print("❌ User ratings JSON decode error: \(error)")
+                        if let jsonString = String(data: data, encoding: .utf8) {
+                            print("Raw response: \(jsonString)")
+                        }
+                    }
+                }
+            }
+        }.resume()
+    }
+    
     // MARK: - Fetch Recent Events
     private func fetchRecentEvents() {
-        guard let url = URL(string: "\(baseURL)/get_study_events/\(username)/") else { return }
+        guard let url = URL(string: "\(baseURL)/get_user_recent_activity/\(username)/") else { return }
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let data = data {
                     do {
@@ -4550,7 +4625,27 @@ struct UserProfileView: View {
             
             HStack(spacing: 20) {
                 statItem("Events", "\(reputationData?.eventsAttended ?? 0)", "calendar")
-                statItem("Reputation", String(format: "%.1f", reputationData?.averageRating ?? 0.0), "star.fill")
+                
+                // Reputation with reviews link
+                VStack(spacing: 8) {
+                    statItem("Reputation", String(format: "%.1f", reputationData?.averageRating ?? 0.0), "star.fill")
+                    
+                    // Show "View Reviews" button if there are reviews
+                    if !userRatings.isEmpty {
+                        Button(action: {
+                            showReviewsList = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Text("View Reviews")
+                                    .font(.caption.weight(.medium))
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(.brandPrimary)
+                        }
+                    }
+                }
+                
                 statItem("Friends", "\(friendsData?.friends.count ?? 0)", "person.2.fill")
             }
         }
@@ -4646,6 +4741,9 @@ struct UserProfileView: View {
                     .foregroundColor(.textSecondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
+                    .onAppear {
+                        print("🔍 Skills card: No skills found. Profile skills: \(profile.skills ?? [:])")
+                    }
             }
         }
         .padding(24)
@@ -4776,6 +4874,141 @@ struct UserProfileView: View {
                 .fill(Color.bgCard)
                 .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
         )
+    }
+    
+    // MARK: - Reviews Card
+    private func reviewsCard(profile: UserProfile) -> some View {
+        VStack(spacing: 20) {
+            HStack {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.textLight)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.brandWarning)
+                            .shadow(color: Color.brandWarning.opacity(0.25), radius: 4, x: 0, y: 2)
+                    )
+                
+                Text("Reviews")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+                
+                // Show average rating
+                if let reputation = reputationData, reputation.averageRating > 0 {
+                    HStack(spacing: 4) {
+                        Text(String(format: "%.1f", reputation.averageRating))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.textPrimary)
+                        
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundColor(.brandWarning)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color.brandWarning.opacity(0.1))
+                    )
+                }
+            }
+            
+            if userRatings.isEmpty {
+                Text("No reviews yet")
+                    .font(.body)
+                    .foregroundColor(.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+            } else {
+                VStack(spacing: 12) {
+                    // Show first 2 reviews
+                    ForEach(Array(userRatings.prefix(2))) { rating in
+                        reviewRowView(rating: rating)
+                    }
+                    
+                    // Show "View All" button if there are more than 2 reviews
+                    if userRatings.count > 2 {
+                        Button(action: {
+                            showReviewsList = true
+                        }) {
+                            HStack(spacing: 8) {
+                                Text("View All \(userRatings.count) Reviews")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.brandPrimary)
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.brandPrimary)
+                            }
+                            .padding(.vertical, 8)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Review Row View
+    private func reviewRowView(rating: UserRating) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(rating.fromUser)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+                
+                Text(formatReviewDate(rating.createdAt))
+                    .font(.caption)
+                    .foregroundColor(.textSecondary)
+            }
+            
+            HStack {
+                ForEach(1...5, id: \.self) { index in
+                    Image(systemName: index <= rating.rating ? "star.fill" : "star")
+                        .foregroundColor(.brandWarning)
+                        .font(.caption)
+                }
+                
+                Spacer()
+            }
+            
+            if let reference = rating.reference, !reference.isEmpty {
+                Text(reference)
+                    .font(.caption)
+                    .foregroundColor(.textSecondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.bgSecondary.opacity(0.5))
+        )
+    }
+    
+    // MARK: - Format Review Date
+    private func formatReviewDate(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        
+        let isoFormatter = ISO8601DateFormatter()
+        if let date = isoFormatter.date(from: dateString) {
+            return formatter.string(from: date)
+        }
+        
+        return "Recently"
     }
     
     // MARK: - Friends Card
