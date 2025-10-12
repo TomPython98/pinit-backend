@@ -364,7 +364,7 @@ def accept_friend_request(request):
 
             return JsonResponse({
                 "success": True, 
-                "message": f"{from_username} and {to_username} are now friends!"
+                "message": f"{from_username} and {to_user.username} are now friends!"
             }, status=200)
 
         except json.JSONDecodeError:

@@ -316,24 +316,82 @@ def invite_to_event(event_id, username):
         return False
 
 def rsvp_study_event(username, event_id):
-    """RSVP to a study event"""
+    """RSVP to a study event - now handles join requests"""
     url = f"{BASE_URL}/api/rsvp_study_event/"
     
     data = {
-        "username": username,
         "event_id": event_id
     }
     
     try:
         response = requests.post(url, json=data)
         if response.status_code == 200:
-            print(f"✅ {username} RSVP'd to event")
-            return True
+            result = response.json()
+            action = result.get("action", "unknown")
+            if action == "joined":
+                print(f"✅ {username} joined event directly")
+                return True
+            elif action == "request_sent":
+                print(f"📝 {username} sent join request")
+                return result  # Return result with request_id
+            elif action == "request_pending":
+                print(f"⏳ {username} already has pending request")
+                return False
         else:
             print(f"❌ Failed to RSVP: {response.text}")
             return False
     except Exception as e:
         print(f"❌ Error RSVPing: {e}")
+        return False
+
+def approve_join_request(request_id):
+    """Approve a join request"""
+    url = f"{BASE_URL}/api/approve_join_request/"
+    
+    data = {
+        "request_id": request_id
+    }
+    
+    try:
+        response = requests.post(url, json=data)
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("success"):
+                print(f"✅ Approved join request {request_id}")
+                return True
+            else:
+                print(f"❌ Approval failed: {result.get('message', 'Unknown error')}")
+                return False
+        else:
+            print(f"❌ Failed to approve request: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error approving request: {e}")
+        return False
+
+def reject_join_request(request_id):
+    """Reject a join request"""
+    url = f"{BASE_URL}/api/reject_join_request/"
+    
+    data = {
+        "request_id": request_id
+    }
+    
+    try:
+        response = requests.post(url, json=data)
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("success"):
+                print(f"✅ Rejected join request {request_id}")
+                return True
+            else:
+                print(f"❌ Rejection failed: {result.get('message', 'Unknown error')}")
+                return False
+        else:
+            print(f"❌ Failed to reject request: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error rejecting request: {e}")
         return False
 
 def submit_user_rating(reviewer, reviewee, rating, comment):
@@ -368,14 +426,18 @@ def update_user_interests(username, interests):
     """Update user interests and profile"""
     url = f"{BASE_URL}/api/update_user_interests/"
     
+    # Generate random skills for each user
+    skills_list = ["Python", "JavaScript", "Java", "C++", "Machine Learning", "Data Analysis", "Web Development", "Mobile Development", "UI/UX Design", "Project Management", "Leadership", "Communication", "Public Speaking", "Teamwork", "Problem Solving", "Research", "Writing", "Teaching", "Marketing", "Sales"]
+    skill_names = random.sample(skills_list, random.randint(2, 4))
+    proficiency_levels = ["BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"]
+    user_skills = {}
+    for skill in skill_names:
+        user_skills[skill] = random.choice(proficiency_levels)
+    
     data = {
         "username": username,
         "interests": interests,
-        "skills": {
-            "Python": "Expert",
-            "JavaScript": "Advanced",
-            "Machine Learning": "Intermediate"
-        },
+        "skills": user_skills,
         "auto_invite_preference": True,
         "preferred_radius": 10.0
     }
@@ -560,18 +622,46 @@ def main():
     
     print(f"✅ Sent {invitations_sent} invitations")
     
-    # Create RSVPs to events
-    print("\n📝 Creating RSVPs...")
+    # Create RSVPs and join requests
+    print("\n📝 Creating RSVPs and join requests...")
     rsvps_created = 0
+    pending_requests = []
+    
     for event_id in event_ids:
         num_rsvps = random.randint(2, 5)
         rsvpers = random.sample(registered_users, min(num_rsvps, len(registered_users)))
         for rsvper in rsvpers:
-            if rsvp_study_event(rsvper, event_id):
+            result = rsvp_study_event(rsvper, event_id)
+            if result == True:
                 rsvps_created += 1
+            elif isinstance(result, dict) and result.get("action") == "request_sent":
+                # Store request for approval
+                pending_requests.append({
+                    "request_id": result.get("request_id"),
+                    "requester": rsvper,
+                    "event_id": event_id
+                })
             time.sleep(0.2)
     
-    print(f"✅ Created {rsvps_created} RSVPs")
+    print(f"✅ Created {rsvps_created} direct RSVPs")
+    print(f"📝 Generated {len(pending_requests)} join requests")
+    
+    # Approve join requests (simulate host approval)
+    print("\n✅ Processing join requests...")
+    approved_requests = 0
+    rejected_requests = 0
+    
+    for request in pending_requests:
+        # Randomly approve or reject (80% approval rate)
+        if random.random() < 0.8:
+            if approve_join_request(request["request_id"]):
+                approved_requests += 1
+        else:
+            if reject_join_request(request["request_id"]):
+                rejected_requests += 1
+        time.sleep(0.2)
+    
+    print(f"✅ Approved {approved_requests} requests, rejected {rejected_requests} requests")
     
     # Create user ratings
     print("\n⭐ Creating user ratings...")
