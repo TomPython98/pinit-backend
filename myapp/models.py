@@ -307,6 +307,7 @@ class EventJoinRequest(models.Model):
         ('rejected', 'Rejected'),
     ]
     
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event = models.ForeignKey('StudyEvent', on_delete=models.CASCADE, related_name='join_requests')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_join_requests')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
