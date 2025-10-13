@@ -2099,8 +2099,6 @@ struct EventSocialFeedView: View {
     @State private var errorMessage: String?
     // Track posts with like requests in flight to prevent double taps
     @State private var inFlightLikePostIds: Set<Int> = []
-    // Force UI refresh when interactions change
-    @State private var refreshTrigger: Int = 0
     
     // MARK: - View Body
     var body: some View {
@@ -2324,7 +2322,7 @@ struct EventSocialFeedView: View {
                                 },
                                 onReply: { showReplySheet(for: post) }
                             )
-                            .id("\(post.id)-\(post.likes)-\(post.isLikedByCurrentUser)-\(refreshTrigger)")
+                            .id(post.id) // Only use stable post ID, not changing properties
                             .padding(.bottom, 1)
                         }
                     }
@@ -2334,6 +2332,7 @@ struct EventSocialFeedView: View {
             }
             .padding(.bottom, 20)
         }
+        .scrollDismissesKeyboard(.interactively)
         .refreshable {
             await refreshWithDelay()
         }
@@ -2890,7 +2889,6 @@ struct EventSocialFeedView: View {
                 postID: postID
             )
             interactions = currentInteractions
-            refreshTrigger += 1  // Force UI refresh
         }
         
         // Make API call to persist the change
@@ -2970,7 +2968,6 @@ struct EventSocialFeedView: View {
                                                 )
                                                 self.interactions = updatedInteractions
                                                 self.updateLikeCache(postID: postID, likes: totalLikes, isLiked: liked)
-                                                self.refreshTrigger += 1  // Force UI refresh
                                             }
                                             self.inFlightLikePostIds.remove(postID)
                                         }
@@ -3007,7 +3004,6 @@ struct EventSocialFeedView: View {
                                 )
                                 self.interactions = updatedInteractions
                                 self.updateLikeCache(postID: postID, likes: totalLikes, isLiked: liked)
-                                self.refreshTrigger += 1  // Force UI refresh
                             }
                             self.inFlightLikePostIds.remove(postID)
                         } else {
@@ -3122,7 +3118,6 @@ struct EventSocialFeedView: View {
                 reply: optimisticReply
             )
             interactions = currentInteractions
-            refreshTrigger += 1  // Force UI refresh
         }
         
         // Make API request
@@ -3164,7 +3159,6 @@ struct EventSocialFeedView: View {
                             username: username
                         )
                         self.interactions = currentInteractions
-                        self.refreshTrigger += 1  // Force UI refresh
                     }
                 } else {
                     // If we can't parse, just refresh to be safe
@@ -3239,8 +3233,6 @@ struct EventPostView: View {
     let onLike: () -> Void
     let onReply: () -> Void
     
-    @State private var isAnimatingLike = false
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
@@ -3277,20 +3269,8 @@ struct EventPostView: View {
                         // Like button
                         Button(action: {
                             // Add haptic feedback
-                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                             impactFeedback.impactOccurred()
-                            
-                            // Trigger animation
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                isAnimatingLike = true
-                            }
-                            
-                            // Reset animation after a short delay
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                withAnimation {
-                                    isAnimatingLike = false
-                                }
-                            }
                             
                             // Call the like action
                             onLike()
@@ -3298,13 +3278,10 @@ struct EventPostView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: post.isLikedByCurrentUser ? "heart.fill" : "heart")
                                     .foregroundColor(post.isLikedByCurrentUser ? .red : .gray)
-                                    .scaleEffect(isAnimatingLike ? 1.3 : 1.0)
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isAnimatingLike)
                                 
                                 Text("\(post.likes)")
                                     .font(.caption)
                                     .foregroundColor(post.isLikedByCurrentUser ? .red : .gray)
-                                    .contentTransition(.numericText())
                             }
                             .padding(.vertical, 6)
                             .padding(.horizontal, 10)
@@ -3312,8 +3289,6 @@ struct EventPostView: View {
                             .cornerRadius(15)
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: post.isLikedByCurrentUser)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: post.likes)
                         
                         // Reply button
                         Button(action: onReply) {
@@ -3375,15 +3350,17 @@ struct EventPostView: View {
                         .frame(height: height)
                     
                     if let url = URL(string: urlString) {
-                        AsyncImage(url: url) { phase in
+                        AsyncImage(url: url, transaction: Transaction(animation: nil)) { phase in
                             switch phase {
                             case .empty:
                                 ProgressView()
+                                    .frame(height: height)
                             case .success(let image):
                                 image
                                     .resizable()
                                     .scaledToFill()
                                     .frame(height: height)
+                                    .clipped()
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                             case .failure(_):
                                 VStack(spacing: 6) {
@@ -3393,6 +3370,7 @@ struct EventPostView: View {
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                 }
+                                .frame(height: height)
                             @unknown default:
                                 EmptyView()
                             }
@@ -3974,7 +3952,7 @@ struct EnhancedEventPostView: View {
                         // Like button
                         Button(action: {
                             // Add haptic feedback
-                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                             impactFeedback.impactOccurred()
                             
                             // Call the like action
@@ -3994,7 +3972,6 @@ struct EnhancedEventPostView: View {
                             .cornerRadius(15)
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .animation(.spring(), value: post.isLikedByCurrentUser)
                         
                         // Reply button
                         Button(action: onReply) {
