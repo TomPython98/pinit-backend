@@ -114,16 +114,20 @@ struct EventCreationView: View {
                     }
                 }
             }
-            .navigationTitle("Create Event")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.bgCard, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.white, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Create Event")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.black)
+                }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(.textPrimary)
+                    .foregroundColor(.black)
                 }
             }
         }
