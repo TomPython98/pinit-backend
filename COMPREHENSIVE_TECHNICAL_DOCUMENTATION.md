@@ -3103,6 +3103,64 @@ func addAuthHeader(to request: inout URLRequest) {
 - ✅ **Token Persistence**: Tokens properly saved and retrieved from UserDefaults
 - ✅ **Debug Visibility**: Comprehensive logging for authentication troubleshooting
 
+#### Host Management Implementation Details
+
+**RSVP Request Management System:**
+- **Backend Integration**: All RSVPs now require host approval through `EventJoinRequest` model
+- **Frontend UI**: Fourth tab in `InvitationsView` for "Host Management"
+- **Data Flow**: Hosts can view, approve, and reject join requests for their events
+
+**Key Implementation Points:**
+```swift
+// Host management tab with event cards
+ForEach(hostedEvents) { event in
+    let eventJoinRequests = hostJoinRequests.filter { 
+        $0.eventId.lowercased() == event.id.uuidString.lowercased() 
+    }
+    HostEventCard(
+        event: event,
+        joinRequests: eventJoinRequests,
+        onApprove: { request in approveRequest(request) },
+        onReject: { request in rejectRequest(request) }
+    )
+}
+```
+
+**Data Model Handling:**
+```swift
+struct HostJoinRequest: Identifiable, Codable {
+    let id: String
+    let eventId: String  // Manually assigned since backend doesn't provide it
+    let user: RequestUser
+    let message: String
+    let createdAt: String
+    let isAutoMatched: Bool
+    
+    // Custom decoder to handle missing event_id field
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        user = try container.decode(RequestUser.self, forKey: .user)
+        message = try container.decode(String.self, forKey: .message)
+        createdAt = try container.decode(String.self, forKey: .createdAt)
+        isAutoMatched = try container.decode(Bool.self, forKey: .isAutoMatched)
+        eventId = ""  // Set manually after decoding
+    }
+}
+```
+
+**API Endpoints Used:**
+- `GET /api/get_study_events/<username>/` - Fetch hosted events
+- `GET /api/get_event_join_requests/<event_id>/` - Fetch join requests for specific event
+- `POST /api/approve_join_request/` - Approve a join request
+- `POST /api/reject_join_request/` - Reject a join request
+
+**Common Issues Resolved:**
+- ✅ **UUID Case Sensitivity**: Fixed mismatch between backend (lowercase) and frontend (uppercase) UUID formats
+- ✅ **Missing event_id Field**: Backend doesn't provide event_id in join request responses
+- ✅ **JSON Decode Errors**: Custom decoder handles missing fields gracefully
+- ✅ **Data Synchronization**: Clear existing requests before fetching fresh ones to prevent duplicates
+
 #### Event Management Flow
 ```
 ContentView → CalendarManager.fetchEvents() → Backend API
@@ -11987,6 +12045,13 @@ REDIS_URL=redis://localhost:6379
 - Verify backend response format matches frontend expectations
 - Check debug logs for token extraction status
 - Ensure `saveTokens()` function is called after successful login
+
+**Error:** Host management shows "0 pending" for all events despite requests existing
+**Root Cause:** Multiple issues with data handling and JSON decoding
+**Solution:**
+- **UUID Case Sensitivity**: Backend returns lowercase UUIDs (`349db645-14c4-406b-b099-d9861e97dee8`) but frontend UUID.uuidString returns uppercase (`349DB645-14C4-406B-B099-D9861E97DEE8`). Fix by normalizing both to lowercase: `$0.eventId.lowercased() == event.id.uuidString.lowercased()`
+- **Missing event_id Field**: Backend join request response doesn't include `event_id` field, causing JSON decode errors. Fix by removing `event_id` from CodingKeys and manually assigning it after decoding
+- **Custom Decoder**: Implement custom `HostJoinRequest` decoder that handles missing fields gracefully
 
 #### WebSocket Connection Issues
 **Error:** WebSocket connection fails
