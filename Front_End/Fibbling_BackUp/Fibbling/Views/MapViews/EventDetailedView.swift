@@ -992,7 +992,7 @@ extension EventDetailView {
                                 .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
                         )
                     
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("Event Schedule")
                             .font(.headline.weight(.semibold))
                             .foregroundColor(.textPrimary)
@@ -1004,6 +1004,21 @@ extension EventDetailView {
                         Text("End: \(localEvent.endTime.formatted(date: .abbreviated, time: .shortened))")
                             .font(.subheadline)
                             .foregroundColor(.textSecondary)
+                        
+                        // Duration display
+                        HStack(spacing: 6) {
+                            Image(systemName: "hourglass")
+                                .font(.system(size: 12))
+                                .foregroundColor(.brandAccent)
+                            
+                            let components = Calendar.current.dateComponents([.hour, .minute], from: localEvent.time, to: localEvent.endTime)
+                            let hours = components.hour ?? 0
+                            let minutes = components.minute ?? 0
+                            
+                            Text("Duration: \(hours)h \(minutes)m")
+                                .font(.footnote)
+                                .foregroundColor(.textSecondary)
+                        }
                     }
                     
                     Spacer()
@@ -1785,19 +1800,29 @@ extension EventDetailView {
             HStack(spacing: 8) {
                 Image(systemName: "pencil")
                     .font(.system(size: 16))
-                    .foregroundColor(.textLight)
+                    .foregroundColor(.blue)
                 
                 Text("Edit Event")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.textLight)
+                    .foregroundColor(.blue)
                 
                 Spacer()
             }
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.brandPrimary)
-                    .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.15), Color.blue.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.blue.opacity(0.45), lineWidth: 1.5)
+                    )
+                    .shadow(color: Color.blue.opacity(0.15), radius: 4, x: 0, y: 2)
             )
         }
     }
@@ -1807,19 +1832,29 @@ extension EventDetailView {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 16))
-                    .foregroundColor(.textLight)
+                    .foregroundColor(.red)
                 
                 Text("Report")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.textLight)
+                    .foregroundColor(.red)
                 
                 Spacer()
             }
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.brandWarning)
-                    .shadow(color: Color.brandWarning.opacity(0.25), radius: 4, x: 0, y: 2)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.red.opacity(0.15), Color.red.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.red.opacity(0.45), lineWidth: 1.5)
+                    )
+                    .shadow(color: Color.red.opacity(0.15), radius: 4, x: 0, y: 2)
             )
         }
     }

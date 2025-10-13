@@ -226,10 +226,12 @@ struct EventEditView: View {
                     VStack(spacing: 12) {
                         DatePicker("Start Time", selection: $eventDate, displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.compact)
+                            .tint(.brandPrimary)
                             .foregroundColor(Color.textPrimary)
                         
                         DatePicker("End Time", selection: $eventEndDate, displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.compact)
+                            .tint(.brandPrimary)
                             .foregroundColor(Color.textPrimary)
                     }
                 }

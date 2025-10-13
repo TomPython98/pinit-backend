@@ -42,6 +42,7 @@ struct EventCreationView: View {
     @State private var showVisibilityHint = false
     @State private var showAutoMatchHint = false
     @State private var showValidationAlert = false
+    @State private var isFullDay = false
     @State private var validationMessage = ""
     @State private var audienceSelection: Audience = .publicEvent
     @State private var showLocationDetail = false
@@ -144,9 +145,9 @@ struct EventCreationView: View {
             .animation(.easeInOut(duration: 0.3), value: isSearchingSuggestions)
             .animation(.easeInOut(duration: 0.3), value: showSuccessAnimation)
             .animation(.easeInOut(duration: 0.3), value: isLoading)
-        .onTapGesture {
-            hideKeyboard()
-        }
+            .onTapGesture {
+                hideKeyboard()
+            }
         .onDisappear {
             // Cancel any ongoing search tasks
             searchTask?.cancel()
@@ -295,40 +296,83 @@ struct EventCreationView: View {
                         .foregroundColor(.textPrimary)
                     
                     DatePicker("", selection: $eventDate, displayedComponents: [.date])
-                        .datePickerStyle(.compact)
-                        .labelsHidden()
+                        .datePickerStyle(.graphical)
+                        .tint(.brandPrimary)
                 }
                 
-                // Time Range
-                HStack(spacing: 16) {
-                            VStack(alignment: .leading, spacing: 8) {
-                        Text("Start Time")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.textPrimary)
+                // Full Day Toggle
+                Toggle(isOn: $isFullDay) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sun.horizon.fill")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.brandAccent)
                         
-                        DatePicker("", selection: $eventDate, displayedComponents: [.hourAndMinute])
-                                        .datePickerStyle(.compact)
-                                    .labelsHidden()
-                            }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Full Day Event")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.textPrimary)
                             
-                            VStack(alignment: .leading, spacing: 8) {
-                        Text("End Time")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.textPrimary)
+                            Text("Event lasts all day")
+                                .font(.system(size: 12))
+                                .foregroundColor(.textSecondary)
+                        }
+                    }
+                }
+                .tint(.brandPrimary)
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.bgCard)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(isFullDay ? Color.brandPrimary : Color.clear, lineWidth: 2)
+                        )
+                )
+                .onChange(of: isFullDay) { _, newValue in
+                    if newValue {
+                        // Set to full day (midnight to 11:59 PM)
+                        let calendar = Calendar.current
+                        eventDate = calendar.startOfDay(for: eventDate)
+                        if let endOfDay = calendar.date(byAdding: .day, value: 1, to: eventDate)?.addingTimeInterval(-60) {
+                            eventEndDate = endOfDay
+                        }
+                    }
+                }
+                
+                // Time Range (only if not full day)
+                if !isFullDay {
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Start Time")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.textPrimary)
+                            
+                            DatePicker("", selection: $eventDate, displayedComponents: [.hourAndMinute])
+                                .datePickerStyle(.compact)
+                                .tint(.brandPrimary)
+                                .labelsHidden()
+                        }
                         
-                        DatePicker("", selection: $eventEndDate, displayedComponents: [.hourAndMinute])
-                                        .datePickerStyle(.compact)
-                                    .labelsHidden()
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("End Time")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.textPrimary)
+                            
+                            DatePicker("", selection: $eventEndDate, displayedComponents: [.hourAndMinute])
+                                .datePickerStyle(.compact)
+                                .tint(.brandPrimary)
+                                .labelsHidden()
+                        }
                     }
                 }
                 
                 // Duration display
                 HStack {
-                    Image(systemName: "clock")
-                        .foregroundColor(.textSecondary)
-                    Text("Duration: \(formatDuration(from: eventDate, to: eventEndDate))")
-                        .font(.subheadline)
-                        .foregroundColor(.textSecondary)
+                    Image(systemName: isFullDay ? "sun.max.fill" : "clock")
+                        .foregroundColor(.brandAccent)
+                    Text(isFullDay ? "Full Day Event" : "Duration: \(formatDuration(from: eventDate, to: eventEndDate))")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.textPrimary)
                     Spacer()
                 }
                 .padding(.top, 8)
@@ -442,7 +486,7 @@ struct EventCreationView: View {
                                 VStack(spacing: 12) {
                                     ForEach(locationSuggestions.prefix(5)) { suggestion in
                                         EnhancedLocationSuggestionCard(
-                                            suggestion: suggestion,
+                                        suggestion: suggestion,
                                             onTap: {
                                                 // Cancel search task and clear suggestions
                                                 searchTask?.cancel()
@@ -1067,12 +1111,12 @@ struct EventCreationView: View {
                 let result = try await googlePlacesService.geocodeAddress(address)
                 
                 await MainActor.run {
-                    self.isGeocoding = false
+                self.isGeocoding = false
                     self.selectLocation(result)
                 }
             } catch {
                 await MainActor.run {
-                    self.isGeocoding = false
+                self.isGeocoding = false
                     // Keep current coordinate as fallback
                 }
             }
