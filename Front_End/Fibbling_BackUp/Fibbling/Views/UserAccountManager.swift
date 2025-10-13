@@ -12,8 +12,8 @@ class UserAccountManager: ObservableObject {
     // MARK: - Configuration
     private let baseURL = APIConfig.primaryBaseURL
     
-    private let accessTokenKey = "access_token"
-    private let refreshTokenKey = "refresh_token"
+    private let accessTokenKey = "access_token" // Backend returns "access_token"
+    private let refreshTokenKey = "refresh_token" // Backend returns "refresh_token"
 
     init() {
         // Check if user is logged in at startup by reading from UserDefaults
@@ -52,12 +52,21 @@ class UserAccountManager: ObservableObject {
         refreshToken = refresh
         UserDefaults.standard.set(access, forKey: accessTokenKey)
         UserDefaults.standard.set(refresh, forKey: refreshTokenKey)
+        
+        print("💾 Tokens saved to UserDefaults:")
+        print("   Key '\(accessTokenKey)': \(access.prefix(20))...")
+        print("   Key '\(refreshTokenKey)': \(refresh.prefix(20))...")
     }
     
     func addAuthHeader(to request: inout URLRequest) {
         if let token = accessToken {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            print("🔑 Adding auth header with token: \(token.prefix(20))...")
         } else {
+            print("❌ No access token available for auth header")
+            print("🔍 Checking UserDefaults keys:")
+            print("   access_token: \(UserDefaults.standard.string(forKey: "access_token")?.prefix(20) ?? "nil")")
+            print("   access: \(UserDefaults.standard.string(forKey: "access")?.prefix(20) ?? "nil")")
         }
     }
     
@@ -189,8 +198,8 @@ class UserAccountManager: ObservableObject {
                 let message = json?["message"] as? String ?? "Unknown error."
                 
                 // Extract JWT tokens if registration successful
-                let accessToken = json?["access_token"] as? String
-                let refreshToken = json?["refresh_token"] as? String
+                let accessToken = json?["access"] as? String
+                let refreshToken = json?["refresh"] as? String
                 
                 AppLogger.logAuth("Registration result: \(success ? "success" : "failed")")
 
@@ -282,6 +291,9 @@ class UserAccountManager: ObservableObject {
                 let refreshToken = json?["refresh_token"] as? String
                 
                 // Debug: Log token extraction
+                print("🔍 Login response keys: \(json?.keys.sorted() ?? [])")
+                print("🔍 Access token: \(accessToken?.prefix(20) ?? "nil")...")
+                print("🔍 Refresh token: \(refreshToken?.prefix(20) ?? "nil")...")
 
                 AppLogger.logAuth("Login result: \(success ? "success" : "failed")")
 

@@ -1817,11 +1817,10 @@ extension EventDetailView {
     }
     
     private func handleRSVP() {
-        
-        // Immediately update the local event's attendees list
         let currentUser = accountManager.currentUser ?? ""
+        
         if isAttending {
-            // User is attending and wants to un-RSVP
+            // User is attending and wants to un-RSVP (leave event)
             if let index = localEvent.attendees.firstIndex(of: currentUser) {
                 localEvent.attendees.remove(at: index)
                 
@@ -1829,37 +1828,105 @@ extension EventDetailView {
                 let key = "event_rsvp_\(localEvent.id.uuidString)_\(currentUser)"
                 UserDefaults.standard.set(false, forKey: key)
             }
-        } else {
-            // User is not attending and wants to RSVP
-            if !localEvent.attendees.contains(currentUser) {
-                localEvent.attendees.append(currentUser)
-                
-                // Store RSVP status in UserDefaults for this event
-                let key = "event_rsvp_\(localEvent.id.uuidString)_\(currentUser)"
-                UserDefaults.standard.set(true, forKey: key)
+            
+            // Toggle the state to refresh the UI
+            attendanceStateChanged = UUID()
+            
+            // Call onRSVP immediately
+            onRSVP(localEvent.id)
+            
+            // Update the studyEvents array with our local event
+            if let eventIndex = studyEvents.firstIndex(where: { $0.id == localEvent.id }) {
+                studyEvents[eventIndex] = localEvent
             }
+            
+            // Post notification
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("EventRSVPUpdated"),
+                    object: nil,
+                    userInfo: ["eventID": self.localEvent.id]
+                )
+            }
+        } else {
+            // User wants to RSVP - send join request to host
+            sendJoinRequest()
+        }
+    }
+    
+    private func sendJoinRequest() {
+        guard let username = accountManager.currentUser else { return }
+        
+        let url = URL(string: "\(APIConfig.primaryBaseURL)/rsvp_study_event/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Add JWT authentication header
+        accountManager.addAuthHeader(to: &request)
+        
+        let requestData: [String: Any] = [
+            "event_id": localEvent.id.uuidString,
+            "message": "I'd love to join this study session!"
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestData)
+        } catch {
+            print("Error encoding request data: \(error)")
+            return
         }
         
-        // Toggle the state to refresh the UI
-        attendanceStateChanged = UUID()
-        
-        // Call onRSVP immediately
-        onRSVP(localEvent.id)
-        
-        // Update the studyEvents array with our local event
-        if let eventIndex = studyEvents.firstIndex(where: { $0.id == localEvent.id }) {
-            studyEvents[eventIndex] = localEvent
-        }
-        
-        // Post a single notification instead of relying on multiple cascading updates
-        // Use a delay to give the backend a chance to update
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            NotificationCenter.default.post(
-                name: NSNotification.Name("EventRSVPUpdated"),
-                object: nil,
-                userInfo: ["eventID": self.localEvent.id]
-            )
-        }
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error sending join request: \(error)")
+                    self.showAlert(title: "Error", message: "Failed to send request. Please try again.")
+                    return
+                }
+                
+                guard let data = data else {
+                    print("No data received")
+                    self.showAlert(title: "Error", message: "No response from server.")
+                    return
+                }
+                
+                do {
+                    let response = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                    
+                    if let success = response?["success"] as? Bool, success {
+                        let action = response?["action"] as? String
+                        let message = response?["message"] as? String ?? "Request sent to host"
+                        
+                        if action == "request_sent" {
+                            // Show success message
+                            self.showAlert(title: "Request Sent", message: message)
+                            
+                            // Update UI to show request sent state
+                            self.attendanceStateChanged = UUID()
+                        } else if action == "joined" {
+                            // User was able to join directly (shouldn't happen with new system)
+                            self.showAlert(title: "Joined Event", message: "You've joined the event!")
+                        } else if action == "left" {
+                            // User left the event
+                            self.showAlert(title: "Left Event", message: "You've left the event.")
+                        }
+                    } else {
+                        let errorMessage = response?["error"] as? String ?? "Unknown error occurred"
+                        self.showAlert(title: "Error", message: errorMessage)
+                    }
+                } catch {
+                    print("Error parsing response: \(error)")
+                    self.showAlert(title: "Error", message: "Invalid response from server.")
+                }
+            }
+        }.resume()
+    }
+    
+    private func showAlert(title: String, message: String) {
+        alertTitle = title
+        alertMessage = message
+        showAlert = true
     }
 }
 

@@ -3,10 +3,10 @@ import SwiftUI
 import Combine
 
 /// Wrapper to decode backend responses. Assumes your backend returns a JSON object with an "events" array.
-struct StudyEventsResponse: Codable {
+public struct StudyEventsResponse: Codable {
     let events: [StudyEvent]
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         // Try to decode events one by one so a single event failing doesn't break everything
@@ -32,7 +32,7 @@ struct StudyEventsResponse: Codable {
         self.events = eventsArray
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(events, forKey: .events)
     }

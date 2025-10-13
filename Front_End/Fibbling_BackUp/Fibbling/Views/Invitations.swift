@@ -73,6 +73,83 @@ struct JoinRequestsResponse: Codable {
     }
 }
 
+// MARK: - Host Join Request Model (for managing requests as host)
+struct HostJoinRequest: Identifiable, Codable {
+    let id: String
+    let eventId: String  // This will be manually set since backend doesn't provide it
+    let user: RequestUser
+    let message: String
+    let createdAt: String
+    let isAutoMatched: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case user
+        case message
+        case createdAt = "created_at"
+        case isAutoMatched = "is_auto_matched"
+        // Note: eventId is not in CodingKeys since backend doesn't provide it
+    }
+    
+    // Custom initializer to handle the missing event_id
+    init(id: String, eventId: String, user: RequestUser, message: String, createdAt: String, isAutoMatched: Bool) {
+        self.id = id
+        self.eventId = eventId
+        self.user = user
+        self.message = message
+        self.createdAt = createdAt
+        self.isAutoMatched = isAutoMatched
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        user = try container.decode(RequestUser.self, forKey: .user)
+        message = try container.decode(String.self, forKey: .message)
+        createdAt = try container.decode(String.self, forKey: .createdAt)
+        isAutoMatched = try container.decode(Bool.self, forKey: .isAutoMatched)
+        
+        // eventId will be set manually after decoding
+        eventId = ""
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(user, forKey: .user)
+        try container.encode(message, forKey: .message)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(isAutoMatched, forKey: .isAutoMatched)
+    }
+}
+
+struct RequestUser: Codable {
+    let username: String
+    let fullName: String
+    let university: String
+    let isCertified: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case username
+        case fullName = "full_name"
+        case university
+        case isCertified = "is_certified"
+    }
+}
+
+// MARK: - Host Join Requests Response
+struct HostJoinRequestsResponse: Codable {
+    let success: Bool
+    let requests: [HostJoinRequest]
+    let totalCount: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case requests
+        case totalCount = "total_count"
+    }
+}
+
 // MARK: - InvitationsView
 
 struct InvitationsView: View {
@@ -80,10 +157,12 @@ struct InvitationsView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @State private var invitations: [Invitation] = []
     @State private var joinRequests: [EventJoinRequest] = []
+    @State private var hostJoinRequests: [HostJoinRequest] = []
+    @State private var hostedEvents: [StudyEvent] = []
     @State private var isLoading = false
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var selectedTab = 0 // 0 = Direct Invites, 1 = Potential Matches, 2 = Requests
+    @State private var selectedTab = 0 // 0 = Direct Invites, 1 = Potential Matches, 2 = My Requests, 3 = Host Management
     
     private var directInvitations: [Invitation] {
         return invitations.filter { !$0.isAutoMatched }
@@ -98,6 +177,7 @@ struct InvitationsView: View {
         case 0: return "Direct Invitations"
         case 1: return "Potential Matches"
         case 2: return "My Requests"
+        case 3: return "Host Management"
         default: return "Events"
         }
     }
@@ -154,7 +234,7 @@ struct InvitationsView: View {
                                         )
                                     }
                                 }
-                            } else {
+                            } else if selectedTab == 2 {
                                 // My Requests Tab
                                 if joinRequests.isEmpty {
                                     emptyStateView(
@@ -165,6 +245,33 @@ struct InvitationsView: View {
                                 } else {
                                     ForEach(joinRequests) { request in
                                         ModernJoinRequestCard(request: request)
+                                    }
+                                }
+                            } else if selectedTab == 3 {
+                                // Host Management Tab
+                                if hostedEvents.isEmpty {
+                                    emptyStateView(
+                                        icon: "crown",
+                                        title: "No Hosted Events",
+                                        subtitle: "Create events to manage RSVP requests"
+                                    )
+                                } else {
+                                    ForEach(hostedEvents) { event in
+                                        let eventJoinRequests = hostJoinRequests.filter { $0.eventId.lowercased() == event.id.uuidString.lowercased() }
+                                        HostEventCard(
+                                            event: event,
+                                            joinRequests: eventJoinRequests,
+                                            onApprove: { request in approveRequest(request) },
+                                            onReject: { request in rejectRequest(request) }
+                                        )
+                                        .onAppear {
+                                            print("🔍 Displaying event: \(event.title)")
+                                            print("   Event ID: \(event.id.uuidString)")
+                                            print("   Matching requests: \(eventJoinRequests.count)")
+                                            for request in eventJoinRequests {
+                                                print("   Request ID: \(request.id), Event ID: \(request.eventId)")
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -195,6 +302,7 @@ struct InvitationsView: View {
             .onAppear {
                 fetchInvitations()
                 fetchJoinRequests()
+                fetchHostedEvents()
             }
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Invitation Update"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
@@ -427,7 +535,7 @@ struct InvitationsView: View {
     
     private var modernTabSelector: some View {
         HStack(spacing: 0) {
-            ForEach(0..<3) { index in
+            ForEach(0..<4) { index in
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         selectedTab = index
@@ -461,6 +569,7 @@ struct InvitationsView: View {
         case 0: return "Direct Invites"
         case 1: return "Potential Matches"
         case 2: return "My Requests"
+        case 3: return "Host Management"
         default: return ""
         }
     }
@@ -508,6 +617,155 @@ struct InvitationsView: View {
             .cornerRadius(16)
             .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
         }
+    }
+    
+    // MARK: - Host Management Functions
+    
+    private func fetchHostedEvents() {
+        guard let username = accountManager.currentUser else { return }
+        
+        // Fetch events directly from backend to ensure we have the latest data
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_study_events/\(username)/") else { return }
+        
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                guard let data = data,
+                      let response = try? JSONDecoder().decode(StudyEventsResponse.self, from: data) else { 
+                    print("❌ Failed to fetch hosted events for \(username)")
+                    return 
+                }
+                
+                // Filter for hosted events
+                self.hostedEvents = response.events.filter { $0.host == username }
+                print("✅ Found \(self.hostedEvents.count) hosted events for \(username)")
+                
+                // Clear existing join requests before fetching fresh ones
+                self.hostJoinRequests.removeAll()
+                
+                // Fetch join requests for each hosted event
+                for event in self.hostedEvents {
+                    print("🔍 Fetching join requests for event: \(event.title)")
+                    self.fetchJoinRequestsForEvent(eventId: event.id.uuidString)
+                }
+            }
+        }.resume()
+    }
+    
+    private func fetchJoinRequestsForEvent(eventId: String) {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_event_join_requests/\(eventId)/") else { return }
+        
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("❌ Network error fetching join requests for event \(eventId): \(error)")
+                    return
+                }
+                
+                guard let data = data else {
+                    print("❌ No data received for event \(eventId)")
+                    return
+                }
+                
+                do {
+                    let response = try JSONDecoder().decode(HostJoinRequestsResponse.self, from: data)
+                    guard response.success else {
+                        print("❌ Backend returned success=false for event \(eventId)")
+                        return
+                    }
+                
+                    print("✅ Found \(response.requests.count) join requests for event \(eventId)")
+                    
+                    // Add event ID to each request and update hostJoinRequests
+                    self.hostJoinRequests.removeAll { $0.eventId.lowercased() == eventId.lowercased() }
+                    let requestsWithEventId = response.requests.map { request in
+                        HostJoinRequest(
+                            id: request.id,
+                            eventId: eventId,  // Manually add the event ID
+                            user: request.user,
+                            message: request.message,
+                            createdAt: request.createdAt,
+                            isAutoMatched: request.isAutoMatched
+                        )
+                    }
+                    self.hostJoinRequests.append(contentsOf: requestsWithEventId)
+                    
+                } catch {
+                    print("❌ JSON decode error for event \(eventId): \(error)")
+                    if let jsonString = String(data: data, encoding: .utf8) {
+                        print("Raw response: \(jsonString)")
+                    }
+                }
+            }
+        }.resume()
+    }
+    
+    private func approveRequest(_ request: HostJoinRequest) {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/approve_join_request/") else { return }
+        
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager.addAuthHeader(to: &urlRequest)
+        
+        let requestData = ["request_id": request.id]
+        
+        do {
+            urlRequest.httpBody = try JSONSerialization.data(withJSONObject: requestData)
+        } catch {
+            print("Error encoding request data: \(error)")
+            return
+        }
+        
+        URLSession.shared.dataTask(with: urlRequest) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error approving request: \(error)")
+                    return
+                }
+                
+                // Remove the approved request from the list
+                self.hostJoinRequests.removeAll { $0.id == request.id }
+                
+                // Refresh the hosted events to update attendee counts
+                self.fetchHostedEvents()
+            }
+        }.resume()
+    }
+    
+    private func rejectRequest(_ request: HostJoinRequest) {
+        guard let url = URL(string: "\(APIConfig.primaryBaseURL)/reject_join_request/") else { return }
+        
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        accountManager.addAuthHeader(to: &urlRequest)
+        
+        let requestData = ["request_id": request.id]
+        
+        do {
+            urlRequest.httpBody = try JSONSerialization.data(withJSONObject: requestData)
+        } catch {
+            print("Error encoding request data: \(error)")
+            return
+        }
+        
+        URLSession.shared.dataTask(with: urlRequest) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error rejecting request: \(error)")
+                    return
+                }
+                
+                // Remove the rejected request from the list
+                self.hostJoinRequests.removeAll { $0.id == request.id }
+            }
+        }.resume()
     }
 }
 
@@ -944,6 +1202,195 @@ struct ModernJoinRequestCard: View {
         }
         
         return dateString
+    }
+}
+
+// MARK: - Host Event Card
+
+struct HostEventCard: View {
+    let event: StudyEvent
+    let joinRequests: [HostJoinRequest]
+    let onApprove: (HostJoinRequest) -> Void
+    let onReject: (HostJoinRequest) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Event header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(event.title)
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(Color.textPrimary)
+                        .lineLimit(2)
+                    
+                    Text(event.eventType.rawValue.capitalized)
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(Color.brandPrimary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.brandPrimary.opacity(0.1))
+                        )
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(event.attendees.count) attending")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(Color.textSecondary)
+                    
+                    Text("\(joinRequests.count) pending")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(Color.brandWarning)
+                }
+            }
+            
+            // Event details
+            HStack(spacing: 16) {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
+                    
+                    Text(formatDate(event.time))
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
+                }
+                
+                HStack(spacing: 6) {
+                    Image(systemName: "location")
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
+                    
+                    Text("Study Event")
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
+                }
+                
+                Spacer()
+            }
+            
+            // Join requests
+            if !joinRequests.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Pending Requests")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Color.textPrimary)
+                    
+                    ForEach(joinRequests) { request in
+                        HostJoinRequestRow(
+                            request: request,
+                            onApprove: { onApprove(request) },
+                            onReject: { onReject(request) }
+                        )
+                    }
+                }
+            } else {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(Color.brandSuccess)
+                    
+                    Text("No pending requests")
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.bgCard)
+        .cornerRadius(16)
+        .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - Host Join Request Row
+
+struct HostJoinRequestRow: View {
+    let request: HostJoinRequest
+    let onApprove: () -> Void
+    let onReject: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // User info
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(request.user.fullName.isEmpty ? request.user.username : request.user.fullName)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(Color.textPrimary)
+                    
+                    if request.user.isCertified {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.caption)
+                            .foregroundColor(Color.brandSuccess)
+                    }
+                    
+                    if request.isAutoMatched {
+                        Text("Auto-matched")
+                            .font(.caption2.weight(.medium))
+                            .foregroundColor(Color.brandAccent)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(Color.brandAccent.opacity(0.1))
+                            )
+                    }
+                }
+                
+                Text(request.user.university.isEmpty ? "University not specified" : request.user.university)
+                    .font(.caption)
+                    .foregroundColor(Color.textSecondary)
+                
+                if !request.message.isEmpty {
+                    Text(request.message)
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
+                        .lineLimit(2)
+                }
+            }
+            
+            Spacer()
+            
+            // Action buttons
+            HStack(spacing: 8) {
+                Button(action: onReject) {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(Color.brandWarning)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            Circle()
+                                .fill(Color.brandWarning.opacity(0.1))
+                        )
+                }
+                
+                Button(action: onApprove) {
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(Color.brandSuccess)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            Circle()
+                                .fill(Color.brandSuccess.opacity(0.1))
+                        )
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.bgSurface)
+        .cornerRadius(12)
     }
 }
 

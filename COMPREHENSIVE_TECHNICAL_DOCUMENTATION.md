@@ -3065,6 +3065,44 @@ JWT Token Storage → ContentView → All Protected Views
 Token Refresh → Automatic re-authentication
 ```
 
+#### Authentication Implementation Details
+
+**JWT Token Management:**
+- **Backend Response Format**: Returns `access_token` and `refresh_token` keys
+- **Frontend Storage**: Uses UserDefaults with keys `access_token` and `refresh_token`
+- **Token Extraction**: Correctly extracts tokens from login response JSON
+- **Authentication Headers**: Automatically adds `Authorization: Bearer <token>` to all API calls
+
+**Key Implementation Points:**
+```swift
+// Token extraction from login response
+let accessToken = json?["access_token"] as? String
+let refreshToken = json?["refresh_token"] as? String
+
+// UserDefaults storage keys
+private let accessTokenKey = "access_token"
+private let refreshTokenKey = "refresh_token"
+
+// Authentication header addition
+func addAuthHeader(to request: inout URLRequest) {
+    if let token = accessToken {
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    }
+}
+```
+
+**Debug Logging:**
+- Login response keys are logged for troubleshooting
+- Token extraction status is logged
+- Authentication header addition is logged
+- UserDefaults storage confirmation is logged
+
+**Common Issues Resolved:**
+- ✅ **Token Key Mismatch**: Fixed frontend to use correct backend response keys
+- ✅ **Missing Authentication**: All API calls now include proper JWT headers
+- ✅ **Token Persistence**: Tokens properly saved and retrieved from UserDefaults
+- ✅ **Debug Visibility**: Comprehensive logging for authentication troubleshooting
+
 #### Event Management Flow
 ```
 ContentView → CalendarManager.fetchEvents() → Backend API
@@ -11928,11 +11966,27 @@ REDIS_URL=redis://localhost:6379
 **Solution:** Run migrations: `python manage.py migrate`
 
 #### Authentication Issues
+
 **Error:** `401 Unauthorized` on API calls
 **Solution:** 
 - Check JWT token validity
 - Ensure token is in Authorization header: `Bearer {token}`
 - Refresh token if expired
+
+**Error:** `401 Unauthorized` with "No access token available" in logs
+**Root Cause:** Token key mismatch between frontend and backend
+**Solution:**
+- Backend returns: `access_token` and `refresh_token`
+- Frontend must look for: `access_token` and `refresh_token` (not `access` and `refresh`)
+- UserDefaults keys must match backend response keys
+- Debug logs will show: `🔍 Login response keys: ["access_token", "refresh_token", ...]`
+
+**Error:** Login successful but tokens not saved
+**Root Cause:** Token extraction failing due to incorrect key names
+**Solution:**
+- Verify backend response format matches frontend expectations
+- Check debug logs for token extraction status
+- Ensure `saveTokens()` function is called after successful login
 
 #### WebSocket Connection Issues
 **Error:** WebSocket connection fails
