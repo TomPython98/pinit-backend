@@ -435,27 +435,53 @@ struct EventDetailView: View {
         var request = URLRequest(url: url)
         accountManager.addAuthHeader(to: &request)
         
+        print("🔍 Checking pending requests for user: \(username)")
+        print("🔍 Event ID: \(localEvent.id.uuidString)")
+        
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
-                guard let data = data,
-                      let response = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let success = response["success"] as? Bool, success,
-                      let requests = response["requests"] as? [[String: Any]] else {
+                if let error = error {
+                    print("❌ Error fetching pending requests: \(error)")
                     return
                 }
                 
-                // Check if there's a pending request for this event
-                let eventIdString = self.localEvent.id.uuidString.lowercased()
-                let hasPending = requests.contains { request in
-                    if let requestEventId = request["event_id"] as? String,
-                       let status = request["status"] as? String {
-                        return requestEventId.lowercased() == eventIdString && status == "pending"
-                    }
-                    return false
+                guard let data = data else {
+                    print("❌ No data received for pending requests")
+                    return
                 }
                 
-                self.hasPendingRequest = hasPending
-                self.attendanceStateChanged = UUID()
+                do {
+                    let response = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                    print("🔍 Pending requests response: \(response ?? [:])")
+                    
+                    guard let responseDict = response,
+                          let success = responseDict["success"] as? Bool, success,
+                          let requests = responseDict["requests"] as? [[String: Any]] else {
+                        print("❌ Invalid response format for pending requests")
+                        return
+                    }
+                    
+                    print("🔍 Found \(requests.count) total requests")
+                    
+                    // Check if there's a pending request for this event
+                    let eventIdString = self.localEvent.id.uuidString.lowercased()
+                    let hasPending = requests.contains { request in
+                        if let eventDict = request["event"] as? [String: Any],
+                           let requestEventId = eventDict["id"] as? String,
+                           let status = request["status"] as? String {
+                            print("🔍 Checking request: event_id=\(requestEventId), status=\(status)")
+                            return requestEventId.lowercased() == eventIdString && status == "pending"
+                        }
+                        return false
+                    }
+                    
+                    print("🔍 Has pending request for this event: \(hasPending)")
+                    self.hasPendingRequest = hasPending
+                    self.attendanceStateChanged = UUID()
+                    
+                } catch {
+                    print("❌ Error parsing pending requests response: \(error)")
+                }
             }
         }.resume()
     }
@@ -1672,8 +1698,9 @@ extension EventDetailView {
                     .fill(buttonGradient)
                     .shadow(color: buttonShadowColor, radius: 8, x: 0, y: 4)
             )
+            .opacity((isHosting || hasPendingRequest) ? 0.6 : 1.0)
         }
-        .disabled(isHosting)
+        .disabled(isHosting || hasPendingRequest)
         .id(attendanceStateChanged)
     }
     
@@ -1691,15 +1718,19 @@ extension EventDetailView {
     }
     
     private var buttonText: String {
+        let text: String
         if isHosting {
-            return "Hosting Event"
+            text = "Hosting Event"
         } else if isAttending {
-            return "Leave Event"
+            text = "Leave Event"
         } else if hasPendingRequest {
-            return "Request Pending"
+            text = "Request Pending"
         } else {
-            return "Join Event"
+            text = "Join Event"
         }
+        
+        print("🔍 Button text: \(text) (isHosting: \(isHosting), isAttending: \(isAttending), hasPendingRequest: \(hasPendingRequest))")
+        return text
     }
     
     private var buttonGradient: LinearGradient {
@@ -2005,8 +2036,20 @@ extension EventDetailView {
                             self.showAlert(title: "Left Event", message: "You've left the event.")
                         }
                     } else {
-                        let errorMessage = response?["error"] as? String ?? "Unknown error occurred"
-                        self.showAlert(title: "Error", message: errorMessage)
+                        // Handle error cases
+                        let action = response?["action"] as? String
+                        let message = response?["message"] as? String ?? response?["error"] as? String ?? "Unknown error occurred"
+                        
+                        if action == "request_pending" {
+                            // User already has a pending request - this shouldn't happen with disabled button
+                            // but handle gracefully
+                            self.showAlert(title: "Request Already Sent", message: message)
+                            self.hasPendingRequest = true
+                            self.attendanceStateChanged = UUID()
+                        } else {
+                            // Other error cases
+                            self.showAlert(title: "Error", message: message)
+                        }
                     }
                 } catch {
                     print("Error parsing response: \(error)")
