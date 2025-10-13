@@ -435,33 +435,24 @@ struct EventDetailView: View {
         var request = URLRequest(url: url)
         accountManager.addAuthHeader(to: &request)
         
-        print("🔍 Checking pending requests for user: \(username)")
-        print("🔍 Event ID: \(localEvent.id.uuidString)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("❌ Error fetching pending requests: \(error)")
                     return
                 }
                 
                 guard let data = data else {
-                    print("❌ No data received for pending requests")
                     return
                 }
                 
                 do {
                     let response = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                    print("🔍 Pending requests response: \(response ?? [:])")
                     
                     guard let responseDict = response,
                           let success = responseDict["success"] as? Bool, success,
                           let requests = responseDict["requests"] as? [[String: Any]] else {
-                        print("❌ Invalid response format for pending requests")
                         return
                     }
-                    
-                    print("🔍 Found \(requests.count) total requests")
                     
                     // Check if there's a pending request for this event
                     let eventIdString = self.localEvent.id.uuidString.lowercased()
@@ -469,18 +460,16 @@ struct EventDetailView: View {
                         if let eventDict = request["event"] as? [String: Any],
                            let requestEventId = eventDict["id"] as? String,
                            let status = request["status"] as? String {
-                            print("🔍 Checking request: event_id=\(requestEventId), status=\(status)")
                             return requestEventId.lowercased() == eventIdString && status == "pending"
                         }
                         return false
                     }
                     
-                    print("🔍 Has pending request for this event: \(hasPending)")
                     self.hasPendingRequest = hasPending
                     self.attendanceStateChanged = UUID()
                     
                 } catch {
-                    print("❌ Error parsing pending requests response: \(error)")
+                    // Error parsing response
                 }
             }
         }.resume()
@@ -1718,19 +1707,15 @@ extension EventDetailView {
     }
     
     private var buttonText: String {
-        let text: String
         if isHosting {
-            text = "Hosting Event"
+            return "Hosting Event"
         } else if isAttending {
-            text = "Leave Event"
+            return "Leave Event"
         } else if hasPendingRequest {
-            text = "Request Pending"
+            return "Request Pending"
         } else {
-            text = "Join Event"
+            return "Join Event"
         }
-        
-        print("🔍 Button text: \(text) (isHosting: \(isHosting), isAttending: \(isAttending), hasPendingRequest: \(hasPendingRequest))")
-        return text
     }
     
     private var buttonGradient: LinearGradient {
@@ -1994,20 +1979,17 @@ extension EventDetailView {
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestData)
         } catch {
-            print("Error encoding request data: \(error)")
             return
         }
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("Error sending join request: \(error)")
                     self.showAlert(title: "Error", message: "Failed to send request. Please try again.")
                     return
                 }
                 
                 guard let data = data else {
-                    print("No data received")
                     self.showAlert(title: "Error", message: "No response from server.")
                     return
                 }
@@ -2052,7 +2034,6 @@ extension EventDetailView {
                         }
                     }
                 } catch {
-                    print("Error parsing response: \(error)")
                     self.showAlert(title: "Error", message: "Invalid response from server.")
                 }
             }
@@ -4499,12 +4480,7 @@ struct UserProfileView: View {
                 
                 do {
                     // First, let's see what the actual response looks like
-                    if let jsonString = String(data: data, encoding: .utf8) {
-                        print("🔍 Profile response: \(jsonString)")
-                    }
-                    
                     let profile = try JSONDecoder().decode(UserProfile.self, from: data)
-                    print("🔍 Decoded profile skills: \(profile.skills ?? [:])")
                     self.userProfile = profile
                     
                     // Fetch additional data in parallel
@@ -4571,7 +4547,6 @@ struct UserProfileView: View {
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("❌ User ratings fetch error: \(error)")
                     return
                 }
                 
@@ -4581,12 +4556,8 @@ struct UserProfileView: View {
                         let response = try JSONDecoder().decode(UserRatingsResponse.self, from: data)
                         // Use ratings_received for the profile view
                         self.userRatings = response.ratingsReceived
-                        print("✅ User ratings loaded: \(response.ratingsReceived.count) ratings")
                     } catch {
-                        print("❌ User ratings JSON decode error: \(error)")
-                        if let jsonString = String(data: data, encoding: .utf8) {
-                            print("Raw response: \(jsonString)")
-                        }
+                        // Error decoding ratings
                     }
                 }
             }
@@ -4944,9 +4915,6 @@ struct UserProfileView: View {
                     .foregroundColor(.textSecondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
-                    .onAppear {
-                        print("🔍 Skills card: No skills found. Profile skills: \(profile.skills ?? [:])")
-                    }
             }
         }
         .padding(24)

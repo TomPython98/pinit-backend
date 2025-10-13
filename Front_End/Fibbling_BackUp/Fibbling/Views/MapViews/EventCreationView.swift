@@ -31,8 +31,8 @@ struct EventCreationView: View {
     @State private var isLoading = false
     @State private var showFriendPicker = false
     @State private var selectedFriends: [String] = []
-    @State private var locationSuggestions: [String] = []
-    @State private var locationSuggestionsCoords: [String: CLLocationCoordinate2D] = [:] // Map suggestion to coordinate
+    @State private var locationSuggestions: [GooglePlacesService.LocationSuggestion] = []
+    @State private var selectedLocation: GooglePlacesService.LocationSuggestion?
     @State private var showLocationSuggestions = false
     @State private var isGeocoding = false
     @State private var showSuccessAnimation = false
@@ -44,6 +44,11 @@ struct EventCreationView: View {
     @State private var showValidationAlert = false
     @State private var validationMessage = ""
     @State private var audienceSelection: Audience = .publicEvent
+    @State private var showLocationDetail = false
+    @State private var searchTask: Task<Void, Never>?
+    
+    // Google Places Service
+    private let googlePlacesService = GooglePlacesService.shared
     
     var onSave: (StudyEvent) -> Void
     
@@ -139,9 +144,14 @@ struct EventCreationView: View {
             .animation(.easeInOut(duration: 0.3), value: isSearchingSuggestions)
             .animation(.easeInOut(duration: 0.3), value: showSuccessAnimation)
             .animation(.easeInOut(duration: 0.3), value: isLoading)
-            .onTapGesture {
-                hideKeyboard()
-            }
+        .onTapGesture {
+            hideKeyboard()
+        }
+        .onDisappear {
+            // Cancel any ongoing search tasks
+            searchTask?.cancel()
+            searchTask = nil
+        }
         }
         .overlay {
             if isLoading {
@@ -361,12 +371,19 @@ struct EventCreationView: View {
                                     .foregroundColor(Color.black)
                                     .padding()
                                     .onChange(of: locationName) { oldValue, newValue in
+                                    // Safety check for valid values
+                                    guard !oldValue.isEmpty, !newValue.isEmpty else { return }
+                                    
                                     // If the change was triggered programmatically, do not reset selection
                                     if suppressLocationOnChange {
                                         suppressLocationOnChange = false
                                     } else if !oldValue.isEmpty && oldValue != newValue {
                                         isLocationSelected = false
+                                        selectedLocation = nil
                                     }
+                                    
+                                    // Cancel previous search task
+                                    searchTask?.cancel()
                                     
                                     // Only show suggestions, don't auto-geocode
                                     if newValue.count > 2 {
@@ -418,83 +435,46 @@ struct EventCreationView: View {
                             }
                         }
                         
-                        // Enhanced Location Suggestions with Map Preview
-                        if showLocationSuggestions && !locationSuggestions.isEmpty {
-                            VStack(spacing: 0) {
-                                ForEach(Array(locationSuggestions.prefix(3).enumerated()), id: \.element) { index, suggestion in
-                                    LocationSuggestionRow(
-                                        suggestion: suggestion,
-                                        coordinate: locationSuggestionsCoords[suggestion],
-                                        isSelected: false
-                                    )
-                                    .contentShape(Rectangle()) // Make entire area tappable
-                                    .onTapGesture {
-                                        // Force immediate state update
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            suppressLocationOnChange = true
-                                            locationName = suggestion
-                                            showLocationSuggestions = false
-                                            locationSuggestions = []
-                                            
-                                            // Use stored coordinates if available (faster and more accurate)
-                                            if let coord = locationSuggestionsCoords[suggestion] {
-                                                selectedCoordinate = coord
-                                                isLocationSelected = true
-                                            } else {
-                                                // Still set as selected while geocoding
-                                                isLocationSelected = true
-                                                geocodeLocation(suggestion)
+                        // Enhanced Location Suggestions with Photos & Ratings
+                        // Only show suggestions if no location is selected
+                        if showLocationSuggestions && !locationSuggestions.isEmpty && !isLocationSelected {
+                            ScrollView {
+                                VStack(spacing: 12) {
+                                    ForEach(locationSuggestions.prefix(5)) { suggestion in
+                                        EnhancedLocationSuggestionCard(
+                                            suggestion: suggestion,
+                                            onTap: {
+                                                // Cancel search task and clear suggestions
+                                                searchTask?.cancel()
+                                                selectLocation(suggestion)
                                             }
-                                        }
-                                    }
-                                    
-                                    if index < min(2, locationSuggestions.count - 1) {
-                                        Divider()
-                                            .padding(.horizontal, 16)
+                                        )
                                     }
                                 }
+                                .padding(.vertical, 8)
                             }
-                            .background(Color.bgCard)
-                            .cornerRadius(12)
-                            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
-                            .padding(.top, 4)
+                            .frame(maxHeight: 450)
+                            .padding(.top, 8)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                         
-                        // Mini Map Preview - Show selected location
-                        if isLocationSelected {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Image(systemName: "map")
-                                        .foregroundColor(Color.pinItPrimary)
-                                        .font(.caption)
-                                    Text("Location Preview")
-                                        .font(.caption.weight(.medium))
-                                        .foregroundColor(.textSecondary)
-                                    Spacer()
+                        // Selected Location Detail Card
+                        if isLocationSelected, let selected = selectedLocation {
+                            SelectedLocationDetailCard(
+                                suggestion: selected,
+                                onDeselect: {
+                                    withAnimation {
+                                        isLocationSelected = false
+                                        selectedLocation = nil
+                                        locationName = ""
+                                    }
                                 }
-                                
-                                MiniMapPreview(coordinate: selectedCoordinate)
-                                    .frame(height: 200)
-                                    .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.pinItPrimary.opacity(0.3), lineWidth: 1)
-                                    )
-                                
-                                HStack {
-                                    Image(systemName: "location.fill")
-                                        .foregroundColor(Color.pinItPrimary)
-                                        .font(.caption2)
-                                    Text("\(String(format: "%.4f", selectedCoordinate.latitude)), \(String(format: "%.4f", selectedCoordinate.longitude))")
-                                        .font(.caption2)
-                                        .foregroundColor(.textSecondary)
-                                    Spacer()
-                                }
-                            }
-                            .padding(12)
-                            .background(Color.pinItPrimary.opacity(0.05))
-                            .cornerRadius(12)
-                            .padding(.top, 8)
+                            )
+                            .padding(.top, 12)
+                            .transition(.asymmetric(
+                                insertion: .scale.combined(with: .opacity),
+                                removal: .opacity
+                            ))
                         }
                     }
                     
@@ -998,409 +978,102 @@ struct EventCreationView: View {
     }
     
     private func searchLocationSuggestions(query: String) {
+        // Safety checks
+        guard !query.isEmpty,
+              query.count >= 2,
+              query.count <= 100 else {
+            locationSuggestions = []
+            showLocationSuggestions = false
+            return
+        }
+        
+        // Cancel previous search task
+        searchTask?.cancel()
+        
         isSearchingSuggestions = true
         
-        // Search both Apple Maps (MKLocalSearch) and Mapbox in parallel
-        // Apple Maps has excellent POI data for restaurants, bars, cafes, etc.
-        let group = DispatchGroup()
-        var appleResults: [(String, CLLocationCoordinate2D)] = []
-        var mapboxResults: [(String, CLLocationCoordinate2D)] = []
-        
-        // APPLE MAPS SEARCH (MKLocalSearch) - Best for POIs like restaurants, bars, cafes
-        group.enter()
-        searchAppleMaps(query: query) { results in
-            appleResults = results
-            group.leave()
-        }
-        
-        // MAPBOX SEARCH - Good for addresses and international locations
-        group.enter()
-        searchMapbox(query: query) { results in
-            mapboxResults = results
-            group.leave()
-        }
-        
-        // Combine results when both searches complete
-        group.notify(queue: .main) {
-            self.isSearchingSuggestions = false
-            
-            // Prioritize Apple Maps results (better for POIs), then add unique Mapbox results
-            var combinedResults = appleResults
-            
-            // Add Mapbox results that aren't already in Apple results
-            for (mbResult, mbCoord) in mapboxResults {
-                let mbName = mbResult.components(separatedBy: " - ").first ?? mbResult
-                let isDuplicate = appleResults.contains { (appleResult, _) in
-                    let appleName = appleResult.components(separatedBy: " - ").first ?? appleResult
-                    // Check if names are similar
-                    return appleName.lowercased().contains(mbName.lowercased()) || 
-                           mbName.lowercased().contains(appleName.lowercased())
-                }
-                if !isDuplicate {
-                    combinedResults.append((mbResult, mbCoord))
-                }
-            }
-            
-            // If no results found locally, try a broader search without location restrictions
-            if combinedResults.isEmpty {
-                self.performBroadSearch(query: query) { broadResults in
-                    DispatchQueue.main.async {
-                        self.locationSuggestions = broadResults.map { $0.0 }
-                        self.locationSuggestionsCoords = Dictionary(uniqueKeysWithValues: broadResults)
-                        self.showLocationSuggestions = !broadResults.isEmpty
-                        print("🔍 Broad search results: \(broadResults.count) suggestions")
-                    }
-                }
-            } else {
-                // Store results and their coordinates
-                self.locationSuggestions = combinedResults.prefix(10).map { $0.0 }
-                self.locationSuggestionsCoords = Dictionary(uniqueKeysWithValues: combinedResults.prefix(10).map { ($0.0, $0.1) })
-                self.showLocationSuggestions = !self.locationSuggestions.isEmpty
-                print("🔍 Local search results: \(combinedResults.count) suggestions")
-            }
-            
-        }
-    }
-    
-    // MARK: - Broad Search Fallback
-    private func performBroadSearch(query: String, completion: @escaping ([(String, CLLocationCoordinate2D)]) -> Void) {
-        let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
-        let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        
-        // Broad search without location restrictions - like Google Maps
-        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=10&types=poi,address,place,locality,neighborhood,district,region,country&fuzzyMatch=true&language=en&autocomplete=true"
-        
-        guard let url = URL(string: urlString) else {
-            completion([])
-            return
-        }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let error = error {
-                print("❌ Broad search error: \(error)")
-                completion([])
-                return
-            }
-            
-            guard let data = data else {
-                completion([])
-                return
-            }
-            
+        // Use Google Places API for location search
+        searchTask = Task {
             do {
-                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                guard let features = json?["features"] as? [[String: Any]] else {
-                    completion([])
-                    return
-                }
+                let results = try await googlePlacesService.searchLocations(query: query, near: selectedCoordinate)
                 
-                var results: [(String, CLLocationCoordinate2D)] = []
+                // Multiple safety checks before updating UI
+                guard !Task.isCancelled,
+                      !results.isEmpty else { return }
                 
-                for feature in features {
-                    guard let properties = feature["properties"] as? [String: Any],
-                          let placeName = properties["place_name"] as? String,
-                          let geometry = feature["geometry"] as? [String: Any],
-                          let coordinates = geometry["coordinates"] as? [Double],
-                          coordinates.count >= 2 else {
-                        continue
-                    }
+                await MainActor.run {
+                    guard !Task.isCancelled else { return }
                     
-                    let longitude = coordinates[0]
-                    let latitude = coordinates[1]
-                    let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-                    
-                    results.append((placeName, coordinate))
-                }
-                
-                print("🔍 Broad search found \(results.count) results for '\(query)'")
-                completion(results)
-                
-            } catch {
-                print("❌ Broad search JSON error: \(error)")
-                completion([])
-            }
-        }.resume()
-    }
-    
-    private func searchMapbox(query: String, completion: @escaping ([(String, CLLocationCoordinate2D)]) -> Void) {
-        let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
-        let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        
-        // Add proximity parameter and bbox for better local results
-        let proximityParam = "\(selectedCoordinate.longitude),\(selectedCoordinate.latitude)"
-        
-        // Create a bounding box around the location (approximately 50km radius)
-        let bboxDelta = 0.5 // Roughly 50km at most latitudes
-        let minLon = selectedCoordinate.longitude - bboxDelta
-        let minLat = selectedCoordinate.latitude - bboxDelta
-        let maxLon = selectedCoordinate.longitude + bboxDelta
-        let maxLat = selectedCoordinate.latitude + bboxDelta
-        let bboxParam = "\(minLon),\(minLat),\(maxLon),\(maxLat)"
-        
-        // Enhanced parameters for comprehensive POI search
-        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=8&types=poi,address,place,locality,neighborhood,district,region&proximity=\(proximityParam)&bbox=\(bboxParam)&fuzzyMatch=true&language=en&autocomplete=true"
-        
-        guard let url = URL(string: urlString) else {
-            completion([])
-            return
-        }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let error = error {
-                completion([])
-                return
-            }
-            
-            guard let data = data else {
-                completion([])
-                return
-            }
-            
-            do {
-                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                
-                if let json = json,
-                   let features = json["features"] as? [[String: Any]] {
-                    
-                    let results = features.compactMap { feature -> (String, CLLocationCoordinate2D)? in
-                        guard let placeName = feature["place_name"] as? String,
-                              let geometry = feature["geometry"] as? [String: Any],
-                              let coordinates = geometry["coordinates"] as? [Double],
-                              coordinates.count >= 2 else {
-                            return nil
-                        }
-                        
-                        let coord = CLLocationCoordinate2D(latitude: coordinates[1], longitude: coordinates[0])
-                        
-                        let displayName: String
-                        if let text = feature["text"] as? String {
-                            let placeType = feature["place_type"] as? [String] ?? []
-                            if placeType.contains("poi") {
-                                displayName = "\(text) - \(placeName)"
-                            } else {
-                                displayName = placeName
-                            }
-                        } else {
-                            displayName = placeName
-                        }
-                        
-                        return (displayName, coord)
-                    }.filter { !$0.0.isEmpty }
-                    
-                    completion(results)
-                } else {
-                    completion([])
+                    self.isSearchingSuggestions = false
+                    self.locationSuggestions = results
+                    self.showLocationSuggestions = true
                 }
             } catch {
-                completion([])
+                // Check if task was cancelled before updating UI
+                guard !Task.isCancelled else { return }
+                
+                await MainActor.run {
+                    self.isSearchingSuggestions = false
+                    self.locationSuggestions = []
+                    self.showLocationSuggestions = false
+                }
             }
-        }.resume()
+        }
     }
     
-    private func searchAppleMaps(query: String, completion: @escaping ([(String, CLLocationCoordinate2D)]) -> Void) {
-        guard !query.isEmpty else {
-            completion([])
-            return
-        }
+    private func selectLocation(_ suggestion: GooglePlacesService.LocationSuggestion) {
+        // Safety check
+        guard !suggestion.name.isEmpty else { return }
         
-        // Create search request with natural language query
-        let searchRequest = MKLocalSearch.Request()
-        searchRequest.naturalLanguageQuery = query
-        
-        // Set region to search around the current/selected location (200km radius for better coverage)
-        let regionRadius: CLLocationDistance = 200000 // 200km
-        let region = MKCoordinateRegion(
-            center: selectedCoordinate,
-            latitudinalMeters: regionRadius,
-            longitudinalMeters: regionRadius
-        )
-        searchRequest.region = region
-        
-        // Include all result types for comprehensive search
-        searchRequest.resultTypes = [.pointOfInterest, .address]
-        
-        let search = MKLocalSearch(request: searchRequest)
-        search.start { response, error in
-            if let error = error {
-                print("❌ Apple Maps search error: \(error)")
-                completion([])
-                return
-            }
+        withAnimation(.easeInOut(duration: 0.3)) {
+            // Update location details
+            suppressLocationOnChange = true
+            locationName = suggestion.name
+            selectedCoordinate = suggestion.coordinate
+            selectedLocation = suggestion
             
-            guard let response = response else {
-                completion([])
-                return
-            }
+            // CRITICAL: Set these in the right order
+            isLocationSelected = true  // First, mark as selected
+            showLocationSuggestions = false  // Then hide suggestions
+            locationSuggestions = []  // Clear the suggestions array
+            isSearchingSuggestions = false  // Stop any search state
             
-            let results = response.mapItems.prefix(8).compactMap { item -> (String, CLLocationCoordinate2D)? in
-                guard let name = item.name else { return nil }
-                
-                let coordinate = item.placemark.coordinate
-                
-                // Build display string
-                var displayParts: [String] = [name]
-                
-                // Add address context
-                var addressParts: [String] = []
-                if let thoroughfare = item.placemark.thoroughfare {
-                    addressParts.append(thoroughfare)
-                }
-                if let locality = item.placemark.locality {
-                    addressParts.append(locality)
-                }
-                
-                if !addressParts.isEmpty {
-                    displayParts.append(addressParts.joined(separator: ", "))
-                }
-                
-                let displayName = displayParts.joined(separator: " - ")
-                
-                return (displayName, coordinate)
-            }
+            // Show success animation
+            showSuccessAnimation = true
             
-            // If no results found with region restriction, try without region
-            if results.isEmpty {
-                let broadSearchRequest = MKLocalSearch.Request()
-                broadSearchRequest.naturalLanguageQuery = query
-                broadSearchRequest.resultTypes = [.pointOfInterest, .address]
-                
-                let broadSearch = MKLocalSearch(request: broadSearchRequest)
-                broadSearch.start { broadResponse, broadError in
-                    if let broadError = broadError {
-                        print("❌ Apple Maps broad search error: \(broadError)")
-                        completion([])
-                        return
+            // Hide success animation after delay
+            Task {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                await MainActor.run {
+                    withAnimation {
+                        showSuccessAnimation = false
                     }
-                    
-                    guard let broadResponse = broadResponse else {
-                        completion([])
-                        return
-                    }
-                    
-                    let broadResults = broadResponse.mapItems.prefix(8).compactMap { item -> (String, CLLocationCoordinate2D)? in
-                        guard let name = item.name else { return nil }
-                        
-                        let coordinate = item.placemark.coordinate
-                        
-                        // Build display string
-                        var displayParts: [String] = [name]
-                        
-                        // Add address context
-                        var addressParts: [String] = []
-                        if let thoroughfare = item.placemark.thoroughfare {
-                            addressParts.append(thoroughfare)
-                        }
-                        if let locality = item.placemark.locality {
-                            addressParts.append(locality)
-                        }
-                        
-                        if !addressParts.isEmpty {
-                            displayParts.append(addressParts.joined(separator: ", "))
-                        }
-                        
-                        let displayName = displayParts.joined(separator: " - ")
-                        
-                        return (displayName, coordinate)
-                    }
-                    
-                    print("🔍 Apple Maps broad search found \(broadResults.count) results for '\(query)'")
-                    completion(Array(broadResults))
                 }
-            } else {
-                print("🔍 Apple Maps found \(results.count) results for '\(query)'")
-                completion(Array(results))
             }
         }
     }
+    
     
     private func geocodeLocation(_ address: String) {
+        // Safety check
+        guard !address.isEmpty, address.count <= 200 else { return }
+        
         // Set loading state
         isGeocoding = true
         
-        // Use Mapbox Geocoding REST API directly for much better worldwide results
-        let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
-        let encodedQuery = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? address
-        
-        // Add proximity bias for better local results
-        let proximityParam = "\(selectedCoordinate.longitude),\(selectedCoordinate.latitude)"
-        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=1&types=poi,address,place,locality,neighborhood&proximity=\(proximityParam)"
-        
-        guard let url = URL(string: urlString) else {
-            DispatchQueue.main.async {
-                self.isGeocoding = false
-                self.fallbackGeocode(address)
-            }
-            return
-        }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            DispatchQueue.main.async {
-                self.isGeocoding = false
+        // Use Google Places API for geocoding
+        Task {
+            do {
+                let result = try await googlePlacesService.geocodeAddress(address)
                 
-                if let error = error {
-                    self.fallbackGeocode(address)
-                    return
+                await MainActor.run {
+                    self.isGeocoding = false
+                    self.selectLocation(result)
                 }
-                
-                guard let data = data else {
-                    self.fallbackGeocode(address)
-                    return
-                }
-                
-                do {
-                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let features = json["features"] as? [[String: Any]],
-                       let firstFeature = features.first,
-                       let geometry = firstFeature["geometry"] as? [String: Any],
-                       let coordinates = geometry["coordinates"] as? [Double],
-                       coordinates.count >= 2 {
-                        
-                        let longitude = coordinates[0]
-                        let latitude = coordinates[1]
-                        let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-                        
-                        self.selectedCoordinate = coordinate
-                        self.isLocationSelected = true
-                        
-                        // Hide suggestions when location is selected
-                        self.showLocationSuggestions = false
-                        self.locationSuggestions = []
-                        
-                        // Update location name with the found result for better accuracy
-                        if let placeName = firstFeature["place_name"] as? String {
-                            self.locationName = placeName
-                        }
-                        
-                        // Show success animation
-                        withAnimation(.easeInOut(duration: 0.5)) {
-                            self.showSuccessAnimation = true
-                        }
-                        
-                        // Hide success animation after delay
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                self.showSuccessAnimation = false
-                            }
-                        }
-                    } else {
-                        self.fallbackGeocode(address)
-                    }
-                } catch {
-                    self.fallbackGeocode(address)
-                }
-            }
-        }.resume()
-    }
-    
-    private func fallbackGeocode(_ address: String) {
-        let geocoder = CLGeocoder()
-        // Create a custom location manager to avoid device location bias
-        geocoder.geocodeAddressString(address, in: nil) { placemarks, error in
-            DispatchQueue.main.async {
-                if let placemark = placemarks?.first {
-                    self.selectedCoordinate = placemark.location?.coordinate ?? self.selectedCoordinate
-                } else {
-                    // Keep current coordinate as last resort
+            } catch {
+                await MainActor.run {
+                    self.isGeocoding = false
+                    // Keep current coordinate as fallback
                 }
             }
         }
