@@ -1127,6 +1127,10 @@ struct StudyMapView: View {
     @State private var filterEventType: EventType? = nil
     @State private var showFilterView: Bool = false
     
+    // Search results state management
+    @State private var searchResults: [StudyEvent] = []
+    @State private var isShowingSearchResults: Bool = false
+    
     @State private var showHotPosts: [EventHotPost] = []
     @State private var isCreatingEvent = false
     @State private var lastCreatedEventTitle = ""
@@ -1167,6 +1171,9 @@ struct StudyMapView: View {
     }
     
     var filteredEvents: [StudyEvent] {
+        // If showing search results, use those instead of calendarManager.events
+        let sourceEvents = isShowingSearchResults ? searchResults : calendarManager.events
+        
         let lowercaseQuery = filterQuery.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         let mathematicsRelatedTerms = [
             "mathematics", "math",
@@ -1186,8 +1193,8 @@ struct StudyMapView: View {
         
         let username = accountManager.currentUser ?? ""
         
-        // First filter events by view mode - Read from calendarManager.events
-        let eventsFilteredByType = calendarManager.events.filter { event in
+        // First filter events by view mode - Read from sourceEvents
+        let eventsFilteredByType = sourceEvents.filter { event in
             switch eventViewMode {
             case .all:
                 // Show all events
@@ -1670,8 +1677,18 @@ struct StudyMapView: View {
     
     // Bottom control bar with buttons
     private var bottomControlBar: some View {
-        VStack {
-            // Raise bottom controls from the very bottom edge
+        VStack(spacing: 10) {
+            // When search is active, show clear button on its own row
+            if isShowingSearchResults {
+                HStack {
+                    Spacer()
+                    clearSearchButton
+                        .transition(.scale.combined(with: .opacity))
+                    Spacer()
+                }
+            }
+            
+            // Main button row
             HStack {
                 // Position to avoid the MapBox logo in bottom left
                 viewModeButton
@@ -1695,17 +1712,19 @@ struct StudyMapView: View {
                 showViewModeSelector = true
             }
         }) {
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 // Icon represents current mode
                 Image(systemName: viewModeIcon)
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                 
                 // Text label
                 Text(viewModeLabel)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
             .foregroundColor(.white)
             .background(
                 Capsule()
@@ -1730,20 +1749,62 @@ struct StudyMapView: View {
                 showEventCreationSheet = true
             }
         }) {
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 Image(systemName: "plus")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                 
                 Text("Add Event")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
             .foregroundColor(.white)
             .background(
                 Capsule()
                     .fill(LinearGradient(
                         gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.7)]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ))
+            )
+            .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 3)
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.5), lineWidth: 2)
+            )
+        }
+    }
+    
+    // Clear search button (shown when search results are active)
+    private var clearSearchButton: some View {
+        Button(action: {
+            withAnimation(.spring()) {
+                // Clear all filters and search state
+                filterQuery = ""
+                filterPrivateOnly = false
+                filterCertifiedOnly = false
+                filterEventType = nil
+                isShowingSearchResults = false
+                searchResults = []
+            }
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                
+                Text("Clear Filters")
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 16)
+            .foregroundColor(.white)
+            .background(
+                Capsule()
+                    .fill(LinearGradient(
+                        gradient: Gradient(colors: [Color.orange, Color.orange.opacity(0.7)]),
                         startPoint: .top,
                         endPoint: .bottom
                     ))
@@ -2077,6 +2138,19 @@ extension StudyMapView {
         guard let username = accountManager.currentUser else {
             return
         }
+        
+        // Check if there are any active filters
+        let hasActiveFilters = !filterQuery.isEmpty || filterPrivateOnly || filterCertifiedOnly || filterEventType != nil
+        
+        // If no active filters, clear search mode and show all events
+        if !hasActiveFilters {
+            DispatchQueue.main.async {
+                self.isShowingSearchResults = false
+                self.searchResults = []
+            }
+            return
+        }
+        
         var components = URLComponents(string: "\(APIConfig.primaryBaseURL)/enhanced_search_events/")
         
         var queryItems = [URLQueryItem]()
@@ -2101,21 +2175,35 @@ extension StudyMapView {
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
+                DispatchQueue.main.async {
+                    // On error, show all events
+                    self.isShowingSearchResults = false
+                    self.searchResults = []
+                }
                 return
             }
             guard let data = data else {
+                DispatchQueue.main.async {
+                    // On missing data, show all events
+                    self.isShowingSearchResults = false
+                    self.searchResults = []
+                }
                 return
             }
             do {
                 let eventsResponse = try JSONDecoder().decode(StudyEventsResponse.self, from: data)
                 DispatchQueue.main.async {
                     let validEvents = eventsResponse.events.filter { $0.endTime > Date() }
-                    self.calendarManager.events.removeAll()
-                    self.calendarManager.events = validEvents
-                    self.filteredEvents.forEach { event in
-                    }
+                    // Store search results separately instead of replacing calendarManager.events
+                    self.searchResults = validEvents
+                    self.isShowingSearchResults = true
                 }
             } catch {
+                DispatchQueue.main.async {
+                    // On decode error, show all events
+                    self.isShowingSearchResults = false
+                    self.searchResults = []
+                }
                 if let rawResponse = String(data: data, encoding: .utf8) {
                 }
             }
@@ -2264,10 +2352,25 @@ struct EventSearchView: View {
                 
                 // Search Input
                 VStack(spacing: 16) {
-                    TextField("Search for events...", text: $searchQuery)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .font(.body)
-                        .padding(.horizontal, 20)
+                    ZStack(alignment: .leading) {
+                        if searchQuery.isEmpty {
+                            Text("Search for events...")
+                                .foregroundColor(Color.gray.opacity(0.6))
+                                .padding(.horizontal, 12)
+                        }
+                        TextField("", text: $searchQuery)
+                            .padding(12)
+                            .foregroundColor(Color.textPrimary)
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.bgCard)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.cardStroke, lineWidth: 1)
+                    )
+                    .padding(.horizontal, 20)
                     
                     // Search Examples
                     VStack(alignment: .leading, spacing: 8) {
