@@ -127,7 +127,7 @@ struct AccessibilityEnhancements {
             Spacer()
             
             Toggle("", isOn: isOn)
-                .toggleStyle(SwitchToggleStyle(tint: .brandPrimary))
+                .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                 .accessibilityLabel(title)
                 .accessibilityHint(hint ?? "Toggle \(title.lowercased())")
         }
@@ -157,7 +157,7 @@ struct AccessibilityEnhancements {
                 .accessibilityAddTraits(.isHeader)
             
             ProgressView(value: progress)
-                .progressViewStyle(LinearProgressViewStyle(tint: .brandPrimary))
+                .progressViewStyle(LinearProgressViewStyle(tint: Color.pinItPrimary))
                 .accessibilityLabel("\(title): \(Int(progress * 100))% complete")
                 .accessibilityHint(hint ?? "")
         }

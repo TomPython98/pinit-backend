@@ -12,6 +12,8 @@ extension Color {
     static let pinItCardBackground = Color.white                                        // Pure white cards
     static let pinItSecondaryBackground = Color(red: 242/255, green: 245/255, blue: 250/255)  // Subtle secondary
     static let pinItAccentBackground = Color(red: 240/255, green: 242/255, blue: 255/255)     // Light accent bg
+    // Improved light colors with better contrast for various iPhone displays
+    static let pinItLight = Color(red: 248/255, green: 250/255, blue: 255/255)             // Light bg for cards - same as background for consistency
     
     // MARK: - Text Colors (Optimal Contrast for Readability)
     static let pinItTextPrimary = Color(red: 15/255, green: 23/255, blue: 42/255)     // Near black - excellent readability
@@ -31,7 +33,6 @@ extension Color {
     
     // MARK: - Additional UI Colors
     static let pinItMedium = Color(red: 30/255, green: 41/255, blue: 59/255)           // Medium bg for dark mode
-    static let pinItLight = Color(red: 248/255, green: 250/255, blue: 255/255)         // Light bg for cards
 
     // MARK: - Event Type Colors (Professional Category System)
     static let pinItStudy = Color(red: 59/255, green: 130/255, blue: 246/255)          // Blue - Study
@@ -169,7 +170,7 @@ struct PinItCardStyle: ViewModifier {
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(isDarkMode ? Color.pinItMedium : Color.pinItCardBackground)
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
             )
     }
 }
@@ -202,39 +203,39 @@ struct PinItButtonStyle: ViewModifier {
     private var foregroundColor: Color {
         switch style {
         case .primary:
-            return .pinItTextInverse
+            return Color.pinItTextInverse
         case .secondary:
-            return isDarkMode ? .pinItTextInverse : .pinItPrimary
+            return isDarkMode ? Color.pinItTextInverse : Color.pinItPrimary
         case .destructive:
-            return .pinItTextInverse
+            return Color.pinItTextInverse
         case .ghost:
-            return isDarkMode ? .pinItTextInverse : .pinItPrimary
+            return isDarkMode ? Color.pinItTextInverse : Color.pinItPrimary
         }
     }
 
     private var backgroundColor: Color {
         switch style {
         case .primary:
-            return .pinItPrimary
+            return Color.pinItPrimary
         case .secondary:
-            return isDarkMode ? .pinItMedium : .pinItLight
+            return isDarkMode ? Color.pinItMedium : Color.pinItLight
         case .destructive:
-            return .pinItError
+            return Color.pinItError
         case .ghost:
-            return .clear
+            return Color.clear
         }
     }
 
     private var borderColor: Color {
         switch style {
         case .primary:
-            return .clear
+            return Color.clear
         case .secondary:
-            return isDarkMode ? .pinItLight : .pinItPrimary
+            return isDarkMode ? Color.pinItLight : Color.pinItPrimary
         case .destructive:
-            return .clear
+            return Color.clear
         case .ghost:
-            return isDarkMode ? .pinItLight : .pinItPrimary
+            return isDarkMode ? Color.pinItLight : Color.pinItPrimary
         }
     }
 
@@ -256,6 +257,80 @@ extension View {
 
     func pinItButton(_ style: PinItButtonStyle.PinItButtonType, isDarkMode: Bool = false) -> some View {
         modifier(PinItButtonStyle(style: style, isDarkMode: isDarkMode))
+    }
+}
+
+// MARK: - Custom Stepper Style
+struct PinItStepperStyle: ViewModifier {
+    let isDarkMode: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .tint(Color.pinItPrimary) // Use custom primary color instead of system tint
+    }
+}
+
+// MARK: - Enhanced Stepper Component
+struct PinItStepper: View {
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let step: Int = 1
+    let isDarkMode: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Minus button
+            Button(action: {
+                if value > range.lowerBound {
+                    value -= step
+                }
+            }) {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(value > range.lowerBound ? Color.pinItPrimary : Color.pinItTextSecondary)
+                    .frame(width: 32, height: 32)
+            }
+            .disabled(value <= range.lowerBound)
+
+            // Current value display
+            Text("\(value)")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color.pinItTextPrimary)
+                .frame(minWidth: 40, alignment: .center)
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isDarkMode ? Color.pinItMedium : Color.pinItSecondaryBackground.opacity(0.6))
+                        .stroke(Color.pinItPrimary.opacity(0.4), lineWidth: 1)
+                )
+
+            // Plus button
+            Button(action: {
+                if value < range.upperBound {
+                    value += step
+                }
+            }) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(value < range.upperBound ? Color.pinItPrimary : Color.pinItTextSecondary)
+                    .frame(width: 32, height: 32)
+            }
+            .disabled(value >= range.upperBound)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isDarkMode ? Color.pinItMedium : Color.pinItSecondaryBackground.opacity(0.4))
+                .stroke(Color.pinItPrimary.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - View Extensions for Stepper
+extension View {
+    func pinItStepperStyle(isDarkMode: Bool = false) -> some View {
+        modifier(PinItStepperStyle(isDarkMode: isDarkMode))
     }
 }
 

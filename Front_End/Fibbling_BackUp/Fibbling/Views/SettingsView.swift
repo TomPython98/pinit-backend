@@ -622,7 +622,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                     Toggle("", isOn: $showOnlineStatus)
-                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItAccent))
+                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                 }
                 .padding(.vertical, 4)
                 
@@ -632,7 +632,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                     Toggle("", isOn: $allowTagging)
-                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItAccent))
+                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                 }
                 .padding(.vertical, 4)
             }
@@ -658,7 +658,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                     Toggle("", isOn: $enableNotifications)
-                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItSecondary))
+                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                 }
                 .padding(.vertical, 4)
                 
@@ -668,7 +668,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.pinItTextPrimary)
                     Spacer()
                     Toggle("", isOn: $showActivityStatus)
-                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItSecondary))
+                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                 }
                 .padding(.vertical, 4)
             }

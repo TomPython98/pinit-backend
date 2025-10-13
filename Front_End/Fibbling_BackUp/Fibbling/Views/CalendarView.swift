@@ -143,7 +143,7 @@ struct CustomCalendarView: View {
                 }) {
                     Image(systemName: "chevron.left")
                         .font(.title2)
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(Color.pinItPrimary)
                 }
                 
                 Spacer()
@@ -161,7 +161,7 @@ struct CustomCalendarView: View {
                 }) {
                     Image(systemName: "chevron.right")
                         .font(.title2)
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(Color.pinItPrimary)
                 }
             }
             .padding(.horizontal)
@@ -175,7 +175,7 @@ struct CustomCalendarView: View {
                         selectedDate = Date()
                     }
                 }
-                .foregroundColor(.accentColor)
+                .foregroundColor(Color.pinItPrimary)
                 .font(.subheadline.bold())
                 Spacer()
             }
@@ -382,7 +382,7 @@ struct CustomCalendarView: View {
                 Button(action: { showEventCreation = true }) {
                     Label("Add Event", systemImage: "plus.circle.fill")
                         .font(.headline)
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(Color.pinItPrimary)
                 }
             }
             .padding(.bottom, 8)
@@ -394,7 +394,7 @@ struct CustomCalendarView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 40))
-                        .foregroundColor(.secondary.opacity(0.7))
+                        .foregroundColor(Color.pinItTextSecondary.opacity(0.7))
                     Text(emptyStateMessage)
                         .font(.subheadline)
                         .foregroundColor(Color.textSecondary)
@@ -672,9 +672,9 @@ struct DayCell: View {
                 .frame(width: 28, height: 28)
                 .background(
                     Circle()
-                        .fill(isToday ? Color.accentColor.opacity(0.2) : Color.clear)
+                        .fill(isToday ? Color.pinItPrimary.opacity(0.2) : Color.clear)
                         .overlay(
-                            Circle().strokeBorder(isToday ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                            Circle().strokeBorder(isToday ? Color.pinItPrimary : Color.clear, lineWidth: 1.5)
                         )
                 )
             VStack(spacing: 2) {
@@ -698,14 +698,14 @@ struct DayCell: View {
                 .fill(cellBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                        .strokeBorder(isSelected ? Color.pinItPrimary : Color.clear, lineWidth: 1.5)
                 )
         )
         .padding(.vertical, 2)
     }
     
     private var cellBackground: Color {
-        isSelected ? Color.accentColor.opacity(0.1) : Color.bgCard
+        isSelected ? Color.pinItPrimary.opacity(0.1) : Color.bgCard
     }
     
     private var cellTextColor: Color {
@@ -761,7 +761,7 @@ struct EventRow: View {
     var body: some View {
         HStack {
             Rectangle()
-                .fill(Color.accentColor)
+                .fill(Color.pinItPrimary)
                 .frame(width: 4)
                 .cornerRadius(2)
             VStack(alignment: .leading, spacing: 4) {
@@ -805,7 +805,7 @@ struct SimpleEventRow: View {
         HStack(spacing: 12) {
             // Simple event type indicator
             Circle()
-                .fill(Color.accentColor)
+                .fill(Color.pinItPrimary)
                 .frame(width: 8, height: 8)
             
             VStack(alignment: .leading, spacing: 4) {
@@ -824,8 +824,8 @@ struct SimpleEventRow: View {
                         .font(.caption)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.accentColor.opacity(0.1))
-                        .foregroundColor(.accentColor)
+                        .background(Color.pinItPrimary.opacity(0.1))
+                        .foregroundColor(Color.pinItPrimary)
                         .cornerRadius(4)
                 }
             }
@@ -932,7 +932,7 @@ struct TagSuggestions: View {
                     .padding(.vertical, 6)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.1))
+                            .fill(Color.pinItTextSecondary.opacity(0.1))
                     )
                 }
             }

@@ -32,24 +32,24 @@ struct PrivacySettingsView: View {
                         settingsCard("Profile Visibility", icon: PinItIcons.profile, color: .pinItPrimary) {
                             VStack(spacing: 16) {
                                 Toggle("Show Online Status", isOn: $showOnlineStatus)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                                    .foregroundColor(Color.black)
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                    .foregroundColor(Color.pinItTextPrimary)
                                 Text("Let other users see when you are online.")
                                     .font(.caption)
                                     .foregroundStyle(Color.pinItTextSecondary)
                                     .multilineTextAlignment(.center)
 
                                 Toggle("Show Activity Status", isOn: $showActivityStatus)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                                    .foregroundColor(Color.black)
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                    .foregroundColor(Color.pinItTextPrimary)
                                 Text("Display your recent activity, like events attended.")
                                     .font(.caption)
                                     .foregroundStyle(Color.pinItTextSecondary)
                                     .multilineTextAlignment(.center)
 
                                 Toggle("Share My Location", isOn: $shareLocation)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                                    .foregroundColor(Color.black)
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                    .foregroundColor(Color.pinItTextPrimary)
                                 Text("Allow PinIt to use your location for event discovery and matching.")
                                     .font(.caption)
                                     .foregroundStyle(Color.pinItTextSecondary)
@@ -61,14 +61,14 @@ struct PrivacySettingsView: View {
                         settingsCard("Social Interactions", icon: PinItIcons.people, color: .pinItAccent) {
                             VStack(spacing: 16) {
                                 Toggle("Allow Tagging in Events", isOn: $allowTagging)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                                    .foregroundColor(Color.black)
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                    .foregroundColor(Color.pinItTextPrimary)
                                 Toggle("Allow Direct Messages", isOn: $allowDirectMessages)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                                    .foregroundColor(Color.black)
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                    .foregroundColor(Color.pinItTextPrimary)
                                 Toggle("Allow Event Discovery by Friends", isOn: $allowEventDiscovery)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                                    .foregroundColor(Color.black)
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                    .foregroundColor(Color.pinItTextPrimary)
                             }
                         }
                         
@@ -76,19 +76,19 @@ struct PrivacySettingsView: View {
                         settingsCard("Data & Privacy", icon: PinItIcons.privacy, color: .pinItSecondary) {
                             VStack(spacing: 16) {
                                 Toggle("Enable Data Sharing", isOn: $dataSharingEnabled)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                                    .foregroundColor(Color.black)
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                    .foregroundColor(Color.pinItTextPrimary)
                                 Text("Allow PinIt to share anonymized data with partners for app improvement.")
                                     .font(.caption)
                                     .foregroundStyle(Color.pinItTextSecondary)
                                     .multilineTextAlignment(.center)
 
                                 Toggle("Send Analytics Data", isOn: $analyticsEnabled)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                                    .foregroundColor(Color.black)
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                    .foregroundColor(Color.pinItTextPrimary)
                                 Toggle("Send Crash Reports", isOn: $crashReportingEnabled)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                                    .foregroundColor(Color.black)
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                    .foregroundColor(Color.pinItTextPrimary)
                             }
                         }
                         

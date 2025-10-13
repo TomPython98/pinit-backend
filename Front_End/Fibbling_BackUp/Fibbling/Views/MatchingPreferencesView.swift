@@ -69,7 +69,7 @@ struct MatchingPreferencesView: View {
                         settingsCard("Auto-Matching", icon: PinItIcons.people, color: .pinItPrimary) {
                             VStack(spacing: 16) {
                                 Toggle("Enable Auto-Matching", isOn: $allowAutoMatching)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
 
                                 if allowAutoMatching {
                                     Text("PinIt will automatically suggest events and people based on your preferences")
@@ -175,7 +175,7 @@ struct MatchingPreferencesView: View {
                                                 .foregroundStyle(Color.pinItTextSecondary)
                                         }
                                         Slider(value: $preferredRadius, in: 1...50, step: 1)
-                                            .accentColor(theme.primaryColor)
+                                            .accentColor(Color.pinItPrimary)
                                     }
                                     
                                     Text("Events within this radius will be prioritized for matching")

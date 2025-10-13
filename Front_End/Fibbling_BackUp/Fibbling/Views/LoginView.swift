@@ -120,7 +120,7 @@ struct LoginView: View {
                             
                             HStack {
                                 Toggle("", isOn: $agreedToTerms)
-                                    .toggleStyle(SwitchToggleStyle(tint: .brandPrimary))
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                 
                                 Text("I agree to Terms & Privacy Policy")
                                     .font(.footnote)

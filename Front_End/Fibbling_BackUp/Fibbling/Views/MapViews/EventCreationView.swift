@@ -200,7 +200,7 @@ struct EventCreationView: View {
     // MARK: - Essential Info Card
     private var essentialInfoCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            cardHeader("Essential Info", icon: "info.circle.fill", color: .blue)
+            cardHeader("Essential Info", icon: "info.circle.fill", color: Color.pinItPrimary)
             
             VStack(spacing: 16) {
                 // Event Title
@@ -212,18 +212,18 @@ struct EventCreationView: View {
                     ZStack(alignment: .leading) {
                         if eventTitle.isEmpty {
                             Text("What's your event about?")
-                                .foregroundColor(Color.gray.opacity(0.5))
+                                .foregroundColor(Color.pinItTextSecondary.opacity(0.5))
                                 .padding()
                         }
                         TextField("", text: $eventTitle)
                             .foregroundColor(Color.black)
                             .padding()
                     }
-                    .background(Color.white)
+                    .background(Color.bgCard)
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            .stroke(Color.cardStroke, lineWidth: 1)
                     )
                 }
                 
@@ -252,7 +252,7 @@ struct EventCreationView: View {
                     ZStack(alignment: .topLeading) {
                         if eventDescription.isEmpty {
                             Text("Tell people what to expect...")
-                                .foregroundColor(Color.gray.opacity(0.5))
+                                .foregroundColor(Color.pinItTextSecondary.opacity(0.5))
                                 .padding()
                         }
                         TextField("", text: $eventDescription, axis: .vertical)
@@ -260,11 +260,11 @@ struct EventCreationView: View {
                             .padding()
                             .lineLimit(3...6)
                     }
-                    .background(Color.white)
+                    .background(Color.bgCard)
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            .stroke(Color.cardStroke, lineWidth: 1)
                     )
                 }
             }
@@ -275,7 +275,7 @@ struct EventCreationView: View {
     // MARK: - Date & Time Card
     private var dateTimeCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            cardHeader("When", icon: "calendar.badge.clock", color: .green)
+            cardHeader("When", icon: "calendar.badge.clock", color: Color.pinItAccent)
             
             VStack(spacing: 16) {
                 // Date
@@ -330,7 +330,7 @@ struct EventCreationView: View {
     // MARK: - Location Card
     private var locationCard: some View {
                     VStack(alignment: .leading, spacing: 16) {
-            cardHeader("Where", icon: "location.fill", color: .orange)
+            cardHeader("Where", icon: "location.fill", color: Color.pinItWarning)
             
             VStack(spacing: 16) {
                 // Simple Location Input with Suggestions
@@ -344,7 +344,7 @@ struct EventCreationView: View {
                         
                         if isLocationSelected {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundColor(Color.pinItSuccess)
                                 .font(.system(size: 16, weight: .medium))
                         }
                     }
@@ -354,7 +354,7 @@ struct EventCreationView: View {
                             ZStack(alignment: .leading) {
                                 if locationName.isEmpty {
                                     Text("Enter location (e.g., Brandenburger Tor, Berlin)")
-                                        .foregroundColor(Color.gray.opacity(0.5))
+                                        .foregroundColor(Color.pinItTextSecondary.opacity(0.5))
                                         .padding()
                                 }
                                 TextField("", text: $locationName)
@@ -383,25 +383,25 @@ struct EventCreationView: View {
                                         }
                                     }
                             }
-                            .background(Color.white)
+                            .background(Color.bgCard)
                             .cornerRadius(12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                    .stroke(Color.cardStroke, lineWidth: 1)
                             )
-                            
+
                             // Dynamic indicator: checkmark, loading, or search button
                             if isLocationSelected && !isGeocoding {
                                 // Green checkmark when location is selected
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
+                                    .foregroundColor(Color.pinItSuccess)
                                     .font(.system(size: 18, weight: .semibold))
                                     .transition(.scale.combined(with: .opacity))
                             } else if isGeocoding || isSearchingSuggestions {
                                 // Loading indicator
                                 ProgressView()
                                     .scaleEffect(0.8)
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(Color.pinItWarning)
                                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
                             } else {
                                 // Search button when no location selected
@@ -411,7 +411,7 @@ struct EventCreationView: View {
                                     }
                                 }) {
                                     Image(systemName: "magnifyingglass")
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(Color.pinItWarning)
                                         .font(.system(size: 16, weight: .medium))
                                 }
                                 .disabled(locationName.isEmpty)
@@ -465,7 +465,7 @@ struct EventCreationView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     Image(systemName: "map")
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(Color.pinItPrimary)
                                         .font(.caption)
                                     Text("Location Preview")
                                         .font(.caption.weight(.medium))
@@ -478,12 +478,12 @@ struct EventCreationView: View {
                                     .cornerRadius(8)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                            .stroke(Color.pinItPrimary.opacity(0.3), lineWidth: 1)
                                     )
                                 
                                 HStack {
                                     Image(systemName: "location.fill")
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(Color.pinItPrimary)
                                         .font(.caption2)
                                     Text("\(String(format: "%.4f", selectedCoordinate.latitude)), \(String(format: "%.4f", selectedCoordinate.longitude))")
                                         .font(.caption2)
@@ -492,7 +492,7 @@ struct EventCreationView: View {
                                 }
                             }
                             .padding(12)
-                            .background(Color.blue.opacity(0.05))
+                            .background(Color.pinItPrimary.opacity(0.05))
                             .cornerRadius(12)
                             .padding(.top, 8)
                         }
@@ -504,7 +504,7 @@ struct EventCreationView: View {
                         VStack(alignment: .leading, spacing: 4) {
                         HStack {
                                 Image(systemName: "mappin.circle")
-                                    .foregroundColor(.orange)
+                                    .foregroundColor(Color.pinItWarning)
                                     .font(.caption)
                                 
                                 Text("Coordinates: \(String(format: "%.4f", selectedCoordinate.latitude)), \(String(format: "%.4f", selectedCoordinate.longitude))")
@@ -518,12 +518,12 @@ struct EventCreationView: View {
                             if isLocationSelected {
                                 HStack {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
+                                        .foregroundColor(Color.pinItSuccess)
                                         .font(.caption)
                                     
                                     Text("Location selected successfully")
                                         .font(.caption)
-                                        .foregroundColor(.green)
+                                        .foregroundColor(Color.pinItSuccess)
                                     
                                     Spacer()
                                 }
@@ -538,7 +538,7 @@ struct EventCreationView: View {
                 if !locationName.isEmpty {
                         HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundColor(Color.pinItSuccess)
                         
                         Text("Location set: \(locationName)")
                             .font(.caption)
@@ -556,7 +556,7 @@ struct EventCreationView: View {
     // MARK: - Settings Card
     private var settingsCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            cardHeader("Settings", icon: "gearshape.fill", color: .purple)
+            cardHeader("Settings", icon: "gearshape.fill", color: Color.pinItAcademic)
             
             VStack(spacing: 16) {
                 // Audience selector
@@ -589,7 +589,7 @@ struct EventCreationView: View {
                 if audienceSelection == .privateEvent {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "lock.fill")
-                            .foregroundColor(.orange)
+                            .foregroundColor(Color.pinItWarning)
                             .font(.caption)
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Private Event")
@@ -621,7 +621,7 @@ struct EventCreationView: View {
                         Spacer()
                     }
                     .padding(12)
-                    .background(Color.orange.opacity(0.12))
+                    .background(Color.pinItWarning.opacity(0.12))
                     .cornerRadius(10)
                 }
                         
@@ -687,16 +687,15 @@ struct EventCreationView: View {
                     Text("Maximum Participants")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
-                                    
+
                                     HStack {
                         Text("\(maxParticipants) people")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.brandPrimary)
-                        
+
                         Spacer()
-                        
-                        Stepper("", value: $maxParticipants, in: 2...50)
-                            .labelsHidden()
+
+                        PinItStepper(value: $maxParticipants, range: 2...50, isDarkMode: false)
                     }
                 }
             }
@@ -707,7 +706,7 @@ struct EventCreationView: View {
     // MARK: - Optional Features Card
     private var optionalFeaturesCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            cardHeader("Optional Features", icon: "star.fill", color: .yellow)
+            cardHeader("Optional Features", icon: "star.fill", color: Color.pinItWarning)
             
             VStack(spacing: 16) {
                 // Auto-Match - available for both Public and Private
@@ -751,20 +750,20 @@ struct EventCreationView: View {
                             ZStack(alignment: .leading) {
                                 if newTag.isEmpty {
                                     Text("Add interest tag")
-                                        .foregroundColor(Color.gray.opacity(0.5))
+                                        .foregroundColor(Color.pinItTextSecondary.opacity(0.5))
                                         .padding()
                                 }
                                 TextField("", text: $newTag)
                                     .foregroundColor(Color.black)
                                     .padding()
                             }
-                            .background(Color.white)
+                            .background(Color.bgCard)
                             .cornerRadius(12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                    .stroke(Color.cardStroke, lineWidth: 1)
                             )
-                            
+
                             Button("Add") {
                                 addTag()
                             }
@@ -1042,12 +1041,85 @@ struct EventCreationView: View {
                 }
             }
             
-            // Store results and their coordinates
-            self.locationSuggestions = combinedResults.prefix(10).map { $0.0 }
-            self.locationSuggestionsCoords = Dictionary(uniqueKeysWithValues: combinedResults.prefix(10).map { ($0.0, $0.1) })
-            self.showLocationSuggestions = !self.locationSuggestions.isEmpty
+            // If no results found locally, try a broader search without location restrictions
+            if combinedResults.isEmpty {
+                self.performBroadSearch(query: query) { broadResults in
+                    DispatchQueue.main.async {
+                        self.locationSuggestions = broadResults.map { $0.0 }
+                        self.locationSuggestionsCoords = Dictionary(uniqueKeysWithValues: broadResults)
+                        self.showLocationSuggestions = !broadResults.isEmpty
+                        print("🔍 Broad search results: \(broadResults.count) suggestions")
+                    }
+                }
+            } else {
+                // Store results and their coordinates
+                self.locationSuggestions = combinedResults.prefix(10).map { $0.0 }
+                self.locationSuggestionsCoords = Dictionary(uniqueKeysWithValues: combinedResults.prefix(10).map { ($0.0, $0.1) })
+                self.showLocationSuggestions = !self.locationSuggestions.isEmpty
+                print("🔍 Local search results: \(combinedResults.count) suggestions")
+            }
             
         }
+    }
+    
+    // MARK: - Broad Search Fallback
+    private func performBroadSearch(query: String, completion: @escaping ([(String, CLLocationCoordinate2D)]) -> Void) {
+        let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
+        let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        
+        // Broad search without location restrictions - like Google Maps
+        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=10&types=poi,address,place,locality,neighborhood,district,region,country&fuzzyMatch=true&language=en&autocomplete=true"
+        
+        guard let url = URL(string: urlString) else {
+            completion([])
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("❌ Broad search error: \(error)")
+                completion([])
+                return
+            }
+            
+            guard let data = data else {
+                completion([])
+                return
+            }
+            
+            do {
+                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                guard let features = json?["features"] as? [[String: Any]] else {
+                    completion([])
+                    return
+                }
+                
+                var results: [(String, CLLocationCoordinate2D)] = []
+                
+                for feature in features {
+                    guard let properties = feature["properties"] as? [String: Any],
+                          let placeName = properties["place_name"] as? String,
+                          let geometry = feature["geometry"] as? [String: Any],
+                          let coordinates = geometry["coordinates"] as? [Double],
+                          coordinates.count >= 2 else {
+                        continue
+                    }
+                    
+                    let longitude = coordinates[0]
+                    let latitude = coordinates[1]
+                    let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                    
+                    results.append((placeName, coordinate))
+                }
+                
+                print("🔍 Broad search found \(results.count) results for '\(query)'")
+                completion(results)
+                
+            } catch {
+                print("❌ Broad search JSON error: \(error)")
+                completion([])
+            }
+        }.resume()
     }
     
     private func searchMapbox(query: String, completion: @escaping ([(String, CLLocationCoordinate2D)]) -> Void) {
@@ -1065,8 +1137,8 @@ struct EventCreationView: View {
         let maxLat = selectedCoordinate.latitude + bboxDelta
         let bboxParam = "\(minLon),\(minLat),\(maxLon),\(maxLat)"
         
-        // Enhanced parameters for better POI search
-        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=5&types=poi,address&proximity=\(proximityParam)&bbox=\(bboxParam)&fuzzyMatch=true&language=en"
+        // Enhanced parameters for comprehensive POI search
+        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=8&types=poi,address,place,locality,neighborhood,district,region&proximity=\(proximityParam)&bbox=\(bboxParam)&fuzzyMatch=true&language=en&autocomplete=true"
         
         guard let url = URL(string: urlString) else {
             completion([])
@@ -1135,8 +1207,8 @@ struct EventCreationView: View {
         let searchRequest = MKLocalSearch.Request()
         searchRequest.naturalLanguageQuery = query
         
-        // Set region to search around the current/selected location (50km radius)
-        let regionRadius: CLLocationDistance = 50000 // 50km
+        // Set region to search around the current/selected location (200km radius for better coverage)
+        let regionRadius: CLLocationDistance = 200000 // 200km
         let region = MKCoordinateRegion(
             center: selectedCoordinate,
             latitudinalMeters: regionRadius,
@@ -1144,12 +1216,13 @@ struct EventCreationView: View {
         )
         searchRequest.region = region
         
-        // Only show results within this region
+        // Include all result types for comprehensive search
         searchRequest.resultTypes = [.pointOfInterest, .address]
         
         let search = MKLocalSearch(request: searchRequest)
         search.start { response, error in
             if let error = error {
+                print("❌ Apple Maps search error: \(error)")
                 completion([])
                 return
             }
@@ -1185,7 +1258,58 @@ struct EventCreationView: View {
                 return (displayName, coordinate)
             }
             
-            completion(Array(results))
+            // If no results found with region restriction, try without region
+            if results.isEmpty {
+                let broadSearchRequest = MKLocalSearch.Request()
+                broadSearchRequest.naturalLanguageQuery = query
+                broadSearchRequest.resultTypes = [.pointOfInterest, .address]
+                
+                let broadSearch = MKLocalSearch(request: broadSearchRequest)
+                broadSearch.start { broadResponse, broadError in
+                    if let broadError = broadError {
+                        print("❌ Apple Maps broad search error: \(broadError)")
+                        completion([])
+                        return
+                    }
+                    
+                    guard let broadResponse = broadResponse else {
+                        completion([])
+                        return
+                    }
+                    
+                    let broadResults = broadResponse.mapItems.prefix(8).compactMap { item -> (String, CLLocationCoordinate2D)? in
+                        guard let name = item.name else { return nil }
+                        
+                        let coordinate = item.placemark.coordinate
+                        
+                        // Build display string
+                        var displayParts: [String] = [name]
+                        
+                        // Add address context
+                        var addressParts: [String] = []
+                        if let thoroughfare = item.placemark.thoroughfare {
+                            addressParts.append(thoroughfare)
+                        }
+                        if let locality = item.placemark.locality {
+                            addressParts.append(locality)
+                        }
+                        
+                        if !addressParts.isEmpty {
+                            displayParts.append(addressParts.joined(separator: ", "))
+                        }
+                        
+                        let displayName = displayParts.joined(separator: " - ")
+                        
+                        return (displayName, coordinate)
+                    }
+                    
+                    print("🔍 Apple Maps broad search found \(broadResults.count) results for '\(query)'")
+                    completion(Array(broadResults))
+                }
+            } else {
+                print("🔍 Apple Maps found \(results.count) results for '\(query)'")
+                completion(Array(results))
+            }
         }
     }
     
@@ -1310,15 +1434,15 @@ struct EventCreationView: View {
     
     private func eventTypeColor(_ type: EventType) -> Color {
         switch type {
-        case .study: return .blue
-        case .party: return .purple
-        case .business: return .orange
-        case .cultural: return .yellow
-        case .academic: return .green
-        case .networking: return .pink
-        case .social: return .red
-        case .language_exchange: return .teal
-        case .other: return .gray
+        case .study: return Color.pinItPrimary
+        case .party: return Color.pinItParty
+        case .business: return Color.pinItBusiness
+        case .cultural: return Color.pinItCultural
+        case .academic: return Color.pinItAcademic
+        case .networking: return Color.pinItNetworking
+        case .social: return Color.pinItSocial
+        case .language_exchange: return Color.pinItLanguage
+        case .other: return Color.pinItOther
         }
     }
     
@@ -1583,10 +1707,10 @@ struct LocationSuggestionRow: View {
                 if let category = categoryName {
                     Text(category)
                         .font(.caption2)
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color.pinItPrimary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.blue.opacity(0.1))
+                        .background(Color.pinItPrimary.opacity(0.1))
                         .cornerRadius(4)
                 }
             }
@@ -1596,7 +1720,7 @@ struct LocationSuggestionRow: View {
             // Selection indicator
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.blue)
+                    .foregroundColor(Color.pinItPrimary)
                     .font(.title3)
             } else {
                 Image(systemName: "chevron.right")
@@ -1606,7 +1730,7 @@ struct LocationSuggestionRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(isSelected ? Color.blue.opacity(0.05) : Color.clear)
+        .background(isSelected ? Color.pinItPrimary.opacity(0.05) : Color.clear)
     }
     
     private var primaryName: String {
@@ -1677,25 +1801,25 @@ struct LocationSuggestionRow: View {
         let name = primaryName.lowercased()
         
         if name.contains("restaurant") || name.contains("cafe") || name.contains("coffee") {
-            return .orange
+            return Color.pinItWarning
         }
         if name.contains("bar") || name.contains("pub") || name.contains("club") {
-            return .purple
+            return Color.pinItParty
         }
         if name.contains("hotel") || name.contains("hostel") {
-            return .green
+            return Color.pinItSuccess
         }
         if name.contains("museum") || name.contains("gallery") {
-            return .blue
+            return Color.pinItPrimary
         }
         if name.contains("park") || name.contains("plaza") {
-            return .green
+            return Color.pinItSuccess
         }
         if name.contains("university") || name.contains("school") {
-            return .indigo
+            return Color.pinItAcademic
         }
         
-        return .blue
+        return Color.pinItPrimary
     }
     
     private func distanceText(from coordinate: CLLocationCoordinate2D) -> String {
@@ -1711,22 +1835,30 @@ struct MiniMapPreview: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Interactive map with pan enabled
+            // Interactive map with anchored pin
             MapboxMapView(coordinate: coordinate)
+                .overlay(alignment: .topLeading) {
+                    GeometryReader { geo in
+                        // Project geographic coordinate into screen point to keep pin anchored to geo coordinate
+                        MiniMapProjectedPin(coordinate: coordinate)
+                            .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+                            .allowsHitTesting(false)
+                    }
+                }
             
             // Info bar
             HStack {
-                Image(systemName: "hand.point.up.left")
+                Image(systemName: "mappin.circle.fill")
                     .font(.caption2)
-                    .foregroundColor(.blue)
-                Text("Tap & drag to explore")
+                    .foregroundColor(Color.pinItPrimary)
+                Text("Selected location preview")
                     .font(.caption2)
                     .foregroundColor(.textSecondary)
                 Spacer()
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(Color.blue.opacity(0.05))
+            .background(Color.pinItPrimary.opacity(0.05))
         }
     }
 }
@@ -1741,13 +1873,13 @@ struct MapboxMapView: UIViewRepresentable {
         // Configure map style
         mapView.mapboxMap.styleURI = .streets
         
-        // Enable pan gestures, disable zoom/rotate for better UX
-        mapView.gestures.options.panEnabled = true
-        mapView.gestures.options.pinchZoomEnabled = true // Allow zoom for verification
+        // Disable all gestures for static preview
+        mapView.gestures.options.panEnabled = false
+        mapView.gestures.options.pinchZoomEnabled = false
         mapView.gestures.options.rotateEnabled = false
         mapView.gestures.options.pitchEnabled = false
-        mapView.gestures.options.doubleTapToZoomInEnabled = true
-        mapView.gestures.options.doubleTouchToZoomOutEnabled = true
+        mapView.gestures.options.doubleTapToZoomInEnabled = false
+        mapView.gestures.options.doubleTouchToZoomOutEnabled = false
         
         // Set camera to the location with zoom level 15
         let cameraOptions = CameraOptions(
@@ -1758,10 +1890,14 @@ struct MapboxMapView: UIViewRepresentable {
         )
         mapView.mapboxMap.setCamera(to: cameraOptions)
         
-        // Add annotation immediately (no need to wait for style)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.addAnnotation(to: mapView, context: context)
-        }
+        // Wait for map style to load before adding annotation
+        mapView.mapboxMap.onStyleLoaded.observeNext { _ in
+            DispatchQueue.main.async {
+                self.addAnnotation(to: mapView, context: context)
+            }
+        }.store(in: &context.coordinator.cancellables)
+        
+        // No camera change observers needed - pin stays centered in overlay
         
         return mapView
     }
@@ -1785,10 +1921,14 @@ struct MapboxMapView: UIViewRepresentable {
             )
             mapView.camera.ease(to: cameraOptions, duration: 0.5)
             
-            // Update annotation
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.addAnnotation(to: mapView, context: context)
-            }
+            // Update annotation when style is ready
+            mapView.mapboxMap.onStyleLoaded.observeNext { _ in
+                DispatchQueue.main.async {
+                    self.addAnnotation(to: mapView, context: context)
+                }
+            }.store(in: &context.coordinator.cancellables)
+            
+            // No camera notifications needed - pin stays centered in overlay
         }
     }
     
@@ -1797,40 +1937,53 @@ struct MapboxMapView: UIViewRepresentable {
     }
     
     private func addAnnotation(to mapView: MapView, context: Context) {
+        print("🔍 Adding annotation to mini map at coordinate: \(coordinate)")
+        
         // Store or reuse the annotation manager
         if context.coordinator.annotationManager == nil {
             context.coordinator.annotationManager = mapView.annotations.makePointAnnotationManager()
+            print("🔍 Created new annotation manager")
         }
         
-        guard let annotationManager = context.coordinator.annotationManager else { return }
-        
-        // Create a point annotation with custom pin like the main map
-        var pointAnnotation = PointAnnotation(coordinate: coordinate)
-        
-        // Use the destination pin image (same as main map)
-        if let pinImage = UIImage(systemName: "mappin.circle.fill")?.withTintColor(.systemBlue, renderingMode: .alwaysOriginal) {
-            pointAnnotation.image = .init(image: pinImage, name: "event-pin")
-            pointAnnotation.iconAnchor = .bottom
-            pointAnnotation.iconSize = 0.8
-        } else {
-            // Fallback to system icon
-            if let markerImage = UIImage(systemName: "mappin.circle.fill")?.withTintColor(.systemBlue, renderingMode: .alwaysOriginal) {
-                pointAnnotation.image = .init(image: markerImage, name: "blue-marker")
-                pointAnnotation.iconSize = 1.2
-            }
+        guard let annotationManager = context.coordinator.annotationManager else { 
+            print("❌ Failed to get annotation manager")
+            return 
         }
         
-        // Add the annotation
-        annotationManager.annotations = [pointAnnotation]
+        // No longer using Mapbox annotations - using SwiftUI overlay instead
+        print("✅ Using SwiftUI overlay pin (no Mapbox annotations needed)")
     }
     
     // Coordinator to manage state
     class Coordinator {
         var annotationManager: PointAnnotationManager?
         var lastCoordinate: CLLocationCoordinate2D
+        var cancellables = Set<AnyCancellable>()
         
         init(coordinate: CLLocationCoordinate2D) {
             self.lastCoordinate = coordinate
         }
     }
 }
+
+// MARK: - Simple centered pin that represents the selected location
+struct MiniMapProjectedPin: View {
+    let coordinate: CLLocationCoordinate2D
+
+    var body: some View {
+        // Pin is always centered in the overlay - represents the selected location
+        ZStack(alignment: .center) {
+            Circle()
+                .fill(Color.white)
+                .frame(width: 32, height: 32)
+                .shadow(color: Color.black.opacity(0.15), radius: 3, x: 0, y: 1)
+            Image("dest-pin")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+

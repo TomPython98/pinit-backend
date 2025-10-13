@@ -30,7 +30,7 @@ struct NotificationPreferencesView: View {
                         settingsCard("General", icon: PinItIcons.notification, color: .pinItPrimary) {
                             VStack(spacing: 16) {
                                 Toggle("Enable All Notifications", isOn: $enableNotifications)
-                                    .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                     .foregroundStyle(Color.pinItTextPrimary)
                                 Text("Turn off to disable all push notifications from PinIt.")
                                     .font(.caption)
@@ -44,13 +44,13 @@ struct NotificationPreferencesView: View {
                             settingsCard("Events", icon: PinItIcons.event, color: .pinItAccent) {
                                 VStack(spacing: 16) {
                                     Toggle("Event Reminders", isOn: $eventReminders)
-                                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                         .foregroundStyle(Color.pinItTextPrimary)
                                     Toggle("Event Invitations", isOn: $eventInvitations)
-                                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                         .foregroundStyle(Color.pinItTextPrimary)
                                     Toggle("Auto-Matching Suggestions", isOn: $autoMatchingNotifications)
-                                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                         .foregroundStyle(Color.pinItTextPrimary)
 
                                     VStack(alignment: .leading, spacing: 8) {
@@ -63,7 +63,7 @@ struct NotificationPreferencesView: View {
                                             Text("1 hour").tag(60.0)
                                         }
                                         .pickerStyle(.segmented)
-                                        .accentColor(theme.primaryColor)
+                                        .accentColor(Color.pinItPrimary)
                                         .background(Color.pinItBackground)
                                         .cornerRadius(8)
                                     }
@@ -74,13 +74,13 @@ struct NotificationPreferencesView: View {
                             settingsCard("Social", icon: PinItIcons.people, color: .pinItSecondary) {
                                 VStack(spacing: 16) {
                                     Toggle("Friend Requests", isOn: $friendRequests)
-                                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                         .foregroundStyle(Color.pinItTextPrimary)
                                     Toggle("Chat Messages", isOn: $chatMessages)
-                                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                         .foregroundStyle(Color.pinItTextPrimary)
                                     Toggle("New Ratings & Reviews", isOn: $ratingNotifications)
-                                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                         .foregroundStyle(Color.pinItTextPrimary)
                                 }
                             }
@@ -89,7 +89,7 @@ struct NotificationPreferencesView: View {
                             settingsCard("Quiet Hours", icon: PinItIcons.time, color: .pinItAcademic) {
                                 VStack(spacing: 16) {
                                     Toggle("Enable Quiet Hours", isOn: $quietHoursEnabled)
-                                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                         .foregroundStyle(Color.pinItTextPrimary)
 
                                     if quietHoursEnabled {

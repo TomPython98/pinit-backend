@@ -181,7 +181,7 @@ struct EventEditView: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                     }
-                    .background(Color.white)
+                    .background(Color.bgCard)
                     .cornerRadius(8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
@@ -274,9 +274,15 @@ struct EventEditView: View {
                         Image(systemName: "person.3").foregroundColor(.brandPrimary)
                         Text("Max Participants").font(.headline).foregroundColor(Color.textPrimary)
                     }
-                    Stepper(value: $maxParticipants, in: 2...50) {
+
+                    HStack {
                         Text("\(maxParticipants) people")
-                            .foregroundColor(Color.textPrimary)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.brandPrimary)
+
+                        Spacer()
+
+                        PinItStepper(value: $maxParticipants, range: 2...50, isDarkMode: false)
                     }
                 }
                 
@@ -564,7 +570,7 @@ struct EventEditView: View {
                             .padding(.vertical, 8)
                             .lineLimit(3...6)
                     }
-                    .background(Color.white)
+                    .background(Color.bgCard)
                     .cornerRadius(8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
