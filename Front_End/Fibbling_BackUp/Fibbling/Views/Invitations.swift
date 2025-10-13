@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 // MARK: - Event Join Request Model
 struct EventJoinRequest: Identifiable, Codable {
@@ -159,6 +160,8 @@ struct InvitationsView: View {
     @State private var joinRequests: [EventJoinRequest] = []
     @State private var hostJoinRequests: [HostJoinRequest] = []
     @State private var hostedEvents: [StudyEvent] = []
+    @State private var selectedEventForDetail: StudyEvent? = nil
+    @State private var showEventDetail = false
     @State private var isLoading = false
     @State private var showAlert = false
     @State private var alertMessage = ""
@@ -213,7 +216,8 @@ struct InvitationsView: View {
                                         ModernInvitationCard(
                                             invitation: invitation,
                                             onAccept: { accept(invitation) },
-                                            onDecline: { decline(invitation) }
+                                            onDecline: { decline(invitation) },
+                                            onNavigateToEvent: { event in navigateToEvent(event) }
                                         )
                                     }
                                 }
@@ -230,7 +234,8 @@ struct InvitationsView: View {
                                         ModernPotentialMatchCard(
                                             invitation: invitation,
                                             onAccept: { accept(invitation) },
-                                            onDecline: { decline(invitation) }
+                                            onDecline: { decline(invitation) },
+                                            onNavigateToEvent: { event in navigateToEvent(event) }
                                         )
                                     }
                                 }
@@ -244,7 +249,10 @@ struct InvitationsView: View {
                                     )
                                 } else {
                                     ForEach(joinRequests) { request in
-                                        ModernJoinRequestCard(request: request)
+                                        ModernJoinRequestCard(
+                                            request: request,
+                                            onNavigateToEvent: { event in navigateToEvent(event) }
+                                        )
                                     }
                                 }
                             } else if selectedTab == 3 {
@@ -262,7 +270,9 @@ struct InvitationsView: View {
                                             event: event,
                                             joinRequests: eventJoinRequests,
                                             onApprove: { request in approveRequest(request) },
-                                            onReject: { request in rejectRequest(request) }
+                                            onReject: { request in rejectRequest(request) },
+                                            onNavigateToEvent: { event in navigateToEvent(event) },
+                                            onInviteMatches: { event in inviteMatches(for: event) }
                                         )
                                         .onAppear {
                                             print("🔍 Displaying event: \(event.title)")
@@ -306,6 +316,18 @@ struct InvitationsView: View {
             }
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Invitation Update"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+            }
+            .sheet(isPresented: $showEventDetail) {
+                if let event = selectedEventForDetail {
+                    EventDetailView(
+                        event: event,
+                        studyEvents: .constant([event]),
+                        onRSVP: { _ in
+                            // Refresh hosted events when RSVP changes
+                            fetchHostedEvents()
+                        }
+                    )
+                }
             }
         }
     }
@@ -767,6 +789,23 @@ struct InvitationsView: View {
             }
         }.resume()
     }
+    
+    // MARK: - Navigation Functions
+    
+    private func navigateToEvent(_ event: StudyEvent) {
+        selectedEventForDetail = event
+        showEventDetail = true
+    }
+    
+    private func inviteMatches(for event: StudyEvent) {
+        // TODO: Implement invite matches functionality
+        // This could open a modal with potential matches or navigate to a match selection view
+        print("🎯 Inviting matches for event: \(event.title)")
+        
+        // For now, show an alert
+        alertMessage = "Invite matches functionality will be implemented soon!"
+        showAlert = true
+    }
 }
 
 // MARK: - Modern Invitation Cards
@@ -775,9 +814,11 @@ struct ModernInvitationCard: View {
     let invitation: Invitation
     let onAccept: () -> Void
     let onDecline: () -> Void
+    let onNavigateToEvent: (StudyEvent) -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        Button(action: { onNavigateToEvent(invitation.event) }) {
+            VStack(alignment: .leading, spacing: 16) {
             // Header with event type icon
             HStack(spacing: 12) {
                 // Event type icon
@@ -814,6 +855,10 @@ struct ModernInvitationCard: View {
                 .padding(.vertical, 4)
                 .background(Color.bgSecondary)
                 .cornerRadius(8)
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(Color.textSecondary)
             }
             
             // Description
@@ -857,10 +902,12 @@ struct ModernInvitationCard: View {
                 }
             }
         }
-        .padding(20)
-        .background(Color.bgCard)
-        .cornerRadius(16)
-        .shadow(color: Color.cardShadow, radius: 6, x: 0, y: 3)
+            .padding(20)
+            .background(Color.bgCard)
+            .cornerRadius(16)
+            .shadow(color: Color.cardShadow, radius: 6, x: 0, y: 3)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
     
     private var eventTypeIcon: String {
@@ -908,9 +955,11 @@ struct ModernPotentialMatchCard: View {
     let invitation: Invitation
     let onAccept: () -> Void
     let onDecline: () -> Void
+    let onNavigateToEvent: (StudyEvent) -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        Button(action: { onNavigateToEvent(invitation.event) }) {
+            VStack(alignment: .leading, spacing: 16) {
             // Header with auto-match badge
             HStack(spacing: 12) {
                 // Sparkles icon for auto-match
@@ -948,6 +997,10 @@ struct ModernPotentialMatchCard: View {
                         )
                     )
                     .cornerRadius(8)
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(Color.textSecondary)
             }
             
             // Description
@@ -1038,21 +1091,23 @@ struct ModernPotentialMatchCard: View {
                 }
             }
         }
-        .padding(20)
-        .background(Color.bgCard)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.brandPrimary.opacity(0.3), Color.brandPrimary.opacity(0.1)]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
-        .shadow(color: Color.cardShadow, radius: 6, x: 0, y: 3)
+            .padding(20)
+            .background(Color.bgCard)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.brandPrimary.opacity(0.3), Color.brandPrimary.opacity(0.1)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color.cardShadow, radius: 6, x: 0, y: 3)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -1065,6 +1120,7 @@ struct ModernPotentialMatchCard: View {
 // MARK: - Modern Join Request Card
 struct ModernJoinRequestCard: View {
     let request: EventJoinRequest
+    let onNavigateToEvent: (StudyEvent) -> Void
     
     private var statusColor: Color {
         switch request.status {
@@ -1094,7 +1150,11 @@ struct ModernJoinRequestCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        Button(action: { 
+            let studyEvent = convertToStudyEvent(request.event)
+            onNavigateToEvent(studyEvent)
+        }) {
+            VStack(alignment: .leading, spacing: 16) {
             // Header with event info
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -1170,12 +1230,14 @@ struct ModernJoinRequestCard: View {
                 .font(.caption)
                 .foregroundColor(.textMuted)
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.bgCard)
-                .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
-        )
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.bgCard)
+                    .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
     
     private func formatEventTime(_ timeString: String) -> String {
@@ -1203,6 +1265,46 @@ struct ModernJoinRequestCard: View {
         
         return dateString
     }
+    
+    private func convertToStudyEvent(_ eventInfo: EventRequestInfo) -> StudyEvent {
+        // Parse the date string
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"
+        let eventDate = formatter.date(from: eventInfo.time) ?? Date()
+        
+        // Parse event type
+        let eventType: EventType
+        switch eventInfo.eventType.lowercased() {
+        case "study": eventType = .study
+        case "social": eventType = .social
+        case "business": eventType = .business
+        case "cultural": eventType = .cultural
+        case "party": eventType = .party
+        case "language_exchange": eventType = .language_exchange
+        case "academic": eventType = .academic
+        case "networking": eventType = .networking
+        default: eventType = .other
+        }
+        
+        // Create StudyEvent with minimal required data
+        return StudyEvent(
+            id: UUID(uuidString: eventInfo.id) ?? UUID(),
+            title: eventInfo.title,
+            coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0), // Default coordinates
+            time: eventDate,
+            endTime: eventDate.addingTimeInterval(3600), // Default 1 hour duration
+            description: nil,
+            invitedFriends: [],
+            attendees: [],
+            isPublic: true,
+            host: eventInfo.host,
+            hostIsCertified: false,
+            eventType: eventType,
+            isAutoMatched: nil,
+            interestTags: nil,
+            matchedUsers: nil
+        )
+    }
 }
 
 // MARK: - Host Event Card
@@ -1212,98 +1314,128 @@ struct HostEventCard: View {
     let joinRequests: [HostJoinRequest]
     let onApprove: (HostJoinRequest) -> Void
     let onReject: (HostJoinRequest) -> Void
+    let onNavigateToEvent: (StudyEvent) -> Void
+    let onInviteMatches: (StudyEvent) -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Event header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(event.title)
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(Color.textPrimary)
-                        .lineLimit(2)
+        Button(action: { onNavigateToEvent(event) }) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Event header
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(event.title)
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(Color.textPrimary)
+                            .lineLimit(2)
+                        
+                        Text(event.eventType.rawValue.capitalized)
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(Color.brandPrimary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(Color.brandPrimary.opacity(0.1))
+                            )
+                    }
                     
-                    Text(event.eventType.rawValue.capitalized)
-                        .font(.caption.weight(.medium))
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("\(event.attendees.count) attending")
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(Color.textSecondary)
+                        
+                        Text("\(joinRequests.count) pending")
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(Color.brandWarning)
+                    }
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
+                }
+                
+                // Event details
+                HStack(spacing: 16) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar")
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
+                        
+                        Text(formatDate(event.time))
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
+                    }
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "location")
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
+                        
+                        Text("Study Event")
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
+                    }
+                    
+                    Spacer()
+                }
+                
+                // Action buttons
+                HStack(spacing: 12) {
+                    Button(action: { onInviteMatches(event) }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "person.badge.plus")
+                                .font(.caption)
+                            Text("Invite Matches")
+                                .font(.caption.weight(.medium))
+                        }
                         .foregroundColor(Color.brandPrimary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
                         .background(
                             Capsule()
                                 .fill(Color.brandPrimary.opacity(0.1))
                         )
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("\(event.attendees.count) attending")
-                        .font(.caption.weight(.medium))
-                        .foregroundColor(Color.textSecondary)
-                    
-                    Text("\(joinRequests.count) pending")
-                        .font(.caption.weight(.medium))
-                        .foregroundColor(Color.brandWarning)
-                }
-            }
-            
-            // Event details
-            HStack(spacing: 16) {
-                HStack(spacing: 6) {
-                    Image(systemName: "calendar")
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
-                    
-                    Text(formatDate(event.time))
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
-                }
-                
-                HStack(spacing: 6) {
-                    Image(systemName: "location")
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
-                    
-                    Text("Study Event")
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
-                }
-                
-                Spacer()
-            }
-            
-            // Join requests
-            if !joinRequests.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Pending Requests")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(Color.textPrimary)
-                    
-                    ForEach(joinRequests) { request in
-                        HostJoinRequestRow(
-                            request: request,
-                            onApprove: { onApprove(request) },
-                            onReject: { onReject(request) }
-                        )
                     }
-                }
-            } else {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(Color.brandSuccess)
-                    
-                    Text("No pending requests")
-                        .font(.caption)
-                        .foregroundColor(Color.textSecondary)
                     
                     Spacer()
                 }
+                
+                // Join requests
+                if !joinRequests.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Pending Requests")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(Color.textPrimary)
+                        
+                        ForEach(joinRequests) { request in
+                            HostJoinRequestRow(
+                                request: request,
+                                onApprove: { onApprove(request) },
+                                onReject: { onReject(request) }
+                            )
+                        }
+                    }
+                } else {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(Color.brandSuccess)
+                        
+                        Text("No pending requests")
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
+                        
+                        Spacer()
+                    }
+                }
             }
+            .padding(20)
+            .background(Color.bgCard)
+            .cornerRadius(16)
+            .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
         }
-        .padding(20)
-        .background(Color.bgCard)
-        .cornerRadius(16)
-        .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+        .buttonStyle(PlainButtonStyle())
     }
     
     private func formatDate(_ date: Date) -> String {

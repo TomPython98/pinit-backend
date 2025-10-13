@@ -99,6 +99,7 @@ struct EventDetailView: View {
     @State private var navigateToMap = false
     @State private var resolvedAddress: String? = nil
     @State private var showDeleteAlert = false
+    @State private var hasPendingRequest = false
 
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>, onRSVP: @escaping (UUID) -> Void) {
         self.event = event
@@ -405,6 +406,9 @@ struct EventDetailView: View {
         // Always refresh event data once when the view appears to get the latest attendance status
         refreshEventData()
         
+        // Check for pending requests
+        checkPendingRequest()
+        
         // Only run initialization code once
         if !hasInitialized {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -421,6 +425,39 @@ struct EventDetailView: View {
             
             hasInitialized = true
         }
+    }
+    
+    // MARK: - Pending Request Check
+    private func checkPendingRequest() {
+        guard let username = accountManager.currentUser else { return }
+        
+        let url = URL(string: "\(APIConfig.primaryBaseURL)/get_user_join_requests/\(username)/")!
+        var request = URLRequest(url: url)
+        accountManager.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                guard let data = data,
+                      let response = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let success = response["success"] as? Bool, success,
+                      let requests = response["requests"] as? [[String: Any]] else {
+                    return
+                }
+                
+                // Check if there's a pending request for this event
+                let eventIdString = self.localEvent.id.uuidString.lowercased()
+                let hasPending = requests.contains { request in
+                    if let requestEventId = request["event_id"] as? String,
+                       let status = request["status"] as? String {
+                        return requestEventId.lowercased() == eventIdString && status == "pending"
+                    }
+                    return false
+                }
+                
+                self.hasPendingRequest = hasPending
+                self.attendanceStateChanged = UUID()
+            }
+        }.resume()
     }
     
     // MARK: - Delete Event
@@ -604,6 +641,11 @@ struct EventDetailView: View {
         // As a backup, check UserDefaults for this user's RSVP status if we didn't find updated data in studyEvents
         if !didUpdateFromStudyEvents {
             checkAndUpdateFromUserDefaults()
+        }
+        
+        // Clear pending request state if user is now attending
+        if isAttending {
+            hasPendingRequest = false
         }
     }
     
@@ -1614,34 +1656,82 @@ extension EventDetailView {
             handleRSVP()
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: isHosting ? "crown.fill" : (isAttending ? "xmark.circle.fill" : "checkmark.circle.fill"))
+                Image(systemName: buttonIcon)
                     .font(.system(size: 20))
-                    .foregroundColor(.textLight)
+                    .foregroundColor(.white)
                 
-                Text(isHosting ? "Hosting Event" : (isAttending ? "Leave Event" : "Join Event"))
+                Text(buttonText)
                     .font(.headline.weight(.semibold))
-                    .foregroundColor(.textLight)
+                    .foregroundColor(.white)
                 
                 Spacer()
             }
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                isHosting ? Color.brandWarning : (isAttending ? Color.brandWarning : Color.brandSuccess),
-                                isHosting ? Color.brandWarning.opacity(0.85) : (isAttending ? Color.brandWarning.opacity(0.85) : Color.brandSuccess.opacity(0.85))
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: (isHosting ? Color.brandWarning : (isAttending ? Color.brandWarning : Color.brandSuccess)).opacity(0.25), radius: 8, x: 0, y: 4)
+                    .fill(buttonGradient)
+                    .shadow(color: buttonShadowColor, radius: 8, x: 0, y: 4)
             )
         }
         .disabled(isHosting)
         .id(attendanceStateChanged)
+    }
+    
+    // MARK: - Button State Properties
+    private var buttonIcon: String {
+        if isHosting {
+            return "crown.fill"
+        } else if isAttending {
+            return "xmark.circle.fill"
+        } else if hasPendingRequest {
+            return "clock.fill"
+        } else {
+            return "checkmark.circle.fill"
+        }
+    }
+    
+    private var buttonText: String {
+        if isHosting {
+            return "Hosting Event"
+        } else if isAttending {
+            return "Leave Event"
+        } else if hasPendingRequest {
+            return "Request Pending"
+        } else {
+            return "Join Event"
+        }
+    }
+    
+    private var buttonGradient: LinearGradient {
+        let colors: [Color]
+        
+        if isHosting {
+            colors = [Color.orange, Color.orange.opacity(0.8)]
+        } else if isAttending {
+            colors = [Color.red, Color.red.opacity(0.8)]
+        } else if hasPendingRequest {
+            colors = [Color.blue, Color.blue.opacity(0.8)]
+        } else {
+            colors = [Color.green, Color.green.opacity(0.8)]
+        }
+        
+        return LinearGradient(
+            colors: colors,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
+    private var buttonShadowColor: Color {
+        if isHosting {
+            return Color.orange.opacity(0.25)
+        } else if isAttending {
+            return Color.red.opacity(0.25)
+        } else if hasPendingRequest {
+            return Color.blue.opacity(0.25)
+        } else {
+            return Color.green.opacity(0.25)
+        }
     }
     
     private var groupChatButton: some View {
@@ -1901,6 +1991,9 @@ extension EventDetailView {
                         if action == "request_sent" {
                             // Show success message
                             self.showAlert(title: "Request Sent", message: message)
+                            
+                            // Set pending request state
+                            self.hasPendingRequest = true
                             
                             // Update UI to show request sent state
                             self.attendanceStateChanged = UUID()
