@@ -291,19 +291,29 @@ struct EventCreationView: View {
             VStack(spacing: 16) {
                 // Date
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Date")
+                    Text("Event Date")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.black)
-
-                    DatePicker("Select Date", selection: $eventDate, displayedComponents: [.date])
-                        .datePickerStyle(.graphical)
-                        .accentColor(.brandPrimary)
-                        .environment(\.colorScheme, .light)
-                        .frame(maxHeight: 400)
-                        .clipped()
+                    
+                    HStack {
+                        Image(systemName: "calendar")
+                            .foregroundColor(.brandPrimary)
+                        
+                        DatePicker("Select Date", selection: $eventDate, displayedComponents: [.date])
+                            .labelsHidden()
+                            .accentColor(.brandPrimary)
+                            .environment(\.colorScheme, .light)
+                        
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(Color.white)
+                    .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                 }
-                .background(Color.white)
-                .cornerRadius(12)
                 
                 // Full Day Toggle
                 Toggle(isOn: $isFullDay) {
