@@ -293,18 +293,12 @@ struct EventCreationView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Date")
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(.textPrimary)
+                        .foregroundColor(.black)
 
                     DatePicker("", selection: $eventDate, displayedComponents: [.date])
                         .datePickerStyle(.graphical)
-                        .tint(.brandPrimary)
-                        .labelsHidden()
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                        )
+                        .accentColor(.brandPrimary)
+                        .environment(\.colorScheme, .light)
                 }
                 
                 // Full Day Toggle
@@ -317,11 +311,11 @@ struct EventCreationView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Full Day Event")
                                 .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.textPrimary)
+                                .foregroundColor(.black)
                             
                             Text("Event lasts all day")
                                 .font(.system(size: 12))
-                                .foregroundColor(.textSecondary)
+                                .foregroundColor(.black.opacity(0.6))
                         }
                     }
                 }
@@ -352,22 +346,24 @@ struct EventCreationView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Start Time")
                                 .font(.subheadline.weight(.medium))
-                                .foregroundColor(.textPrimary)
+                                .foregroundColor(.black)
                             
                             DatePicker("", selection: $eventDate, displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.compact)
-                                .tint(.brandPrimary)
+                                .accentColor(.brandPrimary)
+                                .environment(\.colorScheme, .light)
                                 .labelsHidden()
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
                             Text("End Time")
                                 .font(.subheadline.weight(.medium))
-                                .foregroundColor(.textPrimary)
+                                .foregroundColor(.black)
                             
                             DatePicker("", selection: $eventEndDate, displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.compact)
-                                .tint(.brandPrimary)
+                                .accentColor(.brandPrimary)
+                                .environment(\.colorScheme, .light)
                                 .labelsHidden()
                         }
                     }
@@ -379,7 +375,7 @@ struct EventCreationView: View {
                         .foregroundColor(.brandAccent)
                     Text(isFullDay ? "Full Day Event" : "Duration: \(formatDuration(from: eventDate, to: eventEndDate))")
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(.textPrimary)
+                        .foregroundColor(.black)
                     Spacer()
                 }
                 .padding(.top, 8)
