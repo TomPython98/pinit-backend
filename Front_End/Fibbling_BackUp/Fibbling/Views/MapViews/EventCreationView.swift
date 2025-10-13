@@ -295,11 +295,15 @@ struct EventCreationView: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.black)
 
-                    DatePicker("", selection: $eventDate, displayedComponents: [.date])
+                    DatePicker("Select Date", selection: $eventDate, displayedComponents: [.date])
                         .datePickerStyle(.graphical)
                         .accentColor(.brandPrimary)
                         .environment(\.colorScheme, .light)
+                        .frame(maxHeight: 400)
+                        .clipped()
                 }
+                .background(Color.white)
+                .cornerRadius(12)
                 
                 // Full Day Toggle
                 Toggle(isOn: $isFullDay) {
