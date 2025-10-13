@@ -117,13 +117,14 @@ struct EventCreationView: View {
             .navigationTitle("Create Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.bgCard, for: .navigationBar)
-            .toolbarColorScheme(.light, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                     .foregroundColor(.textPrimary)
+                }
             }
         }
         .sheet(isPresented: $showImagePicker) {
@@ -152,7 +153,6 @@ struct EventCreationView: View {
             // Cancel any ongoing search tasks
             searchTask?.cancel()
             searchTask = nil
-        }
         }
         .overlay {
             if isLoading {
@@ -298,7 +298,10 @@ struct EventCreationView: View {
                     DatePicker("", selection: $eventDate, displayedComponents: [.date])
                         .datePickerStyle(.graphical)
                         .tint(.brandPrimary)
+                        .colorScheme(.light)
+                        .background(Color.white)
                 }
+                .background(Color.white)
                 
                 // Full Day Toggle
                 Toggle(isOn: $isFullDay) {
@@ -350,6 +353,7 @@ struct EventCreationView: View {
                             DatePicker("", selection: $eventDate, displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.compact)
                                 .tint(.brandPrimary)
+                                .colorScheme(.light)
                                 .labelsHidden()
                         }
                         
@@ -361,6 +365,7 @@ struct EventCreationView: View {
                             DatePicker("", selection: $eventEndDate, displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.compact)
                                 .tint(.brandPrimary)
+                                .colorScheme(.light)
                                 .labelsHidden()
                         }
                     }

@@ -227,11 +227,13 @@ struct EventEditView: View {
                         DatePicker("Start Time", selection: $eventDate, displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.compact)
                             .tint(.brandPrimary)
+                            .colorScheme(.light)
                             .foregroundColor(Color.textPrimary)
                         
                         DatePicker("End Time", selection: $eventEndDate, displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.compact)
                             .tint(.brandPrimary)
+                            .colorScheme(.light)
                             .foregroundColor(Color.textPrimary)
                     }
                 }
