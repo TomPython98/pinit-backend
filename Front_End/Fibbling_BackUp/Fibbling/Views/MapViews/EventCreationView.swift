@@ -294,14 +294,18 @@ struct EventCreationView: View {
                     Text("Date")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
-                    
+
                     DatePicker("", selection: $eventDate, displayedComponents: [.date])
                         .datePickerStyle(.graphical)
                         .tint(.brandPrimary)
-                        .colorScheme(.light)
-                        .background(Color.white)
+                        .labelsHidden()
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        )
                 }
-                .background(Color.white)
                 
                 // Full Day Toggle
                 Toggle(isOn: $isFullDay) {
@@ -353,7 +357,6 @@ struct EventCreationView: View {
                             DatePicker("", selection: $eventDate, displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.compact)
                                 .tint(.brandPrimary)
-                                .colorScheme(.light)
                                 .labelsHidden()
                         }
                         
@@ -365,7 +368,6 @@ struct EventCreationView: View {
                             DatePicker("", selection: $eventEndDate, displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.compact)
                                 .tint(.brandPrimary)
-                                .colorScheme(.light)
                                 .labelsHidden()
                         }
                     }
