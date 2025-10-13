@@ -39,12 +39,17 @@ struct EventEditView: View {
     @State private var alertMessage = ""
     
     // Location editing states
-    @State private var locationSuggestions: [String] = []
+    @State private var locationSuggestions: [GooglePlacesService.LocationSuggestion] = []
     @State private var showLocationSuggestions = false
     @State private var isGeocoding = false
     @State private var isLocationSelected = true // Start as true since we have existing location
     @State private var searchTask: Task<Void, Never>? // For debouncing location search
     @State private var suppressLocationOnChange = false // prevent TextField onChange from clearing selection when set programmatically
+    @State private var selectedLocation: GooglePlacesService.LocationSuggestion?
+    @State private var isSearchingSuggestions = false
+    
+    // Google Places Service
+    private let googlePlacesService = GooglePlacesService.shared
     
     // MARK: - Init
     init(event: StudyEvent, studyEvents: Binding<[StudyEvent]>) {
@@ -398,19 +403,26 @@ struct EventEditView: View {
                                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                                 )
                                     .onChange(of: locationName) { oldValue, newValue in
-                                        // Reset location selected state when user types, unless programmatic
+                                        // Safety check for valid values
+                                        guard !oldValue.isEmpty, !newValue.isEmpty else { return }
+                                        
+                                        // If the change was triggered programmatically, do not reset selection
                                         if suppressLocationOnChange {
                                             suppressLocationOnChange = false
-                                        } else if !newValue.isEmpty && oldValue != newValue {
-                                            isLocationSelected = false
+                                            return
                                         }
+                                        
+                                        // User is typing - reset selection and show suggestions
+                                        if oldValue != newValue {
+                                            isLocationSelected = false
+                                            selectedLocation = nil
                                             
                                             // Cancel previous search task
                                             searchTask?.cancel()
                                             
-                                            // Only show suggestions, don't auto-geocode
-                                            if newValue.count > 2 {
-                                                // Debounce the search to avoid throttling
+                                            // Only show suggestions if query is long enough
+                                            if newValue.count >= 2 {
+                                                // Debounce the search
                                                 searchTask = Task {
                                                     try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                                                     
@@ -425,6 +437,7 @@ struct EventEditView: View {
                                                 showLocationSuggestions = false
                                             }
                                         }
+                                    }
                                         .onSubmit {
                                             // Geocode when user presses return
                                             if !locationName.isEmpty {
@@ -457,38 +470,41 @@ struct EventEditView: View {
                                     .padding(.top, 8)
                                 }
                                 
-                                // Enhanced Location Suggestions
-                                if showLocationSuggestions && !locationSuggestions.isEmpty {
-                                    VStack(spacing: 0) {
-                                        ForEach(Array(locationSuggestions.prefix(3).enumerated()), id: \.element) { index, suggestion in
-                                            LocationSuggestionRow(
-                                                suggestion: suggestion,
-                                                coordinate: nil, // EventEditView doesn't store coordinates yet
-                                                isSelected: false
-                                            )
-                                            .contentShape(Rectangle()) // Make entire area tappable
-                                            .onTapGesture {
-                                                // Force immediate state update
-                                                withAnimation(.easeInOut(duration: 0.2)) {
-                                                    suppressLocationOnChange = true
-                                                    locationName = suggestion
-                                                    showLocationSuggestions = false
-                                                    locationSuggestions = []
-                                                    isLocationSelected = true // Set immediately
-                                                    geocodeLocation(suggestion)
-                                                }
-                                            }
-                                            
-                                            if index < min(2, locationSuggestions.count - 1) {
-                                                Divider()
-                                                    .padding(.horizontal, 16)
+                                // Enhanced Location Suggestions with Photos & Ratings
+                                // Only show suggestions if no location is selected
+                                if showLocationSuggestions && !locationSuggestions.isEmpty && !isLocationSelected {
+                                    ScrollView {
+                                        VStack(spacing: 12) {
+                                            ForEach(locationSuggestions.prefix(5)) { suggestion in
+                                                EnhancedLocationSuggestionCard(
+                                                    suggestion: suggestion,
+                                                    onTap: {
+                                                        // Cancel search task and clear suggestions
+                                                        searchTask?.cancel()
+                                                        selectLocation(suggestion)
+                                                    }
+                                                )
                                             }
                                         }
+                                        .padding(.vertical, 8)
                                     }
-                                    .background(Color.bgCard)
-                                    .cornerRadius(12)
-                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                    .frame(maxHeight: 400)
                                     .padding(.top, 8)
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                                }
+                                
+                                // Selected Location Detail Card
+                                if isLocationSelected, let selected = selectedLocation {
+                                    SelectedLocationDetailCard(
+                                        suggestion: selected,
+                                        onDeselect: {
+                                            withAnimation {
+                                                isLocationSelected = false
+                                                selectedLocation = nil
+                                            }
+                                        }
+                                    )
+                                    .padding(.top, 12)
                                 }
                                 
                                 // Mini Map Preview for EventEditView
@@ -808,145 +824,84 @@ struct EventEditView: View {
     // MARK: - Location Functions
     
     private func searchLocationSuggestions(query: String) {
-        guard !query.isEmpty else { return }
+        // Safety checks
+        guard !query.isEmpty,
+              query.count >= 2,
+              query.count <= 100 else {
+            locationSuggestions = []
+            showLocationSuggestions = false
+            return
+        }
         
-        // Use Apple Maps (MKLocalSearch) which has excellent POI data
-        let searchRequest = MKLocalSearch.Request()
-        searchRequest.naturalLanguageQuery = query
+        isSearchingSuggestions = true
         
-        // Set region to search around the event's current location (50km radius)
-        let regionRadius: CLLocationDistance = 50000 // 50km
-        let region = MKCoordinateRegion(
-            center: selectedCoordinate,
-            latitudinalMeters: regionRadius,
-            longitudinalMeters: regionRadius
-        )
-        searchRequest.region = region
-        searchRequest.resultTypes = [.pointOfInterest, .address]
-        
-        let search = MKLocalSearch(request: searchRequest)
-        search.start { response, error in
-            DispatchQueue.main.async {
-                if let error = error {
+        // Use Google Places API for location search
+        Task {
+            do {
+                let results = try await googlePlacesService.searchLocations(query: query, near: selectedCoordinate)
+                
+                // Check if task was cancelled before updating UI
+                guard !Task.isCancelled else { return }
+                
+                await MainActor.run {
+                    guard !Task.isCancelled else { return }
+                    
+                    self.isSearchingSuggestions = false
+                    self.locationSuggestions = results
+                    self.showLocationSuggestions = !results.isEmpty
+                }
+            } catch {
+                // Check if task was cancelled before updating UI
+                guard !Task.isCancelled else { return }
+                
+                await MainActor.run {
+                    self.isSearchingSuggestions = false
                     self.locationSuggestions = []
                     self.showLocationSuggestions = false
-                    return
                 }
-                
-                guard let response = response else {
-                    self.locationSuggestions = []
-                    self.showLocationSuggestions = false
-                    return
-                }
-                
-                self.locationSuggestions = response.mapItems.prefix(8).compactMap { item in
-                    guard let name = item.name else { return nil }
-                    
-                    // Build display string
-                    var displayParts: [String] = [name]
-                    
-                    // Add address context
-                    var addressParts: [String] = []
-                    if let thoroughfare = item.placemark.thoroughfare {
-                        addressParts.append(thoroughfare)
-                    }
-                    if let locality = item.placemark.locality {
-                        addressParts.append(locality)
-                    }
-                    
-                    if !addressParts.isEmpty {
-                        displayParts.append(addressParts.joined(separator: ", "))
-                    }
-                    
-                    return displayParts.joined(separator: " - ")
-                }
-                
-                self.showLocationSuggestions = !self.locationSuggestions.isEmpty
             }
+        }
+    }
+    
+    private func selectLocation(_ suggestion: GooglePlacesService.LocationSuggestion) {
+        // Safety check
+        guard !suggestion.name.isEmpty else { return }
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            // Update location details
+            suppressLocationOnChange = true
+            locationName = suggestion.name
+            selectedCoordinate = suggestion.coordinate
+            selectedLocation = suggestion
+            
+            // CRITICAL: Set these in the right order
+            isLocationSelected = true  // First, mark as selected
+            showLocationSuggestions = false  // Then hide suggestions
+            locationSuggestions = []  // Clear the suggestions array
+            isSearchingSuggestions = false  // Stop any search state
         }
     }
     
     private func geocodeLocation(_ address: String) {
+        // Safety check
+        guard !address.isEmpty, address.count <= 200 else { return }
+        
+        // Set loading state
         isGeocoding = true
         
-        // Use Mapbox Geocoding for better POI and international location support
-        let accessToken = "pk.eyJ1IjoidG9tYmVzaSIsImEiOiJjbTdwNDdvbXAwY3I3MmtzYmZ3dzVtaGJrIn0.yiXVdzVGYjTucLPZPa0hjw"
-        let encodedQuery = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? address
-        
-        // Add proximity bias for better local results
-        let proximityParam = "\(selectedCoordinate.longitude),\(selectedCoordinate.latitude)"
-        let urlString = "https://api.mapbox.com/geocoding/v5/mapbox.places/\(encodedQuery).json?access_token=\(accessToken)&limit=1&types=poi,address,place,locality,neighborhood&proximity=\(proximityParam)"
-        
-        guard let url = URL(string: urlString) else {
-            DispatchQueue.main.async {
-                self.isGeocoding = false
-                self.fallbackGeocode(address)
-            }
-            return
-        }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            DispatchQueue.main.async {
-                self.isGeocoding = false
+        // Use Google Places API for geocoding
+        Task {
+            do {
+                let result = try await googlePlacesService.geocodeAddress(address)
                 
-                if let error = error {
-                    self.fallbackGeocode(address)
-                    return
+                await MainActor.run {
+                    self.isGeocoding = false
+                    self.selectLocation(result)
                 }
-                
-                guard let data = data else {
-                    self.fallbackGeocode(address)
-                    return
-                }
-                
-                do {
-                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let features = json["features"] as? [[String: Any]],
-                       let firstFeature = features.first,
-                       let geometry = firstFeature["geometry"] as? [String: Any],
-                       let coordinates = geometry["coordinates"] as? [Double],
-                       coordinates.count >= 2 {
-                        
-                        // Mapbox returns [longitude, latitude]
-                        let longitude = coordinates[0]
-                        let latitude = coordinates[1]
-                        
-                        self.selectedCoordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-                        self.isLocationSelected = true
-                        self.showLocationSuggestions = false
-                        self.locationSuggestions = []
-                        
-                        // Optionally update the location name with the full place name
-                        if let placeName = firstFeature["place_name"] as? String {
-                            // Prevent TextField onChange from clearing selection for programmatic update
-                            self.suppressLocationOnChange = true
-                            self.locationName = placeName
-                        }
-                    } else {
-                        self.fallbackGeocode(address)
-                    }
-                } catch {
-                    self.fallbackGeocode(address)
-                }
-            }
-        }.resume()
-    }
-    
-    // Fallback to Apple's geocoder if Mapbox fails
-    private func fallbackGeocode(_ address: String) {
-        let geocoder = CLGeocoder()
-        geocoder.geocodeAddressString(address) { placemarks, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    return
-                }
-                
-                if let placemark = placemarks?.first,
-                   let location = placemark.location {
-                    self.selectedCoordinate = location.coordinate
-                    self.isLocationSelected = true
-                    self.showLocationSuggestions = false
-                    self.locationSuggestions = []
+            } catch {
+                await MainActor.run {
+                    self.isGeocoding = false
+                    // Keep current coordinate as fallback
                 }
             }
         }
