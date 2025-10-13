@@ -1141,11 +1141,26 @@ struct EventCreationView: View {
     }
     
     private func formatDuration(from startDate: Date, to endDate: Date) -> String {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: startDate, to: endDate)
-        let hours = components.hour ?? 0
-        let minutes = components.minute ?? 0
+        // Ensure non-negative duration and handle overnight (end before start => next day)
+        var adjustedEnd = endDate
+        if adjustedEnd < startDate {
+            // Assume the end time is on the next day
+            adjustedEnd = Calendar.current.date(byAdding: .day, value: 1, to: adjustedEnd) ?? adjustedEnd.addingTimeInterval(24 * 60 * 60)
+        }
         
-        if hours > 0 {
+        let seconds = max(0, adjustedEnd.timeIntervalSince(startDate))
+        let totalMinutes = Int(seconds / 60)
+        let days = totalMinutes / (24 * 60)
+        let hours = (totalMinutes % (24 * 60)) / 60
+        let minutes = totalMinutes % 60
+        
+        if days > 0 {
+            if hours > 0 || minutes > 0 {
+                return "\(days)d \(hours)h \(minutes)m"
+            } else {
+                return "\(days)d"
+            }
+        } else if hours > 0 {
             return "\(hours)h \(minutes)m"
         } else {
             return "\(minutes)m"
