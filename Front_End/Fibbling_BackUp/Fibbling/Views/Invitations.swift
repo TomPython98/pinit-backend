@@ -161,7 +161,6 @@ struct InvitationsView: View {
     @State private var hostJoinRequests: [HostJoinRequest] = []
     @State private var hostedEvents: [StudyEvent] = []
     @State private var selectedEventForDetail: StudyEvent? = nil
-    @State private var showEventDetail = false
     @State private var isLoading = false
     @State private var showAlert = false
     @State private var alertMessage = ""
@@ -317,17 +316,15 @@ struct InvitationsView: View {
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Invitation Update"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
-            .sheet(isPresented: $showEventDetail) {
-                if let event = selectedEventForDetail {
-                    EventDetailView(
-                        event: event,
-                        studyEvents: .constant([event]),
-                        onRSVP: { _ in
-                            // Refresh hosted events when RSVP changes
-                            fetchHostedEvents()
-                        }
-                    )
-                }
+            .sheet(item: $selectedEventForDetail) { event in
+                EventDetailView(
+                    event: event,
+                    studyEvents: .constant([event]),
+                    onRSVP: { _ in
+                        // Refresh hosted events when RSVP changes
+                        fetchHostedEvents()
+                    }
+                )
             }
         }
     }
@@ -794,7 +791,6 @@ struct InvitationsView: View {
     
     private func navigateToEvent(_ event: StudyEvent) {
         selectedEventForDetail = event
-        showEventDetail = true
     }
     
     private func inviteMatches(for event: StudyEvent) {
