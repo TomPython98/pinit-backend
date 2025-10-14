@@ -346,6 +346,20 @@ struct EventCreationView: View {
                             .labelsHidden()
                             .accentColor(.brandPrimary)
                             .environment(\.colorScheme, .light)
+                            .onChange(of: eventDate) { oldValue, newValue in
+                                print("🔍 [EventCreation] Date Changed:")
+                                print("   📅 Old Date: \(oldValue)")
+                                print("   📅 New Date: \(newValue)")
+                                print("   📅 End Date: \(eventEndDate)")
+                                print("   ⏰ Valid (start < end): \(newValue < eventEndDate)")
+                                
+                                // If the new date is after the end date, adjust end date
+                                if newValue >= eventEndDate {
+                                    let newEndDate = newValue.addingTimeInterval(3600) // Add 1 hour
+                                    print("   🔧 Adjusting end date to: \(newEndDate)")
+                                    eventEndDate = newEndDate
+                                }
+                            }
                         
                         Spacer()
                     }
@@ -410,6 +424,20 @@ struct EventCreationView: View {
                                 .accentColor(.brandPrimary)
                                 .environment(\.colorScheme, .light)
                                 .labelsHidden()
+                                .onChange(of: eventDate) { oldValue, newValue in
+                                    print("🔍 [EventCreation] Start Time Changed:")
+                                    print("   ⏰ Old Start: \(oldValue)")
+                                    print("   ⏰ New Start: \(newValue)")
+                                    print("   ⏰ End Time: \(eventEndDate)")
+                                    print("   ⏰ Valid (start < end): \(newValue < eventEndDate)")
+                                    
+                                    // If the new start time is after the end time, adjust end time
+                                    if newValue >= eventEndDate {
+                                        let newEndDate = newValue.addingTimeInterval(1800) // Add 30 minutes
+                                        print("   🔧 Adjusting end time to: \(newEndDate)")
+                                        eventEndDate = newEndDate
+                                    }
+                                }
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
@@ -422,6 +450,20 @@ struct EventCreationView: View {
                                 .accentColor(.brandPrimary)
                                 .environment(\.colorScheme, .light)
                                 .labelsHidden()
+                                .onChange(of: eventEndDate) { oldValue, newValue in
+                                    print("🔍 [EventCreation] End Time Changed:")
+                                    print("   ⏰ Start Time: \(eventDate)")
+                                    print("   ⏰ Old End: \(oldValue)")
+                                    print("   ⏰ New End: \(newValue)")
+                                    print("   ⏰ Valid (start < end): \(eventDate < newValue)")
+                                    
+                                    // If the new end time is before the start time, adjust start time
+                                    if newValue <= eventDate {
+                                        let newStartDate = newValue.addingTimeInterval(-1800) // Subtract 30 minutes
+                                        print("   🔧 Adjusting start time to: \(newStartDate)")
+                                        eventDate = newStartDate
+                                    }
+                                }
                         }
                     }
                 }
@@ -1026,11 +1068,22 @@ struct EventCreationView: View {
     }
     
     private var isFormValid: Bool {
-        !eventTitle.isEmpty &&
-        !eventDescription.isEmpty &&
-        !locationName.isEmpty &&
-        eventDate < eventEndDate
-        // Removed the auto-matching tags requirement to make it easier
+        let titleValid = !eventTitle.isEmpty
+        let descriptionValid = !eventDescription.isEmpty
+        let locationValid = !locationName.isEmpty
+        let dateValid = eventDate < eventEndDate
+        
+        // 🔍 DEBUG: Print detailed validation info
+        print("🔍 [EventCreation] Form Validation Debug:")
+        print("   📝 Title: '\(eventTitle)' - Valid: \(titleValid)")
+        print("   📄 Description: '\(eventDescription)' - Valid: \(descriptionValid)")
+        print("   📍 Location: '\(locationName)' - Valid: \(locationValid)")
+        print("   📅 Start Date: \(eventDate)")
+        print("   📅 End Date: \(eventEndDate)")
+        print("   ⏰ Date Valid (start < end): \(dateValid)")
+        print("   ✅ Overall Valid: \(titleValid && descriptionValid && locationValid && dateValid)")
+        
+        return titleValid && descriptionValid && locationValid && dateValid
     }
     
     private var popularTags: [String] {
@@ -1247,6 +1300,14 @@ struct EventCreationView: View {
     // MARK: - Event Creation
     private func createEvent() {
         print("🚀 [EventCreation] createEvent called - type: \(selectedEventType.rawValue)")
+        print("🔍 [EventCreation] Current Form State:")
+        print("   📝 Title: '\(eventTitle)'")
+        print("   📄 Description: '\(eventDescription)'")
+        print("   📍 Location: '\(locationName)'")
+        print("   📅 Start Date: \(eventDate)")
+        print("   📅 End Date: \(eventEndDate)")
+        print("   ⏰ Date Valid (start < end): \(eventDate < eventEndDate)")
+        print("   ✅ Form Valid: \(isFormValid)")
         
         // Client-side validation: prevent private events without invitees or auto-matching
         if !isPublic && selectedFriends.isEmpty && !enableAutoMatching {
