@@ -19,6 +19,8 @@ DEBUG = False
 ALLOWED_HOSTS = [
     'pinit-backend-production.up.railway.app',
     'healthcheck.railway.app',
+    'pinitsocial.com',
+    'www.pinitsocial.com',
     'localhost',
     '127.0.0.1',
 ]
@@ -27,6 +29,8 @@ ALLOWED_HOSTS = [
 CSRF_TRUSTED_ORIGINS = [
     'https://pinit-backend-production.up.railway.app',
     'https://healthcheck.railway.app',
+    'https://pinitsocial.com',
+    'https://www.pinitsocial.com',
 ]
 
 INSTALLED_APPS = [
@@ -187,6 +191,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://10.0.0.30",
     "http://localhost:3000",
     "https://pinit-backend-production.up.railway.app",
+    "https://pinitsocial.com",
+    "https://www.pinitsocial.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
