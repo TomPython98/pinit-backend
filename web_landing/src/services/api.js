@@ -75,6 +75,23 @@ export const eventAPI = {
     const response = await api.post('/api/create_study_event/', eventData)
     return response.data
   },
+  
+  rsvpEvent: async (eventId) => {
+    const response = await api.post('/api/rsvp_study_event/', { event_id: eventId })
+    return response.data
+  },
+}
+
+export const invitationAPI = {
+  getInvitations: async (username) => {
+    const response = await api.get(`/api/get_invitations/${username}/`)
+    return response.data
+  },
+  
+  declineInvitation: async (invitationData) => {
+    const response = await api.post('/api/decline_invitation/', invitationData)
+    return response.data
+  },
 }
 
 export default api
