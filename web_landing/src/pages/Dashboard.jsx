@@ -60,7 +60,7 @@ const Dashboard = ({ user, onLogout }) => {
       await eventAPI.rsvpEvent(eventId)
       loadData()
       setSelectedEvent(null)
-      alert('✅ You\'re in! Event added to your calendar.\n\n📱 Download the app for real-time updates and chat with other attendees!')
+      alert('🎉 You\'re going!\n\nNow download the app to:\n• See exact meeting location on map\n• Chat with everyone attending\n• Get reminded before it starts\n\nDon\'t be that person who shows up to the wrong place.')
     } catch (error) {
       console.error('Error accepting invitation:', error)
       alert('Failed to accept invitation. Please try again.')
@@ -84,7 +84,7 @@ const Dashboard = ({ user, onLogout }) => {
       await eventAPI.rsvpEvent(eventId)
       loadData()
       setSelectedEvent(null)
-      alert('🎉 You\'re going!\n\n📱 Download the app to:\n• Chat with attendees\n• Get real-time updates\n• See event location on map')
+      alert('✅ See you there!\n\nQuick tip: Download the app so you can:\n• See who else is going (maybe someone from your classes?)\n• Get the exact pin location\n• Chat in the group\n• Know if plans change\n\nThis web version is cool, but you\'re missing out on the good stuff.')
     } catch (error) {
       console.error('Error RSVPing:', error)
       alert(error.response?.data?.error || 'Failed to RSVP. Please try again.')
@@ -128,10 +128,10 @@ const Dashboard = ({ user, onLogout }) => {
           {/* Welcome Section */}
           <section className="welcome-section">
             <h1 className="welcome-title">
-              Welcome back, <span className="gradient-text">{user.username}</span>!
+              Hey <span className="gradient-text">{user.username}</span>, what's happening tonight?
             </h1>
             <p className="welcome-subtitle">
-              Ready to discover new events and connect with amazing people?
+              Browse events, accept invitations, or download the app to create your own meetups
             </p>
           </section>
 
@@ -194,16 +194,16 @@ const Dashboard = ({ user, onLogout }) => {
             <>
               <section className="discover-header">
                 <div className="discover-title-section">
-                  <h2 className="section-title">Discover Events Near You</h2>
+                  <h2 className="section-title">What's Happening Right Now</h2>
                   <p className="discover-subtitle">
-                    See what's happening in your community. Join public events or download the app to create your own!
+                    Live events near you. Tap to join. Want to host? Download the app.
                   </p>
                 </div>
                 <button 
                   className="btn btn-primary"
-                  onClick={() => alert('📱 Download the app to create events!\n\n• Set location on map\n• Invite friends\n• Chat with attendees\n• Get real-time updates')}
+                  onClick={() => alert('📱 Want to organize something?\n\nDownload the app to:\n• Drop a pin on the map\n• Set your vibe (study, party, cultural)\n• Invite people instantly\n• Chat with your group\n\nBe the one who makes plans, not the one waiting for them.')}
                 >
-                  ➕ Create Event (Download App)
+                  ➕ Host an Event (Download App)
                 </button>
               </section>
               
@@ -243,11 +243,11 @@ const Dashboard = ({ user, onLogout }) => {
                   </div>
                 ) : (
                   <div className="empty-state">
-                    <div className="empty-icon">🔍</div>
-                    <h2>No Public Events Yet</h2>
-                    <p>Be the first! Download the app to create events.</p>
-                    <button className="btn btn-primary">
-                      📱 Download PinIt
+                    <div className="empty-icon">🤔</div>
+                    <h2>Nothing happening yet?</h2>
+                    <p>Be the one who starts something. Download the app and create the first event on your campus.</p>
+                    <button className="btn btn-primary" onClick={() => alert('📱 Download PinIt\n\nDon\'t wait for someone else to organize. Take 30 seconds to create a study group, coffee meetup, or party.\n\nYour future friends are waiting for someone to make the first move.')}>
+                      📱 I'll Start Something
                     </button>
                   </div>
                 )}
@@ -299,9 +299,9 @@ const Dashboard = ({ user, onLogout }) => {
                 </div>
               ) : (
                 <div className="empty-state">
-                  <div className="empty-icon">📭</div>
-                  <h2>No Invitations</h2>
-                  <p>You don't have any pending event invitations.</p>
+                  <div className="empty-icon">👀</div>
+                  <h2>No invitations yet</h2>
+                  <p>Check the Discover tab to find events happening now. Or download the app to get invited to private meetups.</p>
                 </div>
               )}
             </section>
@@ -334,9 +334,9 @@ const Dashboard = ({ user, onLogout }) => {
                 </div>
               ) : (
                 <div className="empty-state">
-                  <div className="empty-icon">📭</div>
-                  <h2>No Events Yet</h2>
-                  <p>You haven't created or joined any events yet.</p>
+                  <div className="empty-icon">🎯</div>
+                  <h2>Your calendar is empty</h2>
+                  <p>Go to Discover to find something happening tonight. Or download the app to organize your own.</p>
                 </div>
               )}
             </section>
@@ -407,7 +407,7 @@ const Dashboard = ({ user, onLogout }) => {
                 ✅ RSVP - I'm Going!
               </button>
               <p className="app-reminder">
-                📱 <strong>Get the full experience:</strong> Download the app to chat with attendees, get notifications, and see events on a map!
+                📱 <strong>Want the real thing?</strong> Download the app to see exact locations on the map, chat with everyone going, and get notified when plans change. This is just the preview.
               </p>
             </div>
           </div>

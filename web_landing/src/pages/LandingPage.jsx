@@ -44,12 +44,13 @@ const LandingPage = ({ onLogin }) => {
         <div className="container">
           <div className="hero-content fade-in">
             <h1 className="hero-title">
-              Connect, Meet, and Make
-              <span className="gradient-text"> Memories</span>
+              New in Town?
+              <span className="gradient-text"> Meet People Tonight.</span>
             </h1>
             <p className="hero-description">
-              Join PinIt to discover and create amazing events near you. 
-              Connect with like-minded people and make every moment count.
+              The app for international students who are tired of sitting alone. 
+              See what's happening right now on your campus. Join study groups, 
+              parties, and cultural meetups in one tap.
             </p>
             <div className="hero-buttons">
               <button 
@@ -64,16 +65,16 @@ const LandingPage = ({ onLogin }) => {
             </div>
             <div className="hero-stats">
               <div className="stat">
-                <div className="stat-number">10K+</div>
-                <div className="stat-label">Active Users</div>
+                <div className="stat-number">3 sec</div>
+                <div className="stat-label">To find an event</div>
               </div>
               <div className="stat">
-                <div className="stat-number">50K+</div>
-                <div className="stat-label">Events Created</div>
+                <div className="stat-number">Live</div>
+                <div className="stat-label">See what's happening now</div>
               </div>
               <div className="stat">
-                <div className="stat-number">100+</div>
-                <div className="stat-label">Cities</div>
+                <div className="stat-number">Real</div>
+                <div className="stat-label">Verified student hosts</div>
               </div>
             </div>
           </div>
@@ -83,48 +84,48 @@ const LandingPage = ({ onLogin }) => {
       {/* Features Section */}
       <section className="features">
         <div className="container">
-          <h2 className="section-title">Why Choose PinIt?</h2>
+          <h2 className="section-title">Why International Students Love PinIt</h2>
           <div className="features-grid">
             <div className="feature-card">
               <div className="feature-icon">🗺️</div>
-              <h3 className="feature-title">Discover Events</h3>
+              <h3 className="feature-title">See What's Happening NOW</h3>
               <p className="feature-description">
-                Find interesting events happening around you on an interactive map
+                Open the map. See live events near you. Join in seconds. No endless scrolling through dead group chats.
               </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">👥</div>
-              <h3 className="feature-title">Connect with People</h3>
+              <div className="feature-icon">🎓</div>
+              <h3 className="feature-title">Study Together, Not Alone</h3>
               <p className="feature-description">
-                Meet new friends who share your interests and passions
-              </p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">📅</div>
-              <h3 className="feature-title">Create Events</h3>
-              <p className="feature-description">
-                Organize your own events and invite others to join
-              </p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">⭐</div>
-              <h3 className="feature-title">Build Reputation</h3>
-              <p className="feature-description">
-                Gain trust and reputation through positive interactions
-              </p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">🔔</div>
-              <h3 className="feature-title">Stay Updated</h3>
-              <p className="feature-description">
-                Get notified about events and friend requests
+                Find study groups for your courses. Library at 10PM? You're not the only one cramming.
               </p>
             </div>
             <div className="feature-card">
               <div className="feature-icon">🌍</div>
-              <h3 className="feature-title">Global Community</h3>
+              <h3 className="feature-title">Meet Other Internationals</h3>
               <p className="feature-description">
-                Connect with people from around the world
+                Connect with students who get it. Language exchanges, cultural nights, or just grabbing coffee with someone who understands.
+              </p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon">🎉</div>
+              <h3 className="feature-title">Don't Miss Out Anymore</h3>
+              <p className="feature-description">
+                That party everyone's talking about? You'll actually know about it before it happens.
+              </p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon">✅</div>
+              <h3 className="feature-title">Safe & Verified</h3>
+              <p className="feature-description">
+                Hosts are verified students. See ratings. Know who you're meeting. Your safety matters.
+              </p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon">⚡</div>
+              <h3 className="feature-title">One Tap to Join</h3>
+              <p className="feature-description">
+                See event. Tap RSVP. Done. No group chat politics. No wondering if you're actually invited. Just go.
               </p>
             </div>
           </div>
@@ -135,15 +136,15 @@ const LandingPage = ({ onLogin }) => {
       <section className="cta">
         <div className="container">
           <div className="cta-content">
-            <h2 className="cta-title">Ready to Get Started?</h2>
+            <h2 className="cta-title">Stop Scrolling. Start Living.</h2>
             <p className="cta-description">
-              Join thousands of users already making connections on PinIt
+              You didn't move abroad to sit in your dorm room. There's stuff happening right now near you.
             </p>
             <button 
               className="btn btn-large btn-primary"
               onClick={() => handleAuthClick('signup')}
             >
-              Create Your Account
+              Show Me What's Happening Tonight
             </button>
           </div>
         </div>
