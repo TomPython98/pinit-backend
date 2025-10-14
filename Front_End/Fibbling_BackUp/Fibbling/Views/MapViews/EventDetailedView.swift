@@ -2489,50 +2489,46 @@ struct EventSocialFeedView: View {
         accountManager.addAuthHeader(to: &request)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
-            // Decode off the main thread to avoid UI hangs
-            Task {
+            DispatchQueue.main.async {
                 if let error = error {
-                    await MainActor.run { self.errorMessage = "Network error: \(error.localizedDescription)" }
+                    self.errorMessage = "Network error: \(error.localizedDescription)"
                     return
                 }
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    await MainActor.run { self.errorMessage = "Invalid response" }
+                    self.errorMessage = "Invalid response"
                     return
                 }
                 
                 // Handle 403 Forbidden specifically - indicates user doesn't have access
                 if httpResponse.statusCode == 403 {
                     // Remember that this event gave a 403 to prevent future requests
-                    await MainActor.run {
-                        UserDefaults.standard.set(self.event.id.uuidString, forKey: "lastForbiddenEventId")
-                        self.errorMessage = "You don't have access to this event's social feed."
-                    }
+                    UserDefaults.standard.set(self.event.id.uuidString, forKey: "lastForbiddenEventId")
+                    self.errorMessage = "You don't have access to this event's social feed."
                     return
                 }
                 
                 guard (200...299).contains(httpResponse.statusCode) else {
-                    await MainActor.run { self.errorMessage = "Server error: \(httpResponse.statusCode)" }
+                    self.errorMessage = "Server error: \(httpResponse.statusCode)"
                     return
                 }
                 
                 guard let data = data else {
-                    await MainActor.run { self.errorMessage = "No data received" }
+                    self.errorMessage = "No data received"
                     return
                 }
                 
                 do {
                     let decoded = try JSONDecoder().decode(EventInteractions.self, from: data)
-                    await MainActor.run {
-                        self.interactions = decoded
-                        // Merge any locally cached like states to avoid resetting to 0
-                        self.mergeLikesWithCache()
-                    }
+                    self.interactions = decoded
+                    // Merge any locally cached like states to avoid resetting to 0
+                    self.mergeLikesWithCache()
                 } catch {
-                    await MainActor.run { self.errorMessage = "Failed to decode data: \(error.localizedDescription)" }
+                    self.errorMessage = "Failed to decode data: \(error.localizedDescription)"
                     
                     // Print the received data for debugging
-                    _ = String(data: data, encoding: .utf8)
+                    if let dataString = String(data: data, encoding: .utf8) {
+                    }
                 }
             }
         }.resume()
@@ -4505,41 +4501,34 @@ struct UserProfileView: View {
         accountManager.addAuthHeader(to: &request)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
-            Task {
-                await MainActor.run { isLoading = false }
+            DispatchQueue.main.async {
+                isLoading = false
                 
                 if let error = error {
-                    await MainActor.run {
-                        self.alertMessage = "Failed to load profile: \(error.localizedDescription)"
-                        self.showAlert = true
-                    }
+                    self.alertMessage = "Failed to load profile: \(error.localizedDescription)"
+                    self.showAlert = true
                     return
                 }
                 
                 guard let data = data else {
-                    await MainActor.run {
-                        errorMessage = "No data received"
-                        showError = true
-                    }
+                    errorMessage = "No data received"
+                    showError = true
                     return
                 }
                 
-                // Decode off main thread to prevent hang
-                if let profile = try? JSONDecoder().decode(UserProfile.self, from: data) {
-                    await MainActor.run {
-                        self.userProfile = profile
-                        
-                        // Fetch additional data in parallel
-                        self.fetchReputationData()
-                        self.fetchFriendsData()
-                        self.fetchRecentEvents()
-                        self.fetchUserRatings()
-                    }
-                } else {
-                    await MainActor.run {
-                        self.alertMessage = "Failed to parse profile data"
-                        self.showAlert = true
-                    }
+                do {
+                    // First, let's see what the actual response looks like
+                    let profile = try JSONDecoder().decode(UserProfile.self, from: data)
+                    self.userProfile = profile
+                    
+                    // Fetch additional data in parallel
+                    self.fetchReputationData()
+                    self.fetchFriendsData()
+                    self.fetchRecentEvents()
+                    self.fetchUserRatings()
+                } catch {
+                    self.alertMessage = "Failed to parse profile data: \(error.localizedDescription)"
+                    self.showAlert = true
                 }
             }
         }.resume()
@@ -4554,12 +4543,15 @@ struct UserProfileView: View {
         accountManager.addAuthHeader(to: &request)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
-            Task {
-                guard let data = data else { return }
-                if let reputation = try? JSONDecoder().decode(ReputationData.self, from: data) {
-                    await MainActor.run { self.reputationData = reputation }
+            DispatchQueue.main.async(execute: {
+                if let data = data {
+                    do {
+                        let reputation = try JSONDecoder().decode(ReputationData.self, from: data)
+                        self.reputationData = reputation
+                    } catch {
+                    }
                 }
-            }
+            })
         }.resume()
     }
     
@@ -4571,10 +4563,13 @@ struct UserProfileView: View {
         accountManager.addAuthHeader(to: &request)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
-            Task {
-                guard let data = data else { return }
-                if let friends = try? JSONDecoder().decode(FriendsData.self, from: data) {
-                    await MainActor.run { self.friendsData = friends }
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        let friends = try JSONDecoder().decode(FriendsData.self, from: data)
+                        self.friendsData = friends
+                    } catch {
+                    }
                 }
             }
         }.resume()
@@ -4588,11 +4583,20 @@ struct UserProfileView: View {
         accountManager.addAuthHeader(to: &request)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
-            Task {
-                if let _ = error { return }
-                guard let data = data else { return }
-                if let response = try? JSONDecoder().decode(UserRatingsResponse.self, from: data) {
-                    await MainActor.run { self.userRatings = response.ratingsReceived }
+            DispatchQueue.main.async {
+                if let error = error {
+                    return
+                }
+                
+                if let data = data {
+                    do {
+                        // Decode the response structure
+                        let response = try JSONDecoder().decode(UserRatingsResponse.self, from: data)
+                        // Use ratings_received for the profile view
+                        self.userRatings = response.ratingsReceived
+                    } catch {
+                        // Error decoding ratings
+                    }
                 }
             }
         }.resume()
@@ -4606,17 +4610,33 @@ struct UserProfileView: View {
         accountManager.addAuthHeader(to: &request)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
-            Task {
-                guard let data = data else { return }
-                if let response = try? JSONDecoder().decode(EventsResponse.self, from: data) {
-                    // Filter events where the user actually participated (hosted, attended, or was invited)
-                    let userEvents = response.events.filter { event in
-                        if event.host == self.username { return true }
-                        if event.attendees.contains(self.username) { return true }
-                        if event.invitedFriends.contains(self.username) { return true }
-                        return false
+            DispatchQueue.main.async {
+                if let data = data {
+                    do {
+                        // The API returns {"events": [...]}
+                        let response = try JSONDecoder().decode(EventsResponse.self, from: data)
+                        
+                        // Filter events where the user actually participated (hosted, attended, or was invited)
+                        let userEvents = response.events.filter { event in
+                            // Check if user is the host
+                            if event.host == self.username {
+                                return true
+                            }
+                            // Check if user is in attendees list
+                            if event.attendees.contains(self.username) {
+                                return true
+                            }
+                            // Check if user was invited
+                            if event.invitedFriends.contains(self.username) {
+                                return true
+                            }
+                            return false
+                        }
+                        
+                        // Take only the first 3 events for recent activity
+                        self.recentEventsData = Array(userEvents.prefix(3))
+                    } catch {
                     }
-                    await MainActor.run { self.recentEventsData = Array(userEvents.prefix(3)) }
                 }
             }
         }.resume()

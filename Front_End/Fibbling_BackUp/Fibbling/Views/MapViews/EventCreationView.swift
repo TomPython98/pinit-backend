@@ -5,6 +5,18 @@ import CoreLocation
 import MapboxMaps
 import Combine
 
+// MARK: - Performance Debugging
+private struct PerformanceTracker {
+    static func measure(_ operation: String, _ block: () -> Void) {
+        let start = CFAbsoluteTimeGetCurrent()
+        block()
+        let duration = CFAbsoluteTimeGetCurrent() - start
+        if duration > 0.05 {
+            print("⚠️ SLOW [\(operation)]: \(String(format: "%.3f", duration))s")
+        }
+    }
+}
+
 // MARK: - Redesigned EventCreationView
 struct EventCreationView: View {
     @EnvironmentObject var accountManager: UserAccountManager
@@ -62,11 +74,16 @@ struct EventCreationView: View {
     }
     
     var body: some View {
+        let _ = print("🔄 [EventCreation] Body re-evaluated - selectedEventType: \(selectedEventType.rawValue)")
+        let _ = print("   📊 State: isLoading=\(isLoading), showLocationSuggestions=\(showLocationSuggestions), isGeocoding=\(isGeocoding), isSearchingSuggestions=\(isSearchingSuggestions), showSuccessAnimation=\(showSuccessAnimation)")
+        let _ = print("   📍 Location: isLocationSelected=\(isLocationSelected), locationName='\(locationName.prefix(20))...'")
+        
         NavigationStack {
         ZStack {
                 // Professional background
             Color.bgSurface
                 .ignoresSafeArea()
+                .allowsHitTesting(false) // Don't block touches
             
                 // Subtle gradient
             LinearGradient(
@@ -75,34 +92,29 @@ struct EventCreationView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+            .allowsHitTesting(false) // Don't block touches
             
                 ScrollView {
-                    VStack(spacing: 24) {
+                    LazyVStack(spacing: 24) {
                         // Header with progress
                         headerSection
-                            .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                         
                         // Main content in cards
                         VStack(spacing: 20) {
                             // Essential Info Card
                             essentialInfoCard
-                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                             
                             // Date & Time Card
                             dateTimeCard
-                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                             
                             // Location Card
                             locationCard
-                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                             
                             // Event Settings Card
                             settingsCard
-                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                             
                             // Optional Features Card
                             optionalFeaturesCard
-                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                         }
                         .padding(.horizontal, 20)
                         
@@ -113,6 +125,7 @@ struct EventCreationView: View {
                             .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.95)), removal: .opacity))
                     }
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.white, for: .navigationBar)
@@ -145,11 +158,6 @@ struct EventCreationView: View {
                     dismissButton: .default(Text("OK"))
                 )
             }
-            .animation(.easeInOut(duration: 0.3), value: showLocationSuggestions)
-            .animation(.easeInOut(duration: 0.3), value: isGeocoding)
-            .animation(.easeInOut(duration: 0.3), value: isSearchingSuggestions)
-            .animation(.easeInOut(duration: 0.3), value: showSuccessAnimation)
-            .animation(.easeInOut(duration: 0.3), value: isLoading)
             .onTapGesture {
                 hideKeyboard()
             }
@@ -161,6 +169,8 @@ struct EventCreationView: View {
         .overlay {
             if isLoading {
                 loadingOverlay
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.2), value: isLoading)
             }
         }
     }
@@ -198,7 +208,6 @@ struct EventCreationView: View {
                     Circle()
                         .fill(completionProgress >= Double(index) ? Color.brandPrimary : Color.bgSecondary)
                         .frame(width: 8, height: 8)
-                        .animation(.easeInOut(duration: 0.3), value: completionProgress)
                 }
             
             Spacer()
@@ -242,19 +251,49 @@ struct EventCreationView: View {
                     )
                 }
                 
-                // Event Type
+                // Event Type - NEW STABLE IMPLEMENTATION
                 VStack(alignment: .leading, spacing: 8) {
-                            Text("Event Type")
+                    Text("Event Type")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
                     
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(EventType.allCases, id: \.self) { type in
-                                eventTypeButton(type)
+                    // Use Menu for stable selection
+                    Menu {
+                        ForEach(EventType.allCases, id: \.self) { type in
+                            Button(action: {
+                                print("🎯 [EventCreation] Menu selected: \(type.rawValue)")
+                                selectedEventType = type
+                            }) {
+                                HStack {
+                                    Image(systemName: eventTypeIcon(type))
+                                        .foregroundColor(eventTypeColor(type))
+                                    Text(type.displayName)
+                                    if selectedEventType == type {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.brandPrimary)
+                                    }
+                                }
                             }
                         }
-                        .padding(.horizontal, 4)
+                    } label: {
+                        HStack {
+                            Image(systemName: eventTypeIcon(selectedEventType))
+                                .foregroundColor(eventTypeColor(selectedEventType))
+                            Text(selectedEventType.displayName)
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Image(systemName: "chevron.down")
+                                .foregroundColor(.textSecondary)
+                                .font(.caption)
+                        }
+                        .padding()
+                        .background(Color.bgCard)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.cardStroke, lineWidth: 1)
+                        )
                     }
                 }
                 
@@ -514,6 +553,7 @@ struct EventCreationView: View {
                                                 selectLocation(suggestion)
                                             }
                                         )
+                                        .transition(.opacity.combined(with: .move(edge: .top)))
                                     }
                                 }
                                 .padding(.vertical, 8)
@@ -521,6 +561,7 @@ struct EventCreationView: View {
                             .frame(maxHeight: 450)
                             .padding(.top, 8)
                             .transition(.opacity.combined(with: .move(edge: .top)))
+                            .animation(.easeInOut(duration: 0.2), value: showLocationSuggestions)
                         }
                         
                         // Selected Location Detail Card
@@ -883,8 +924,6 @@ struct EventCreationView: View {
         }
         .disabled(!isFormValid || isLoading)
         .opacity(isFormValid ? 1.0 : 0.6)
-        .animation(.easeInOut(duration: 0.3), value: isLoading)
-        .animation(.easeInOut(duration: 0.3), value: isFormValid)
     }
     
     // MARK: - Loading Overlay
@@ -914,7 +953,6 @@ struct EventCreationView: View {
                         .frame(width: 60, height: 60)
                         .rotationEffect(.degrees(-90))
                         .rotationEffect(.degrees(isLoading ? 360 : 0))
-                        .animation(.linear(duration: 1.0).repeatForever(autoreverses: false), value: isLoading)
                 }
                 
                 VStack(spacing: 8) {
@@ -953,32 +991,6 @@ struct EventCreationView: View {
             
             Spacer()
         }
-    }
-    
-    private func eventTypeButton(_ type: EventType) -> some View {
-        Button(action: { selectedEventType = type }) {
-            VStack(spacing: 4) {
-                Image(systemName: eventTypeIcon(type))
-                    .font(.system(size: 16))
-                    .foregroundColor(selectedEventType == type ? .white : eventTypeColor(type))
-                
-                Text(type.displayName)
-                    .font(.caption2.weight(.medium))
-                    .foregroundColor(selectedEventType == type ? .white : .textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .frame(width: 55, height: 50)
-                                                .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(selectedEventType == type ? eventTypeColor(type) : Color.bgSecondary)
-                                                )
-                                                .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(selectedEventType == type ? Color.clear : Color.bgSecondary, lineWidth: 1)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
     }
     
     private func tagView(_ tag: String) -> some View {
@@ -1052,28 +1064,43 @@ struct EventCreationView: View {
             return
         }
         
+        print("🔍 [EventCreation] searchLocationSuggestions called: '\(query)'")
+        
         // Cancel previous search task
         searchTask?.cancel()
         
         isSearchingSuggestions = true
         
         // Use Google Places API for location search
-        searchTask = Task {
+        searchTask = Task(priority: .userInitiated) {
+            let taskStart = CFAbsoluteTimeGetCurrent()
+            
             do {
                 let results = try await googlePlacesService.searchLocations(query: query, near: selectedCoordinate)
+                let duration = CFAbsoluteTimeGetCurrent() - taskStart
+                print("✅ [EventCreation] Location search completed in \(String(format: "%.3f", duration))s - \(results.count) results")
                 
                 // Multiple safety checks before updating UI
                 guard !Task.isCancelled,
-                      !results.isEmpty else { return }
+                      !results.isEmpty else {
+                    print("⚠️ [EventCreation] Search cancelled or empty")
+                    return
+                }
                 
                 await MainActor.run {
                     guard !Task.isCancelled else { return }
                     
+                    print("📍 [EventCreation] Updating UI with \(results.count) suggestions")
                     self.isSearchingSuggestions = false
-                    self.locationSuggestions = results
-                    self.showLocationSuggestions = true
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        self.locationSuggestions = results
+                        self.showLocationSuggestions = true
+                    }
                 }
             } catch {
+                let duration = CFAbsoluteTimeGetCurrent() - taskStart
+                print("❌ [EventCreation] Location search failed in \(String(format: "%.3f", duration))s: \(error)")
+                
                 // Check if task was cancelled before updating UI
                 guard !Task.isCancelled else { return }
                 
@@ -1090,29 +1117,33 @@ struct EventCreationView: View {
         // Safety check
         guard !suggestion.name.isEmpty else { return }
         
-        withAnimation(.easeInOut(duration: 0.3)) {
-            // Update location details
-            suppressLocationOnChange = true
-            locationName = suggestion.name
-            selectedCoordinate = suggestion.coordinate
-            selectedLocation = suggestion
-            
-            // CRITICAL: Set these in the right order
-            isLocationSelected = true  // First, mark as selected
-            showLocationSuggestions = false  // Then hide suggestions
-            locationSuggestions = []  // Clear the suggestions array
-            isSearchingSuggestions = false  // Stop any search state
-            
-            // Show success animation
-            showSuccessAnimation = true
-            
-            // Hide success animation after delay
-            Task {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                await MainActor.run {
-                    withAnimation {
-                        showSuccessAnimation = false
-                    }
+        print("🎯 [EventCreation] selectLocation called: \(suggestion.name)")
+        
+        PerformanceTracker.measure("Select Location") {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                // Update location details
+                suppressLocationOnChange = true
+                locationName = suggestion.name
+                selectedCoordinate = suggestion.coordinate
+                selectedLocation = suggestion
+                
+                // CRITICAL: Set these in the right order
+                isLocationSelected = true  // First, mark as selected
+                showLocationSuggestions = false  // Then hide suggestions
+                locationSuggestions = []  // Clear the suggestions array
+                isSearchingSuggestions = false  // Stop any search state
+                
+                // Show success animation
+                showSuccessAnimation = true
+            }
+        }
+        
+        // Hide success animation after delay (run outside of animation block)
+        Task {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showSuccessAnimation = false
                 }
             }
         }
@@ -1123,21 +1154,30 @@ struct EventCreationView: View {
         // Safety check
         guard !address.isEmpty, address.count <= 200 else { return }
         
+        print("🌍 [EventCreation] geocodeLocation called: \(address)")
+        
         // Set loading state
         isGeocoding = true
         
         // Use Google Places API for geocoding
-        Task {
+        Task(priority: .userInitiated) {
+            let taskStart = CFAbsoluteTimeGetCurrent()
+            
             do {
                 let result = try await googlePlacesService.geocodeAddress(address)
+                let duration = CFAbsoluteTimeGetCurrent() - taskStart
+                print("✅ [EventCreation] Geocoding completed in \(String(format: "%.3f", duration))s")
                 
                 await MainActor.run {
-                self.isGeocoding = false
+                    self.isGeocoding = false
                     self.selectLocation(result)
                 }
             } catch {
+                let duration = CFAbsoluteTimeGetCurrent() - taskStart
+                print("❌ [EventCreation] Geocoding failed in \(String(format: "%.3f", duration))s: \(error)")
+                
                 await MainActor.run {
-                self.isGeocoding = false
+                    self.isGeocoding = false
                     // Keep current coordinate as fallback
                 }
             }
@@ -1206,6 +1246,8 @@ struct EventCreationView: View {
     
     // MARK: - Event Creation
     private func createEvent() {
+        print("🚀 [EventCreation] createEvent called - type: \(selectedEventType.rawValue)")
+        
         // Client-side validation: prevent private events without invitees or auto-matching
         if !isPublic && selectedFriends.isEmpty && !enableAutoMatching {
             validationMessage = "Private events need either invited friends or auto-matching enabled."
@@ -1263,51 +1305,60 @@ struct EventCreationView: View {
         }
         
         // Make the API call
+        let requestStart = CFAbsoluteTimeGetCurrent()
         URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
-                self.isLoading = false
+            Task {
+                let networkDuration = CFAbsoluteTimeGetCurrent() - requestStart
+                print("🌐 [EventCreation] Network request completed in \(String(format: "%.3f", networkDuration))s")
+                
+                await MainActor.run { self.isLoading = false }
                 
                 if let error = error {
+                    print("❌ [EventCreation] Network error: \(error)")
                     return
                 }
                 
-                if let httpResponse = response as? HTTPURLResponse {
+                guard let httpResponse = response as? HTTPURLResponse else { return }
+                print("📡 [EventCreation] HTTP Status: \(httpResponse.statusCode)")
+                
+                if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
+                    // Success - parse response OFF main thread
+                    guard let data = data else { return }
                     
-                    if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
-                        // Success - parse response
-                        if let data = data {
-                            do {
-                                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                                
-                                // Create local event for UI using the backend event ID
-                                let eventId = json?["event_id"] as? String ?? UUID().uuidString
-                                
-                                let newEvent = StudyEvent(
-                                    id: UUID(uuidString: eventId) ?? UUID(),
-                                    title: self.eventTitle,
-                                    coordinate: self.selectedCoordinate,
-                                    time: self.eventDate,
-                                    endTime: self.eventEndDate,
-                                    description: self.eventDescription,
-                                    invitedFriends: self.selectedFriends,
-                                    attendees: [self.accountManager.currentUser ?? "Unknown"],
-                                    isPublic: self.isPublic,
-                                    host: self.accountManager.currentUser ?? "Unknown",
-                                    hostIsCertified: false,
-                                    eventType: self.selectedEventType,
-                                    isAutoMatched: self.enableAutoMatching,
-                                    interestTags: self.tags,
-                                    matchedUsers: []
-                                )
-                                
-                                self.onSave(newEvent)
-                                self.dismiss()
-                            } catch {
-                            }
+                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let eventId = json["event_id"] as? String {
+                        
+                        print("✅ [EventCreation] Event created with ID: \(eventId)")
+                        
+                        let newEvent = StudyEvent(
+                            id: UUID(uuidString: eventId) ?? UUID(),
+                            title: self.eventTitle,
+                            coordinate: self.selectedCoordinate,
+                            time: self.eventDate,
+                            endTime: self.eventEndDate,
+                            description: self.eventDescription,
+                            invitedFriends: self.selectedFriends,
+                            attendees: [self.accountManager.currentUser ?? "Unknown"],
+                            isPublic: self.isPublic,
+                            host: self.accountManager.currentUser ?? "Unknown",
+                            hostIsCertified: false,
+                            eventType: self.selectedEventType,
+                            isAutoMatched: self.enableAutoMatching,
+                            interestTags: self.tags,
+                            matchedUsers: []
+                        )
+                        
+                        await MainActor.run {
+                            print("💾 [EventCreation] Saving event and dismissing view")
+                            self.onSave(newEvent)
+                            self.dismiss()
                         }
-                        } else {
-                                }
-                            }
+                    } else {
+                        print("⚠️ [EventCreation] Failed to parse event response")
+                    }
+                } else {
+                    print("❌ [EventCreation] HTTP error: \(httpResponse.statusCode)")
+                }
             }
         }.resume()
     }
