@@ -654,11 +654,12 @@ extension UserAccountManager {
                 AppLogger.logResponse(url: url.absoluteString, statusCode: httpResponse.statusCode)
             }
             
-            if let data = data {
+            Task {
+                guard let data = data else { return }
                 do {
                     let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
                     let certified = json?["is_certified"] as? Bool ?? false
-                    DispatchQueue.main.async {
+                    await MainActor.run {
                         self.isCertified = certified
                         AppLogger.debug("User certification status: \(certified)", category: AppLogger.data)
                     }

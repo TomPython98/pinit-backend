@@ -116,6 +116,7 @@ struct CompactMapboxView: UIViewRepresentable {
             cameraOptions: cameraOptions,
             styleURI: StyleURI.streets
         )
+        // REVERT: Let SwiftUI handle frame sizing
         let mapView = MapView(frame: .zero, mapInitOptions: mapInitOptions)
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         

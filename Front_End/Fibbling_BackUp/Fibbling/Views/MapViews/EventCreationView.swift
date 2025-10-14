@@ -1621,7 +1621,9 @@ struct MapboxMapView: UIViewRepresentable {
     let coordinate: CLLocationCoordinate2D
     
     func makeUIView(context: Context) -> MapView {
+        // REVERT: Start with zero frame, let SwiftUI handle sizing
         let mapView = MapView(frame: .zero)
+        mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         
         // Configure map style
         mapView.mapboxMap.styleURI = .streets

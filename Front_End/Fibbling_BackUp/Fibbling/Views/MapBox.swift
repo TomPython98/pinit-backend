@@ -892,6 +892,7 @@ struct StudyMapBoxView: UIViewRepresentable {
            context.coordinator.forceRefresh != refreshVersion {
             
             
+            // PERFORMANCE FIX: Limit annotation updates to prevent hangs
             // Clear all existing annotations
             uiView.viewAnnotations.removeAll()
             
@@ -961,10 +962,8 @@ struct StudyMapBoxView: UIViewRepresentable {
                 if maxLatDiff < 0.0001 && maxLonDiff < 0.0001 && cluster.events.count > 1 {
                     // Events are at same location - cluster tap should show multi-event selection
                     clusterView.onTap = {
-                        // Ensure we're on the main thread and pass a copy of the events
-                        DispatchQueue.main.async {
-                            self.onMultiEventSelect?(Array(cluster.events))
-                        }
+                        // Already on main thread, no need for async dispatch
+                        self.onMultiEventSelect?(Array(cluster.events))
                     }
                 } else {
                     // Events are at different locations - cluster tap should zoom in

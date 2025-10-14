@@ -245,17 +245,21 @@ struct PersonalDashboardView: View {
         guard let url = URL(string: "\(APIConfig.primaryBaseURL)/get_user_reputation/\(username)/") else { return }
         
         URLSession.shared.dataTask(with: url) { data, response, error in
-            DispatchQueue.main.async {
-                if let data = data {
-                    do {
-                        let reputationData = try JSONDecoder().decode(ReputationData.self, from: data)
+            Task {
+                guard let data = data else {
+                    await MainActor.run { self.isLoading = false }
+                    return
+                }
+                if let reputationData = try? JSONDecoder().decode(ReputationData.self, from: data) {
+                    await MainActor.run {
                         self.userStats.averageRating = reputationData.averageRating
                         self.userStats.eventsHosted = reputationData.eventsHosted
                         self.userStats.eventsAttended = reputationData.eventsAttended
-                    } catch {
+                        self.isLoading = false
                     }
+                } else {
+                    await MainActor.run { self.isLoading = false }
                 }
-                self.isLoading = false
             }
         }.resume()
     }
