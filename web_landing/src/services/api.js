@@ -67,8 +67,16 @@ export const eventAPI = {
   },
   
   searchEvents: async (params) => {
-    const response = await api.post('/api/search_events/', params)
-    return response.data
+    try {
+      const response = await api.post('/api/search_events/', params)
+      return response.data
+    } catch (error) {
+      // If unauthorized, return empty events (for landing page)
+      if (error.response?.status === 401) {
+        return { events: [] }
+      }
+      throw error
+    }
   },
   
   createEvent: async (eventData) => {

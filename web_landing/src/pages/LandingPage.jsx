@@ -1,63 +1,14 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { eventAPI } from '../services/api'
+import React, { useState } from 'react'
 import AuthModal from '../components/AuthModal'
 import './LandingPage.css'
 
 const LandingPage = ({ onLogin }) => {
-  const navigate = useNavigate()
   const [showAuth, setShowAuth] = useState(false)
   const [authMode, setAuthMode] = useState('signup') // 'signup' or 'login'
-  const [liveEvents, setLiveEvents] = useState([])
-  const [loadingEvents, setLoadingEvents] = useState(true)
-
-  useEffect(() => {
-    loadLiveEvents()
-  }, [])
-
-  const loadLiveEvents = async () => {
-    try {
-      const response = await eventAPI.searchEvents({ is_public: true })
-      setLiveEvents(response.events?.slice(0, 6) || [])
-    } catch (error) {
-      console.error('Error loading events:', error)
-    } finally {
-      setLoadingEvents(false)
-    }
-  }
 
   const handleAuthClick = (mode) => {
     setAuthMode(mode)
     setShowAuth(true)
-  }
-
-  const getEventIcon = (category) => {
-    const icons = {
-      'Study': '📚',
-      'Social': '🎉',
-      'Academic': '🎓',
-      'Party': '🎊',
-      'Networking': '🤝',
-      'Cultural': '🎭',
-      'Business': '💼',
-      'Language_Exchange': '🗣️',
-      'Other': '🌟'
-    }
-    return icons[category] || '📌'
-  }
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'TBD'
-    const date = new Date(dateString)
-    const now = new Date()
-    const isToday = date.toDateString() === now.toDateString()
-    const tomorrow = new Date(now)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const isTomorrow = date.toDateString() === tomorrow.toDateString()
-
-    if (isToday) return `Today at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-    if (isTomorrow) return `Tomorrow at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
   }
 
   return (
@@ -130,60 +81,6 @@ const LandingPage = ({ onLogin }) => {
         </div>
       </section>
 
-      {/* Live Events Section */}
-      <section className="live-events-section">
-        <div className="container">
-          <div className="live-header">
-            <h2 className="section-title">
-              <span className="live-badge">🔴 LIVE</span> What's Happening Right Now
-            </h2>
-            <p className="live-subtitle">
-              These are REAL events happening on campuses today. No fake numbers. No BS.
-            </p>
-          </div>
-          
-          {loadingEvents ? (
-            <div className="events-loading">Loading events...</div>
-          ) : liveEvents.length > 0 ? (
-            <div className="live-events-grid">
-              {liveEvents.map((event) => (
-                <div 
-                  key={event.id} 
-                  className="live-event-card"
-                  onClick={() => navigate(`/event/${event.id}`)}
-                >
-                  <div className="live-event-icon">
-                    {getEventIcon(event.category || event.event_type)}
-                  </div>
-                  <h3 className="live-event-title">{event.title || event.name}</h3>
-                  <div className="live-event-meta">
-                    <span className="live-event-time">⏰ {formatDate(event.time || event.date || event.created_at)}</span>
-                    <span className="live-event-attendees">👥 {event.attendee_count || 0} going</span>
-                  </div>
-                  <button className="btn btn-small btn-primary btn-full">
-                    See Details →
-                  </button>
-                  <div className="requires-signup">📱 Tap to see details & join</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="no-events-yet">
-              <p>Events coming soon! Be the first to create one.</p>
-            </div>
-          )}
-          
-          <div className="live-events-cta">
-            <p className="cta-text">Want to join these? Create a free account.</p>
-            <button 
-              className="btn btn-primary btn-large"
-              onClick={() => handleAuthClick('signup')}
-            >
-              Sign Up to Join Events
-            </button>
-          </div>
-        </div>
-      </section>
 
       {/* Features Section */}
       <section className="features">
