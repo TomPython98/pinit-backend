@@ -298,48 +298,50 @@ struct EventDetailView: View {
     }
     
     private var contentView: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 24) {
-                // Event Header Card - matching ContentView style
-                eventHeaderCard
-                    .padding(.horizontal)
-                
-                // Event Details Card
-                eventDetailsCard
-                    .padding(.horizontal)
-                
-                // Attendees Card
-                attendeesCard
-                    .padding(.horizontal)
-                
-                // Action Buttons Card
-                actionButtonsCard
-                    .padding(.horizontal)
-                
-                // Social Feed Card
-                socialFeedCard
-                    .padding(.horizontal)
-            }
-            .padding(.vertical, 10)
-            .padding(.bottom, 40)
-        }
-        .background(
-            ZStack {
-                // Refined background with subtle pattern - matching ContentView
-                Color.bgSurface.ignoresSafeArea()
-                
-                // Enhanced layered background for depth
-                LinearGradient(
-                    colors: [
-                        Color.gradientStart.opacity(0.05),
-                        Color.gradientEnd.opacity(0.02)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+        ZStack {
+            // Background layer - BEHIND the ScrollView, not blocking touches
+            Color.bgSurface
                 .ignoresSafeArea()
+                .allowsHitTesting(false) // KEY FIX: Prevent background from capturing touches
+            
+            LinearGradient(
+                colors: [
+                    Color.gradientStart.opacity(0.05),
+                    Color.gradientEnd.opacity(0.02)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            .allowsHitTesting(false) // KEY FIX: Prevent gradient from capturing touches
+            
+            // Content layer - ON TOP, receives all touches
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // Event Header Card - matching ContentView style
+                    eventHeaderCard
+                        .padding(.horizontal)
+                    
+                    // Event Details Card
+                    eventDetailsCard
+                        .padding(.horizontal)
+                    
+                    // Attendees Card
+                    attendeesCard
+                        .padding(.horizontal)
+                    
+                    // Action Buttons Card
+                    actionButtonsCard
+                        .padding(.horizontal)
+                    
+                    // Social Feed Card
+                    socialFeedCard
+                        .padding(.horizontal)
+                }
+                .padding(.vertical, 10)
+                .padding(.bottom, 40)
             }
-        )
+        }
         .sheet(isPresented: $showRateUserSheet, onDismiss: {
             selectedUserToRate = nil
         }) {
