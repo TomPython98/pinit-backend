@@ -12,8 +12,23 @@ struct ChatView: View {
     @State private var scrollToBottom = false
     @FocusState private var isInputFocused: Bool
 
-    // Add this state property to store messages
-    @State private var messagesArray: [ChatMessage] = []
+    // Pending messages optimistically shown until confirmed by manager
+    @State private var pendingMessages: [ChatMessage] = []
+
+    // Computed view of messages: manager + pending (deduped)
+    private var displayMessages: [ChatMessage] {
+        let managerMessages = chatManager.getMessages(sender: sender, receiver: receiver)
+        var merged = managerMessages
+        for p in pendingMessages {
+            let exists = merged.contains { m in
+                m.sender == p.sender && m.message == p.message && abs(m.timestamp.timeIntervalSince(p.timestamp)) < 5.0
+            }
+            if !exists {
+                merged.append(p)
+            }
+        }
+        return merged.sorted { a, b in a.timestamp < b.timestamp }
+    }
     
     let sender: String
     let receiver: String
@@ -37,6 +52,7 @@ struct ChatView: View {
         }
         .toolbar(.hidden)
         .onAppear {
+            print("🔍 ChatView onAppear - Sender: '\(sender)', Receiver: '\(receiver)'")
             chatManager.connect(sender: sender, receiver: receiver)
             // Fetch messages when view appears
             updateMessagesList()
@@ -44,9 +60,14 @@ struct ChatView: View {
         .onDisappear {
             chatManager.disconnect()
         }
-        .onChange(of: messagesArray.count) { oldCount, newCount in
+        .onReceive(chatManager.$chatSessions) { _ in
+            // ✅ Update messages when chat sessions change
+            print("🔍 ChatView: chatSessions changed, updating messages")
+            updateMessagesList()
+        }
+        .onChange(of: pendingMessages.count) { oldCount, newCount in
             // Scroll to bottom when new messages arrive
-            if !messagesArray.isEmpty && newCount > oldCount {
+            if !pendingMessages.isEmpty && newCount > oldCount {
                 // Set flag to scroll - will be processed in ScrollViewReader
                 scrollToBottom = true
             }
@@ -112,7 +133,7 @@ struct ChatView: View {
     var messagesListView: some View {
         ScrollViewReader { scrollProxy in
             ScrollView {
-                if messagesArray.isEmpty {
+                if displayMessages.isEmpty {
                     // Empty state for no messages
                     VStack(spacing: 20) {
                         Spacer()
@@ -141,8 +162,7 @@ struct ChatView: View {
                 } else {
                     LazyVStack(spacing: 8) {
                         // Use the state property instead of fetching in the view directly
-                        ForEach(0..<messagesArray.count, id: \.self) { index in
-                            let msg = messagesArray[index]
+                        ForEach(displayMessages, id: \.id) { msg in
                             
                             if msg.sender == "📅" {
                                 // Date message
@@ -180,7 +200,7 @@ struct ChatView: View {
                     }
                 }
             }
-            .onChange(of: messagesArray.count) { _ in
+            .onChange(of: displayMessages.count) { _ in
                 // Scroll to bottom when messages update
                 scrollToBottom = true
             }
@@ -289,18 +309,27 @@ struct ChatView: View {
         }
         
         private var formattedTime: String {
-            let now = Date()
             let formatter = DateFormatter()
             formatter.timeStyle = .short
-            return formatter.string(from: now)
+            return formatter.string(from: message.timestamp)
         }
     }
 
     // MARK: - Methods
     
-    // Add this method to update messages from chatManager
+    // Add this method to keep pending clean if manager catches up
     private func updateMessagesList() {
-        self.messagesArray = chatManager.getMessages(sender: sender, receiver: receiver)
+        // Remove any pending that manager already has
+        let managerMessages = chatManager.getMessages(sender: sender, receiver: receiver)
+        let filteredPending = pendingMessages.filter { p in
+            !managerMessages.contains { m in
+                m.sender == p.sender && m.message == p.message && abs(m.timestamp.timeIntervalSince(p.timestamp)) < 5.0
+            }
+        }
+        if filteredPending.count != pendingMessages.count {
+            pendingMessages = filteredPending
+        }
+        print("✅ UI display messages count: \(displayMessages.count)")
     }
     
     // Get consistent color for friend
@@ -318,14 +347,19 @@ struct ChatView: View {
         guard !messageToSend.isEmpty, !isSending else { return }
 
         isSending = true
+
+        // ✅ Optimistic UI update: append locally so it shows immediately
+        let optimistic = ChatMessage(sender: sender, message: messageToSend, timestamp: Date())
+        pendingMessages.append(optimistic)
+        scrollToBottom = true
+
         chatManager.sendMessage(to: receiver, sender: sender, message: messageToSend)
 
-        // Reset fields and update messages
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        // ✅ Reset fields immediately - ChatManager handles the rest
+        DispatchQueue.main.async {
             self.message = ""
             self.isSending = false
-            updateMessagesList() // Update messages after sending
-            scrollToBottom = true // Scroll after sending
+            self.scrollToBottom = true // Scroll after sending
         }
     }
 }

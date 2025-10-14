@@ -28,6 +28,7 @@ class PrivateChatWebSocketManager: ObservableObject {
     let receiver: String
     private var reconnectAttempt = 0
     private var reconnectTimer: Timer?
+    private var pingTimer: Timer?
     private let maxReconnectAttempts = 5
     
     init(sender: String, receiver: String) {
@@ -36,20 +37,32 @@ class PrivateChatWebSocketManager: ObservableObject {
     }
     
     deinit {
-        disconnect()
+        print("🗑️ PrivateChatWebSocketManager deinit")
+        reconnectTimer?.invalidate()
+        reconnectTimer = nil
+        pingTimer?.invalidate()
+        pingTimer = nil
+        webSocketTask?.cancel(with: .goingAway, reason: nil)
+        webSocketTask = nil
     }
     
     /// Connect to the private chat WebSocket
     func connect() {
+        // ✅ Validate parameters before connecting
+        guard !sender.isEmpty, !receiver.isEmpty else {
+            print("❌ Invalid WebSocket parameters - sender: '\(sender)', receiver: '\(receiver)'")
+            DispatchQueue.main.async {
+                self.connectionError = "Invalid sender or receiver"
+            }
+            return
+        }
+        
         // Use API configuration for WebSocket URL
         let wsBaseURL = APIConfig.websocketURL
         
-        // ✅ Create consistent room name regardless of sender/receiver order
-        // Sort usernames to ensure both users join the same room (same as backend)
-        let participants = [sender, receiver].sorted()
-        let roomName = "\(participants[0])/\(participants[1])"
-        
-        guard let url = URL(string: "\(wsBaseURL)chat/\(roomName)/") else {
+        // ✅ Use the correct URL format that matches backend routing
+        // Backend expects: ws/chat/{sender}/{receiver}/
+        guard let url = URL(string: "\(wsBaseURL)chat/\(sender)/\(receiver)/") else {
             DispatchQueue.main.async {
                 self.connectionError = "Invalid WebSocket URL"
             }
@@ -64,14 +77,43 @@ class PrivateChatWebSocketManager: ObservableObject {
         webSocketTask?.resume()
         
         print("🔗 Connecting to private chat WebSocket: \(url.absoluteString)")
+        print("🔗 Sender: \(sender), Receiver: \(receiver)")
         
         // Start listening for messages
         listenForMessages()
+        
+        // ✅ Start periodic pings to keep connection alive
+        startPingTimer()
         
         DispatchQueue.main.async {
             self.isConnected = true
             self.connectionError = nil
             self.reconnectAttempt = 0
+            print("✅ WebSocket connection established")
+        }
+    }
+    
+    /// Start periodic ping timer to keep the connection alive
+    private func startPingTimer() {
+        // Clean up any existing timer
+        pingTimer?.invalidate()
+        
+        // Create a new ping timer that fires every 20 seconds
+        pingTimer = Timer.scheduledTimer(withTimeInterval: 20.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            self.sendPing()
+        }
+    }
+    
+    /// Send a ping to keep the connection alive
+    private func sendPing() {
+        webSocketTask?.sendPing { [weak self] error in
+            if let error = error {
+                print("❌ Ping failed: \(error.localizedDescription)")
+                self?.handleConnectionError()
+            } else {
+                print("🔍 WebSocket ping successful")
+            }
         }
     }
     
@@ -79,6 +121,9 @@ class PrivateChatWebSocketManager: ObservableObject {
     func disconnect() {
         reconnectTimer?.invalidate()
         reconnectTimer = nil
+        
+        pingTimer?.invalidate()
+        pingTimer = nil
         
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
@@ -103,6 +148,8 @@ class PrivateChatWebSocketManager: ObservableObject {
             "message": message
         ]
         
+        print("📤 Sending message: \(message) from \(sender) to \(receiver)")
+        
         do {
             let data = try JSONSerialization.data(withJSONObject: payload)
             let wsMessage = URLSessionWebSocketTask.Message.data(data)
@@ -114,7 +161,7 @@ class PrivateChatWebSocketManager: ObservableObject {
                         self?.connectionError = "Failed to send message"
                     }
                 } else {
-                    print("✅ Message sent successfully")
+                    print("✅ Message sent successfully to WebSocket")
                 }
             }
         } catch {

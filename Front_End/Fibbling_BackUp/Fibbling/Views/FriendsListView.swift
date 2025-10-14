@@ -1,5 +1,11 @@
 import SwiftUI
 
+// MARK: - Identifiable String Wrapper
+struct IdentifiableString: Identifiable {
+    let id = UUID()
+    let value: String
+}
+
 // MARK: - Modern FriendsListView following Apple Design Guidelines
 struct FriendsListView: View {
     @EnvironmentObject var accountManager: UserAccountManager
@@ -17,8 +23,7 @@ struct FriendsListView: View {
     @State private var selectedTab = 0
     @State private var isLoading = false
     @State private var isPrefetchingImages = true // Start as true to show loading initially
-    @State private var showChatView = false
-    @State private var selectedChatUser = ""
+    @State private var selectedChatUser: IdentifiableString? = nil
     @State private var showUserProfileSheet = false
     @State private var selectedUserProfile: String? = nil
     
@@ -104,14 +109,19 @@ struct FriendsListView: View {
         } message: {
             Text(alertMessage)
         }
-        .sheet(isPresented: $showChatView) {
+        .sheet(item: $selectedChatUser) { chatUser in
             NavigationStack {
                 ChatView(
                     sender: accountManager.currentUser ?? "Guest",
-                    receiver: selectedChatUser
+                    receiver: chatUser.value
                 )
                 .environmentObject(accountManager)
                 .environmentObject(chatManager)
+                .onAppear {
+                    print("🔍 ChatView sheet appeared with:")
+                    print("   Sender: '\(accountManager.currentUser ?? "Guest")'")
+                    print("   Receiver: '\(chatUser.value)'")
+                }
             }
         }
         .sheet(isPresented: $showUserProfileSheet) {
@@ -384,8 +394,9 @@ struct FriendsListView: View {
                 Spacer()
                 
                 Button(action: {
-                    selectedChatUser = username
-                    showChatView = true
+                    print("🔍 Chat button tapped for: '\(username)'")
+                    selectedChatUser = IdentifiableString(value: username)
+                    print("🔍 Opening chat with: '\(username)'")
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: "message.fill")
