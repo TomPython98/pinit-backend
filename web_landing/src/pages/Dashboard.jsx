@@ -91,6 +91,19 @@ const Dashboard = ({ user, onLogout }) => {
     }
   }
 
+  const handleShareEvent = (eventId) => {
+    const shareUrl = `${window.location.origin}/event/${eventId}`
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        alert('🔗 Link copied!\n\nShare this with your friends so they can join too.\n\nPro tip: Download the app to invite people directly and chat with your group.')
+      }).catch(() => {
+        prompt('Copy this link to share:', shareUrl)
+      })
+    } else {
+      prompt('Copy this link to share:', shareUrl)
+    }
+  }
+
   if (loading) {
     return (
       <div className="dashboard">
@@ -235,9 +248,20 @@ const Dashboard = ({ user, onLogout }) => {
                             👥 {event.attendee_count || 0} going
                           </span>
                         </div>
-                        <button className="btn btn-primary btn-full btn-small">
-                          View Details →
-                        </button>
+                        <div className="event-card-actions">
+                          <button className="btn btn-primary btn-small">
+                            View Details →
+                          </button>
+                          <button 
+                            className="btn btn-outline btn-small btn-icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleShareEvent(event.id)
+                            }}
+                          >
+                            🔗 Share
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -400,12 +424,20 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
 
             <div className="event-modal-footer">
-              <button 
-                className="btn btn-primary btn-large btn-full"
-                onClick={() => handleRSVP(selectedEvent.id)}
-              >
-                ✅ RSVP - I'm Going!
-              </button>
+              <div className="modal-footer-actions">
+                <button 
+                  className="btn btn-primary btn-large btn-full"
+                  onClick={() => handleRSVP(selectedEvent.id)}
+                >
+                  ✅ RSVP - I'm Going!
+                </button>
+                <button 
+                  className="btn btn-outline btn-large"
+                  onClick={() => handleShareEvent(selectedEvent.id)}
+                >
+                  🔗 Share Event
+                </button>
+              </div>
               <p className="app-reminder">
                 📱 <strong>Want the real thing?</strong> Download the app to see exact locations on the map, chat with everyone going, and get notified when plans change. This is just the preview.
               </p>

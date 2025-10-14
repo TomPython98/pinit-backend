@@ -360,6 +360,23 @@
   font-size: 0.9rem;
 }
 
+.event-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.event-card-actions .btn-small {
+  flex: 1;
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
 .event-icon {
   font-size: 2.5rem;
   margin-bottom: 1rem;
@@ -499,6 +516,12 @@
   text-align: center;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border);
+}
+
+.modal-footer-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .app-reminder {

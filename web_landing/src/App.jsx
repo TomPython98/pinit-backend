@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import LandingPage from './pages/LandingPage'
 import Dashboard from './pages/Dashboard'
+import EventInvite from './pages/EventInvite'
 import './App.css'
 
 function App() {
@@ -53,6 +54,10 @@ function App() {
             <Dashboard user={user} onLogout={handleLogout} /> : 
             <Navigate to="/" />
           } 
+        />
+        <Route 
+          path="/event/:eventId" 
+          element={<EventInvite user={user} onLogin={handleLogin} />}
         />
       </Routes>
     </Router>
