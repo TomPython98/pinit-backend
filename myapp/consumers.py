@@ -12,12 +12,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.sender = self.scope["url_route"]["kwargs"]["sender"]
         self.receiver = self.scope["url_route"]["kwargs"]["receiver"]
-        self.room_name = f"private_chat_{self.sender}_{self.receiver}"
+        
+        # ✅ Create consistent room name regardless of sender/receiver order
+        # Sort usernames to ensure both users join the same room
+        participants = sorted([self.sender, self.receiver])
+        self.room_name = f"private_chat_{participants[0]}_{participants[1]}"
         
         # ✅ Join WebSocket group for private chat
         await self.channel_layer.group_add(self.room_name, self.channel_name)
         await self.accept()
-        print(f"✅ WebSocket CONNECTED: {self.sender} chatting with {self.receiver}")
+        print(f"✅ WebSocket CONNECTED: {self.sender} chatting with {self.receiver} in room {self.room_name}")
 
     async def disconnect(self, close_code):
         # ✅ Leave WebSocket group
