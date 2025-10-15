@@ -6,7 +6,6 @@ struct InteractiveTutorial: View {
     @Binding var isShowing: Bool
     @ObservedObject var tutorialManager = TutorialManager.shared
     @State private var pulseScale: CGFloat = 1.0
-    @State private var showConfetti = false
     
     var currentStep: TutorialManager.TutorialStep {
         tutorialManager.tutorialStep
@@ -21,30 +20,21 @@ struct InteractiveTutorial: View {
                 .allowsHitTesting(currentStep == .completed)
             
             // Spotlight effect for specific areas
-            if currentStep == .tapOnMap {
-                // Spotlight on map area
-                mapSpotlight
-            } else if currentStep == .tapAddEvent {
-                // Spotlight on + button
-                addButtonSpotlight
+            if currentStep == .openMap {
+                // Spotlight on "View Full Map" card (middle of screen)
+                mapCardSpotlight
             }
+            // Other steps (tapOnPin, tapAddEvent) show on MapView itself
             
             // Tutorial content
             VStack {
                 Spacer()
                 
-                if currentStep == .tapOnMap {
+                if currentStep == .openMap {
                     tutorialTooltip(
                         icon: "map.fill",
-                        title: "Tap on any pin",
-                        subtitle: "See what events are happening near you",
-                        position: .top
-                    )
-                } else if currentStep == .tapAddEvent {
-                    tutorialTooltip(
-                        icon: "plus.circle.fill",
-                        title: "Create your own event",
-                        subtitle: "Tap the + button to host an event",
+                        title: "Open the map",
+                        subtitle: "Tap 'View Full Map' to see events near you",
                         position: .bottom
                     )
                 }
@@ -72,8 +62,13 @@ struct InteractiveTutorial: View {
             startPulseAnimation()
         }
         .onChange(of: currentStep) { oldStep, newStep in
-            if newStep == .completed {
-                // Auto-dismiss when tutorial completes
+            if newStep == .tapOnPin {
+                // User opened map - hide ContentView tutorial
+                withAnimation {
+                    isShowing = false
+                }
+            } else if newStep == .completed {
+                // Tutorial fully complete
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     completeTutorial()
                 }
@@ -81,22 +76,186 @@ struct InteractiveTutorial: View {
         }
     }
     
-    // MARK: - Spotlight for Map
-    private var mapSpotlight: some View {
+    // MARK: - Spotlight for Map Card (on ContentView)
+    private var mapCardSpotlight: some View {
         GeometryReader { geometry in
-            // Clear circle in the middle of map area
             ZStack {
                 Color.black.opacity(0.85)
                     .ignoresSafeArea()
                 
-                // Cutout circle in center
+                // Cutout rectangle for map card (center of screen, below header)
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.clear)
+                    .frame(width: geometry.size.width - 40, height: 220)
+                    .position(x: geometry.size.width / 2, y: geometry.size.height * 0.35)
+                    .blendMode(.destinationOut)
+                
+                // Pulsing border around the card
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.brandPrimary.opacity(0.8), lineWidth: 4)
+                    .frame(width: (geometry.size.width - 40) * pulseScale, 
+                           height: 220 * pulseScale)
+                    .position(x: geometry.size.width / 2, y: geometry.size.height * 0.35)
+            }
+            .compositingGroup()
+        }
+        .allowsHitTesting(false)
+    }
+    
+    // MARK: - Professional Tooltip
+    private func tutorialTooltip(icon: String, title: String, subtitle: String, position: TooltipPosition) -> some View {
+        VStack(spacing: 16) {
+            // Icon with glow
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.brandPrimary.opacity(0.3), Color.brandSecondary.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 60, height: 60)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 28))
+                    .foregroundColor(.white)
+            }
+            
+            // Text content
+            VStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                
+                Text(subtitle)
+                    .font(.body)
+                    .foregroundColor(.white.opacity(0.9))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.white.opacity(0.15))
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.ultraThinMaterial)
+                )
+        )
+        .padding(.horizontal, 40)
+        .padding(position == .top ? .top : .bottom, position == .top ? 80 : 180)
+    }
+    
+    enum TooltipPosition {
+        case top, bottom
+    }
+    
+    // MARK: - Animations
+    private func startPulseAnimation() {
+        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+            pulseScale = 1.05
+        }
+    }
+    
+    // MARK: - Tutorial Completion
+    private func skipTutorial() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            completeTutorial()
+        }
+    }
+    
+    private func completeTutorial() {
+        tutorialManager.isActive = false
+        tutorialManager.tutorialStep = .completed
+        hasSeenMapTutorial = true
+        isShowing = false
+    }
+}
+
+// MARK: - Map Tutorial Overlay (shows on MapView)
+struct MapTutorialOverlay: View {
+    @ObservedObject var tutorialManager = TutorialManager.shared
+    @State private var pulseScale: CGFloat = 1.0
+    
+    var currentStep: TutorialManager.TutorialStep {
+        tutorialManager.tutorialStep
+    }
+    
+    var body: some View {
+        ZStack {
+            // Professional dark overlay
+            Color.black
+                .opacity(0.85)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            
+            // Spotlight effects
+            if currentStep == .tapOnPin {
+                mapPinSpotlight
+            } else if currentStep == .tapAddEvent {
+                addButtonSpotlight
+            }
+            
+            // Tutorial content
+            VStack {
+                Spacer()
+                
+                if currentStep == .tapOnPin {
+                    tutorialTooltip(
+                        icon: "map.fill",
+                        title: "Tap on any pin",
+                        subtitle: "See what events are happening near you",
+                        position: .top
+                    )
+                } else if currentStep == .tapAddEvent {
+                    tutorialTooltip(
+                        icon: "plus.circle.fill",
+                        title: "Create your own event",
+                        subtitle: "Tap the + button to host an event",
+                        position: .bottom
+                    )
+                }
+                
+                Spacer()
+                
+                // Skip button
+                Button(action: skipTutorial) {
+                    Text("Skip Tutorial")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.7))
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .fill(Color.white.opacity(0.1))
+                        )
+                }
+                .padding(.bottom, 50)
+            }
+        }
+        .onAppear {
+            startPulseAnimation()
+        }
+    }
+    
+    // MARK: - Spotlight for Map Pins
+    private var mapPinSpotlight: some View {
+        GeometryReader { geometry in
+            ZStack {
+                Color.black.opacity(0.85)
+                    .ignoresSafeArea()
+                
+                // Cutout circle in center (where pins are)
                 Circle()
                     .fill(Color.clear)
                     .frame(width: 200, height: 200)
                     .position(x: geometry.size.width / 2, y: geometry.size.height / 2 - 50)
                     .blendMode(.destinationOut)
                 
-                // Pulsing ring around the spotlight
+                // Pulsing ring
                 Circle()
                     .stroke(Color.brandPrimary.opacity(0.6), lineWidth: 4)
                     .frame(width: 200 * pulseScale, height: 200 * pulseScale)
@@ -190,35 +349,38 @@ struct InteractiveTutorial: View {
         }
     }
     
-    // MARK: - Tutorial Completion
     private func skipTutorial() {
-        withAnimation(.easeOut(duration: 0.3)) {
-            completeTutorial()
-        }
-    }
-    
-    private func completeTutorial() {
         tutorialManager.isActive = false
-        hasSeenMapTutorial = true
-        isShowing = false
+        tutorialManager.tutorialStep = .completed
     }
 }
 
 // MARK: - Tutorial Tracking Helper
 class TutorialManager: ObservableObject {
     enum TutorialStep {
-        case tapOnMap
-        case tapAddEvent
-        case completed
+        case openMap        // Step 1: Open map from ContentView
+        case tapOnPin       // Step 2: Tap a pin on the map
+        case tapAddEvent    // Step 3: Tap + button
+        case completed      // Done!
     }
     
-    @Published var tutorialStep: TutorialStep = .tapOnMap
+    @Published var tutorialStep: TutorialStep = .openMap
     @Published var isActive = false
     
     static let shared = TutorialManager()
     
+    func mapOpened() {
+        // User navigated to map
+        if tutorialStep == .openMap && isActive {
+            withAnimation {
+                tutorialStep = .tapOnPin
+            }
+        }
+    }
+    
     func mapPinTapped() {
-        if tutorialStep == .tapOnMap && isActive {
+        // User tapped a pin on map
+        if tutorialStep == .tapOnPin && isActive {
             withAnimation {
                 tutorialStep = .tapAddEvent
             }
@@ -226,6 +388,7 @@ class TutorialManager: ObservableObject {
     }
     
     func addButtonTapped() {
+        // User tapped add event button
         if tutorialStep == .tapAddEvent && isActive {
             withAnimation {
                 tutorialStep = .completed
@@ -233,9 +396,13 @@ class TutorialManager: ObservableObject {
             }
         }
     }
+    
+    func reset() {
+        tutorialStep = .openMap
+        isActive = false
+    }
 }
 
 #Preview {
     InteractiveTutorial(isShowing: .constant(true))
 }
-

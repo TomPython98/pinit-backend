@@ -128,8 +128,8 @@ struct ContentView: View {
                     customTopBar
                 }
                 
-                // Professional interactive tutorial - shows on first login
-                if showMapTutorial {
+                // Professional interactive tutorial - shows on first login (only for openMap step)
+                if showMapTutorial && tutorialManager.tutorialStep == .openMap {
                     InteractiveTutorial(isShowing: $showMapTutorial)
                         .transition(.opacity)
                         .zIndex(1000)
@@ -144,7 +144,7 @@ struct ContentView: View {
                     withAnimation {
                         showMapTutorial = true
                         tutorialManager.isActive = true
-                        tutorialManager.tutorialStep = .tapOnMap
+                        tutorialManager.tutorialStep = .openMap
                     }
                 }
             }

@@ -1258,7 +1258,9 @@ struct StudyMapView: View {
                 // Map View
                 StudyMapBoxView(events: filteredEvents, region: $region, refreshVersion: mapRefreshVersion, onSelect: { event in
                     // Track tutorial progress - user tapped on map pin!
-                    tutorialManager.mapPinTapped()
+                    if tutorialManager.isActive {
+                        tutorialManager.mapPinTapped()
+                    }
                     
                     // Always get the most up-to-date version of the event from studyEvents
                     if let freshEvent = calendarManager.events.first(where: { $0.id == event.id }) {
@@ -1393,9 +1395,25 @@ struct StudyMapView: View {
                     .transition(.opacity)
                     .animation(.easeInOut(duration: 0.3), value: calendarManager.isLoading)
                 }
+                
+                // Map tutorial overlay (for pin and add button steps)
+                if tutorialManager.isActive && 
+                   (tutorialManager.tutorialStep == .tapOnPin || 
+                    tutorialManager.tutorialStep == .tapAddEvent) {
+                    MapTutorialOverlay()
+                        .transition(.opacity)
+                        .zIndex(1000)
+                }
             }
             .navigationBarHidden(true)
             .onAppear {
+                // Track that user opened the map (for tutorial)
+                if tutorialManager.isActive && tutorialManager.tutorialStep == .openMap {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        tutorialManager.mapOpened()
+                    }
+                }
+                
                 // Request location permission on first load
                 if locationManager.authorizationStatus == .notDetermined {
                     showLocationPermission = true
@@ -1768,7 +1786,9 @@ struct StudyMapView: View {
     var addEventButton: some View {
         Button(action: {
             // Track tutorial progress - user tapped add event button!
-            tutorialManager.addButtonTapped()
+            if tutorialManager.isActive {
+                tutorialManager.addButtonTapped()
+            }
             
             withAnimation(.spring()) {
                 newEventCoordinate = CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816) // Default to Buenos Aires
