@@ -21,6 +21,10 @@ class UserAccountManager: ObservableObject {
     private let refreshTokenKey = "refresh_token" // Backend returns "refresh_token"
 
     init() {
+        // Load cached data FIRST for instant display
+        self.loadFriendsCache()
+        self.loadFriendRequestsCache()
+        
         // Check if user is logged in at startup by reading from UserDefaults
         if UserDefaults.standard.bool(forKey: "isLoggedIn"),
            let savedUsername = UserDefaults.standard.string(forKey: "username") {
@@ -34,9 +38,9 @@ class UserAccountManager: ObservableObject {
             
             // Only fetch data if we have valid tokens
             if self.accessToken != nil {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    self.fetchFriends()
-                    self.fetchFriendRequests()
+                // Fetch all data in parallel immediately (updates cache in background)
+                Task {
+                    await self.fetchAllUserDataParallel()
                 }
             } else {
                 // No access token found - user needs to login again
@@ -216,10 +220,9 @@ class UserAccountManager: ObservableObject {
                         if let access = accessToken, let refresh = refreshToken {
                             self.saveTokens(access: access, refresh: refresh)
                             
-                            // Fetch user data after tokens are saved
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                self.fetchFriends()
-                                self.fetchFriendRequests()
+                            // Fetch all user data in parallel immediately
+                            Task {
+                                await self.fetchAllUserDataParallel()
                             }
                         } else {
                         }
@@ -309,10 +312,9 @@ class UserAccountManager: ObservableObject {
                         if let access = accessToken, let refresh = refreshToken {
                             self.saveTokens(access: access, refresh: refresh)
                             
-                            // Only fetch data AFTER tokens are saved
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                self.fetchFriends()
-                                self.fetchFriendRequests()
+                            // Fetch all user data in parallel immediately
+                            Task {
+                                await self.fetchAllUserDataParallel()
                             }
                         } else {
                         }
@@ -387,11 +389,13 @@ class UserAccountManager: ObservableObject {
                 if let friendsList = decodedResponse["friends"] {
                     DispatchQueue.main.async {
                         self.friends = friendsList
+                        self.saveFriendsCache(friendsList)
                         AppLogger.debug("Loaded \(friendsList.count) friends", category: AppLogger.data)
                     }
                 } else {
                     DispatchQueue.main.async {
                         self.friends = []
+                        self.saveFriendsCache([])
                     }
                 }
             } catch {
@@ -447,6 +451,7 @@ class UserAccountManager: ObservableObject {
                 if let pendingRequests = decodedResponse?["pending_requests"] as? [String] {
                     DispatchQueue.main.async {
                         self.friendRequests = pendingRequests
+                        self.saveFriendRequestsCache(pendingRequests)
                         AppLogger.debug("Loaded \(pendingRequests.count) friend requests", category: AppLogger.data)
                     }
                 } else {
@@ -673,6 +678,109 @@ extension UserAccountManager {
                 }
             }
         }.resume()
+    }
+    
+    // MARK: - Cache Management (Performance Optimization)
+    
+    private let friendsCacheKey = "cached_friends"
+    private let friendRequestsCacheKey = "cached_friend_requests"
+    private let cacheTimestampKey = "cache_timestamp"
+    
+    /// Load cached friends on app startup for instant display
+    private func loadFriendsCache() {
+        if let cached = UserDefaults.standard.array(forKey: friendsCacheKey) as? [String] {
+            self.friends = cached
+            print("📦 Loaded \(cached.count) friends from cache")
+        }
+    }
+    
+    /// Save friends to cache for next app launch
+    private func saveFriendsCache(_ friendsList: [String]) {
+        UserDefaults.standard.set(friendsList, forKey: friendsCacheKey)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: cacheTimestampKey)
+    }
+    
+    /// Load cached friend requests on app startup
+    private func loadFriendRequestsCache() {
+        if let cached = UserDefaults.standard.array(forKey: friendRequestsCacheKey) as? [String] {
+            self.friendRequests = cached
+            print("📦 Loaded \(cached.count) friend requests from cache")
+        }
+    }
+    
+    /// Save friend requests to cache
+    private func saveFriendRequestsCache(_ requests: [String]) {
+        UserDefaults.standard.set(requests, forKey: friendRequestsCacheKey)
+    }
+    
+    // MARK: - Parallel Data Fetching (Performance Optimization)
+    
+    /// Fetch all user data in parallel for maximum performance
+    func fetchAllUserDataParallel() async {
+        async let friendsTask: Void = fetchFriendsAsync()
+        async let requestsTask: Void = fetchFriendRequestsAsync()
+        
+        // Wait for both to complete
+        _ = await (friendsTask, requestsTask)
+        print("✅ All user data loaded in parallel")
+    }
+    
+    /// Async version of fetchFriends for parallel execution
+    private func fetchFriendsAsync() async {
+        guard let username = currentUser else { return }
+        
+        let urlString = "\(baseURL)/get_friends/\(username)/"
+        guard let url = URL(string: urlString) else { return }
+        
+        var request = URLRequest(url: url)
+        addAuthHeader(to: &request)
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                return
+            }
+            
+            let decodedResponse = try JSONDecoder().decode([String: [String]].self, from: data)
+            
+            if let friendsList = decodedResponse["friends"] {
+                await MainActor.run {
+                    self.friends = friendsList
+                    self.saveFriendsCache(friendsList)
+                }
+            }
+        } catch {
+            print("❌ Failed to fetch friends: \(error)")
+        }
+    }
+    
+    /// Async version of fetchFriendRequests for parallel execution
+    private func fetchFriendRequestsAsync() async {
+        guard let username = currentUser else { return }
+        guard let url = URL(string: "\(baseURL)/get_pending_requests/\(username)/") else { return }
+        
+        var request = URLRequest(url: url)
+        addAuthHeader(to: &request)
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                return
+            }
+            
+            let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+            
+            if let pendingRequests = json?["pending_requests"] as? [String] {
+                await MainActor.run {
+                    self.friendRequests = pendingRequests
+                    self.saveFriendRequestsCache(pendingRequests)
+                }
+            }
+        } catch {
+            print("❌ Failed to fetch friend requests: \(error)")
+        }
     }
     
 }

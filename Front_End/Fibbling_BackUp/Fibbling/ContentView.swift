@@ -557,7 +557,8 @@ struct ContentView: View {
                 "Events",
                 systemImage: "ticket.fill",
                 background: Color.brandAccent,
-                description: "Join university activities"
+                description: "Join university activities",
+                badgeCount: calendarManager.pendingNotificationsCount
             ) {
                 withAnimation(.spring()) {
                     showNotesView = true
@@ -3321,9 +3322,8 @@ struct SocialActivityFeedView: View {
         // Load recent activity
         loadRecentActivity()
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            isLoading = false
-        }
+        // No artificial delay - loading state handled by actual data completion
+        isLoading = false
     }
     
     private func loadTrendingEvents() {

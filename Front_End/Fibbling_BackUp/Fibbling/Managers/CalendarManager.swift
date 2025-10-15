@@ -53,6 +53,22 @@ class CalendarManager: ObservableObject {
     
     // Username should be set once the user is logged in.
     var username: String = ""
+    
+    /// Computed property for pending notifications count (invitations + join requests to my events)
+    var pendingNotificationsCount: Int {
+        guard !username.isEmpty else { return 0 }
+        
+        // Count event invitations (events where I'm invited but not attending yet)
+        let invitations = events.filter { event in
+            event.invitedFriends.contains(username) &&
+            !event.attendees.contains(username) &&
+            event.host != username
+        }.count
+        
+        // Count pending join requests to MY events (would need separate API call)
+        // For now, just count invitations
+        return invitations
+    }
     private var hasFetchedInitialEvents = false // Flag to track initial fetch
     private var accountManager: UserAccountManager? // Reference to account manager for auth
     
@@ -67,9 +83,16 @@ class CalendarManager: ObservableObject {
     private var autoRefreshTimer: Timer?
     private let autoRefreshInterval: TimeInterval = 300.0 // Refresh every 5 minutes (reduced from 60 seconds)
     
+    // Cache keys
+    private let eventsCacheKey = "cached_events"
+    private let eventsCacheTimestampKey = "events_cache_timestamp"
+    
     /// Dependency Injection initializer. You can pass in your account manager.
     init(accountManager: UserAccountManager) {
         self.accountManager = accountManager
+        
+        // Load cached events FIRST for instant display
+        self.loadEventsCache()
         
         // Listen for logout notification
         NotificationCenter.default.addObserver(self,
@@ -97,10 +120,10 @@ class CalendarManager: ObservableObject {
             
             // Fetch events only when username becomes valid for the first time or changes from a non-empty value
             if !self.username.isEmpty && !self.hasFetchedInitialEvents {
-                self.fetchEvents()
+                // Start fetch and WebSocket in parallel for maximum performance
+                self.setupWebSocket() // Connect immediately
+                self.fetchEvents()    // Fetch in parallel
                 self.hasFetchedInitialEvents = true // Mark initial fetch as done
-                // Setup WebSocket after initial fetch
-                self.setupWebSocket()
             } else if self.username.isEmpty && !previousUsername.isEmpty {
                 // User logged out
                 self.disconnectWebSocket()
@@ -111,9 +134,10 @@ class CalendarManager: ObservableObject {
                  self.disconnectWebSocket() // Disconnect old socket
                  self.events = []           // Clear old user's events
                  self.hasFetchedInitialEvents = false // Reset flag
-                 self.fetchEvents()
+                 // Start both in parallel
+                 self.setupWebSocket()      // Connect new socket immediately
+                 self.fetchEvents()         // Fetch in parallel
                  self.hasFetchedInitialEvents = true
-                 self.setupWebSocket()      // Connect new socket
             }
         }
     }
@@ -341,6 +365,9 @@ class CalendarManager: ObservableObject {
                     
                     
                     self.events = filteredEvents
+                    
+                    // Save to cache for instant display next time
+                    self.saveEventsCache()
                     
                     // Print summary of included events
                     var hostCount = 0
@@ -735,6 +762,49 @@ extension CalendarManager: EventsWebSocketManagerDelegate {
         } else {
             // Add new event
             events.append(event)
+        }
+    }
+    
+    // MARK: - Cache Management (Performance Optimization)
+    
+    /// Load cached events on app startup for instant display
+    private func loadEventsCache() {
+        guard let data = UserDefaults.standard.data(forKey: eventsCacheKey) else {
+            print("📦 No cached events found")
+            return
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let cachedEvents = try decoder.decode([StudyEvent].self, from: data)
+            
+            // Check cache age (max 24 hours)
+            if let timestamp = UserDefaults.standard.object(forKey: eventsCacheTimestampKey) as? Double {
+                let cacheAge = Date().timeIntervalSince1970 - timestamp
+                if cacheAge < 86400 { // 24 hours
+                    self.events = cachedEvents
+                    print("📦 Loaded \(cachedEvents.count) events from cache (age: \(Int(cacheAge/60))min)")
+                } else {
+                    print("📦 Cache expired (age: \(Int(cacheAge/3600))h), will fetch fresh data")
+                }
+            }
+        } catch {
+            print("❌ Failed to load cached events: \(error)")
+        }
+    }
+    
+    /// Save events to cache for next app launch
+    private func saveEventsCache() {
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(events)
+            UserDefaults.standard.set(data, forKey: eventsCacheKey)
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: eventsCacheTimestampKey)
+            print("📦 Saved \(events.count) events to cache")
+        } catch {
+            print("❌ Failed to save events cache: \(error)")
         }
     }
 }
