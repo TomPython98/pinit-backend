@@ -88,27 +88,17 @@ class PrivateChatWebSocketManager: ObservableObject {
         print("🔗 Connecting to private chat WebSocket: \(url.absoluteString)")
         print("🔗 Sender: \(sender), Receiver: \(receiver)")
         
-        // Start listening for messages FIRST
+        // Start listening for messages
         listenForMessages()
         
-        // ✅ Verify connection is actually working before marking as connected
-        // Send a ping to verify the connection is alive
-        webSocketTask?.sendPing { [weak self] error in
-            guard let self = self else { return }
-            self.isConnecting = false // ✅ Connection attempt complete
-            
-            if let error = error {
-                print("❌ Initial ping failed: \(error.localizedDescription)")
-                self.handleConnectionError()
-            } else {
-                print("✅ Initial ping successful - connection verified")
-                DispatchQueue.main.async {
-                    self.isConnected = true
-                    self.connectionError = nil
-                    self.reconnectAttempt = 0
-                    print("✅ WebSocket connection established and verified")
-                }
-            }
+        // ✅ Mark as connected immediately without ping verification
+        // Railway's infrastructure has issues with ping, just accept the connection
+        isConnecting = false
+        DispatchQueue.main.async {
+            self.isConnected = true
+            self.connectionError = nil
+            self.reconnectAttempt = 0
+            print("✅ WebSocket connection established (no ping verification)")
         }
     }
     
