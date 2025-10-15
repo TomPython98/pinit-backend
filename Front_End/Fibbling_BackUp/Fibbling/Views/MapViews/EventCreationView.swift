@@ -23,9 +23,6 @@ struct EventCreationView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.dismiss) var dismiss
     
-    // MARK: - Focus Management
-    @FocusState private var isFocused: Bool
-    
     // MARK: - Event State
     @State private var eventTitle = ""
     @State private var eventDescription = ""
@@ -154,17 +151,6 @@ struct EventCreationView: View {
                 FriendPickerView(selectedFriends: $selectedFriends)
                     .environmentObject(accountManager)
             }
-            .onChange(of: showFriendPicker) { oldValue, newValue in
-                // When friend picker sheet dismisses, ensure keyboard is dismissed and view is reset
-                if oldValue && !newValue {
-                    hideKeyboard()
-                    isFocused = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        // Ensure focus is cleared after sheet animation completes
-                        self.isFocused = false
-                    }
-                }
-            }
             .alert(isPresented: $showValidationAlert) {
                 Alert(
                     title: Text("Cannot Create Event"),
@@ -172,9 +158,11 @@ struct EventCreationView: View {
                     dismissButton: .default(Text("OK"))
                 )
             }
-            .onTapGesture {
-                hideKeyboard()
-            }
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    hideKeyboard()
+                }
+            )
         .onDisappear {
             // Cancel any ongoing search tasks
             searchTask?.cancel()
@@ -617,6 +605,7 @@ struct EventCreationView: View {
                             .frame(maxHeight: 450)
                             .padding(.top, 8)
                             .transition(.opacity.combined(with: .move(edge: .top)))
+                            .animation(.easeInOut(duration: 0.2), value: showLocationSuggestions)
                         }
                         
                         // Selected Location Detail Card
@@ -702,145 +691,115 @@ struct EventCreationView: View {
             VStack(spacing: 16) {
                 // Audience selector
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Event Visibility")
+                    Text("Audience")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
-                    
-                    HStack(spacing: 12) {
-                        // Public Button
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                audienceSelection = .publicEvent
+                    Toggle(isOn: $isPublic) {
+                        HStack(spacing: 8) {
+                            Image(systemName: isPublic ? "globe" : "lock.fill")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(isPublic ? .brandAccent : .brandPrimary)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(isPublic ? "Public Event" : "Private Event")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.black)
+                                
+                                Text(isPublic ? "Everyone can discover and join" : "Only invited friends can join")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.black.opacity(0.6))
                             }
-                        }) {
-                            Text("Public")
-                                .font(.headline.weight(.semibold))
-                                .foregroundColor(audienceSelection == .publicEvent ? .white : .black)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(audienceSelection == .publicEvent ? Color.brandPrimary : Color.bgCard)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.cardStroke, lineWidth: 1)
-                                )
-                                .shadow(color: audienceSelection == .publicEvent ? Color.brandPrimary.opacity(0.3) : Color.clear, radius: audienceSelection == .publicEvent ? 8 : 0, x: 0, y: 2)
-                        }
-                        .contentShape(Rectangle())
-                        
-                        // Private Button
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                audienceSelection = .privateEvent
-                            }
-                        }) {
-                            Text("Private")
-                                .font(.headline.weight(.semibold))
-                                .foregroundColor(audienceSelection == .privateEvent ? .white : .black)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(audienceSelection == .privateEvent ? Color.brandPrimary : Color.bgCard)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.cardStroke, lineWidth: 1)
-                                )
-                                .shadow(color: audienceSelection == .privateEvent ? Color.brandPrimary.opacity(0.3) : Color.clear, radius: audienceSelection == .privateEvent ? 8 : 0, x: 0, y: 2)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .onChange(of: audienceSelection) { newValue in
-                        switch newValue {
-                        case .publicEvent:
-                            isPublic = true
-                        case .privateEvent:
-                            isPublic = false
-                            // Auto-matching is now allowed for private events too
                         }
                     }
-                    Text(audienceSelection == .publicEvent ? 
-                         "Everyone can discover and join this event." : 
-                         "Only invited friends and auto-matched users can see this event.")
-                        .font(.caption)
-                        .foregroundColor(.textSecondary)
+                    .tint(.brandPrimary)
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.bgCard)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(isPublic ? Color.clear : Color.brandPrimary, lineWidth: 2)
+                            )
+                    )
+                    .onChange(of: isPublic) { newValue in
+                        if newValue {
+                            audienceSelection = .publicEvent
+                        } else {
+                            audienceSelection = .privateEvent
+                        }
+                    }
                 }
                 
-                // Friend Invitations - Always visible for both public and private
+                // Friend Invitations (always visible)
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Invite Friends")
-                            .font(.headline.weight(.semibold))
-                            .foregroundColor(.textPrimary)
-                        
-                        Spacer()
-                        
-                        Button(action: { showFriendPicker = true }) {
-                            HStack(spacing: 6) {
-                                Text("Add Friends")
-                                    .font(.subheadline.weight(.semibold))
+                    Button(action: { showFriendPicker = true }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                                .font(.system(size: 16, weight: .semibold))
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Invite Friends")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.white)
+                                
+                                Text("Add specific people to your event")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.white.opacity(0.9))
                             }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(Color.brandPrimary)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.8))
                         }
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(audienceSelection == .publicEvent ?
-                             "Invite specific friends to this public event to let them know about it" :
-                             "Only these invited friends and auto-matched users can see this private event")
-                            .font(.caption)
-                            .foregroundColor(.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(16)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.brandPrimary, Color.brandAccent]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .cornerRadius(12)
+                        .shadow(color: Color.brandPrimary.opacity(0.3), radius: 4, x: 0, y: 2)
                     }
                     
                     if !selectedFriends.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(selectedFriends, id: \.self) { friend in
-                                    HStack(spacing: 6) {
+                                    HStack(spacing: 4) {
                                         Text(friend)
                                             .font(.caption.weight(.medium))
-                                            .foregroundColor(.white)
+                            .foregroundColor(.brandPrimary)
                                         
                                         Button(action: { removeFriend(friend) }) {
-                                            Text("×")
-                                                .font(.system(size: 16, weight: .semibold))
-                                                .foregroundColor(.white)
+                                            Image(systemName: "xmark")
+                                                .font(.caption2)
+                                                .foregroundColor(.textSecondary)
                                         }
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.brandPrimary)
-                                    .cornerRadius(10)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.brandPrimary.opacity(0.1))
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1)
+                                    )
                                 }
                             }
                             .padding(.horizontal, 4)
                         }
                     } else {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("No friends invited yet")
+                        Text("No friends invited yet")
                                 .font(.caption)
                                 .foregroundColor(.textSecondary)
-                                .padding(.vertical, 12)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.bgSecondary.opacity(0.5))
-                        .cornerRadius(8)
+                            .padding(.vertical, 8)
                     }
                 }
-                .padding(16)
-                .background(Color.bgCard)
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1.5)
-                )
                 
                 // Max Participants
                                 VStack(alignment: .leading, spacing: 8) {
@@ -1203,9 +1162,6 @@ struct EventCreationView: View {
         guard !suggestion.name.isEmpty else { return }
         
         print("🎯 [EventCreation] selectLocation called: \(suggestion.name)")
-        
-        // Just dismiss keyboard - don't manipulate shared focus state to avoid breaking hit testing
-        hideKeyboard()
         
         PerformanceTracker.measure("Select Location") {
             withAnimation(.easeInOut(duration: 0.15)) {
