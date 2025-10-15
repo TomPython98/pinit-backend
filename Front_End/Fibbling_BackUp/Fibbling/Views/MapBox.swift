@@ -1270,9 +1270,16 @@ struct StudyMapView: View {
                 })
                 .edgesIgnoringSafeArea(.all)
                 .onChange(of: calendarManager.events) { oldValue, newValue in
-                    // Update map annotations when events change, but don't recenter
+                    // Update map annotations when events change
                     if !filteredEvents.isEmpty {
                         mapRefreshVersion += 1
+                        
+                        // ✅ IMMEDIATE: If this is the first load of events, center the map
+                        if oldValue.isEmpty && !newValue.isEmpty {
+                            withAnimation(.easeInOut(duration: 0.8)) {
+                                region = regionThatFits(events: filteredEvents)
+                            }
+                        }
                     }
                 }
                 .onChange(of: eventViewMode) { oldValue, newValue in
@@ -1397,13 +1404,26 @@ struct StudyMapView: View {
                     locationManager.requestLocationPermission()
                 }
                 
-                // Recenter map to show events if we're still at default coordinates
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    if isDefaultRegion(region.center) && !filteredEvents.isEmpty {
-                        withAnimation(.easeInOut(duration: 1.0)) {
-                            region = regionThatFits(events: filteredEvents)
+                // ✅ IMMEDIATE: Fetch events right away (no delay!)
+                if calendarManager.events.isEmpty && !calendarManager.isLoading {
+                    calendarManager.fetchEvents(force: true)
+                }
+                
+                // ✅ IMMEDIATE: Show events if we have them (no 1s delay!)
+                if !filteredEvents.isEmpty {
+                    withAnimation(.easeInOut(duration: 0.8)) {
+                        region = regionThatFits(events: filteredEvents)
+                    }
+                    mapRefreshVersion += 1
+                } else {
+                    // If no events yet, try again after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        if !filteredEvents.isEmpty {
+                            withAnimation(.easeInOut(duration: 0.8)) {
+                                region = regionThatFits(events: filteredEvents)
+                            }
+                            mapRefreshVersion += 1
                         }
-                        mapRefreshVersion += 1
                     }
                 }
             }
