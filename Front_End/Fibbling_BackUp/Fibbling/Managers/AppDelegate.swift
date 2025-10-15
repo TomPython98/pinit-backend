@@ -62,22 +62,30 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     // Send device token to your Django server
     private func sendTokenToServer(token: String) {
+        // Check if user is logged in
         guard let username = UserAccountManager.shared.currentUser, !username.isEmpty else {
+            print("⚠️ Cannot register device: No user logged in")
+            return
+        }
+        
+        // Get JWT token from UserAccountManager
+        guard let jwtToken = UserAccountManager.shared.jwtToken, !jwtToken.isEmpty else {
+            print("⚠️ Cannot register device: No JWT token available")
             return
         }
         
         // Use the constant base URL
         let url = URL(string: "\(serverBaseURL)/api/register-device/")!
         
-        // Create request body
+        // Create request body - only need device token and type
         let body: [String: Any] = [
-            "username": username,
             "device_token": token,
             "device_type": "ios"
         ]
         
         // Convert body to JSON data
         guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
+            print("❌ Failed to serialize device registration JSON")
             return
         }
         
@@ -86,20 +94,27 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         request.httpMethod = "POST"
         request.httpBody = jsonData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(jwtToken)", forHTTPHeaderField: "Authorization")
         
-        // No auth token needed for this request
+        print("📱 Registering device token with server...")
         
         // Send request
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
+                print("❌ Device registration network error: \(error.localizedDescription)")
                 return
             }
             
             if let httpResponse = response as? HTTPURLResponse {
                 if (200...299).contains(httpResponse.statusCode) {
-                } else {
-                    
+                    print("✅ Device token registered successfully for user: \(username)")
                     if let data = data, let responseString = String(data: data, encoding: .utf8) {
+                        print("📱 Server response: \(responseString)")
+                    }
+                } else {
+                    print("❌ Device registration failed with status: \(httpResponse.statusCode)")
+                    if let data = data, let responseString = String(data: data, encoding: .utf8) {
+                        print("❌ Error response: \(responseString)")
                     }
                 }
             }

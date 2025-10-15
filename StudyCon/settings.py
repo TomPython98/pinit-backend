@@ -269,10 +269,22 @@ LOGGING = {
 }
 
 # Push Notifications Settings (configure via environment)
+# Supports both certificate-based and token-based (APNs Auth Key) authentication
 PUSH_NOTIFICATIONS_SETTINGS = {
+    # Modern APNs Authentication (Token-based) - RECOMMENDED
+    "APNS_AUTH_KEY_PATH": os.environ.get('APNS_AUTH_KEY_PATH', ''),  # Path to .p8 file
+    "APNS_AUTH_KEY_ID": os.environ.get('APNS_AUTH_KEY_ID', ''),      # 10-character key ID
+    "APNS_TEAM_ID": os.environ.get('APNS_TEAM_ID', ''),              # 10-character team ID
+    "APNS_TOPIC": os.environ.get('APNS_TOPIC', 'com.pinit.app'),     # Bundle ID
+    
+    # Legacy Certificate-based Authentication (fallback)
     "APNS_CERTIFICATE": os.environ.get('APNS_CERTIFICATE_PATH', ''),
-    "APNS_TOPIC": os.environ.get('APNS_TOPIC', ''),
-    "APNS_USE_SANDBOX": os.environ.get('APNS_USE_SANDBOX', 'False').lower() == 'true',
+    
+    # Environment setting
+    "APNS_USE_SANDBOX": os.environ.get('APNS_USE_SANDBOX', 'True').lower() == 'true',
+    
+    # FCM settings for Android (future)
+    "FCM_API_KEY": os.environ.get('FCM_API_KEY', ''),
 }
 
 # ✅ SECURITY: Security Headers

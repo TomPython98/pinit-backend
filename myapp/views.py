@@ -3515,10 +3515,14 @@ def register_device(request):
     """
     try:
         token = request.data.get('device_token')
-        device_type = request.data.get('device_type')
+        device_type = request.data.get('device_type', 'ios')
         
-        if not token or not device_type:
-            return Response({'error': 'Missing device token or type'}, status=status.HTTP_400_BAD_REQUEST)
+        if not token:
+            return Response({'error': 'Missing device token'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate device type
+        if device_type not in ['ios', 'android']:
+            return Response({'error': 'Invalid device type. Must be "ios" or "android"'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Update or create device record
         device, created = Device.objects.update_or_create(
@@ -3530,9 +3534,31 @@ def register_device(request):
             }
         )
         
-        return Response({'message': 'Device registered successfully'}, status=status.HTTP_201_CREATED)
+        # Also register with django-push-notifications for iOS
+        if device_type == 'ios':
+            try:
+                apns_device, _ = APNSDevice.objects.update_or_create(
+                    registration_id=token,
+                    defaults={
+                        'user': request.user,
+                        'active': True
+                    }
+                )
+                print(f"✅ Registered APNS device for user {request.user.username}")
+            except Exception as apns_error:
+                print(f"⚠️  APNS device registration error: {apns_error}")
+        
+        action = "registered" if created else "updated"
+        print(f"✅ Device {action} for user {request.user.username}: {device_type} - {token[:20]}...")
+        
+        return Response({
+            'message': f'Device {action} successfully',
+            'device_id': str(device.id),
+            'device_type': device_type
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
     
     except Exception as e:
+        print(f"❌ Error registering device: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Function to send push notifications
@@ -3550,7 +3576,10 @@ def send_push_notification(user_id, notification_type, **kwargs):
         devices = Device.objects.filter(user_id=user_id, is_active=True)
         
         if not devices.exists():
+            print(f"⚠️  No active devices found for user_id: {user_id}")
             return
+        
+        print(f"📱 Sending {notification_type} notification to user_id: {user_id} ({devices.count()} device(s))")
         
         # Prepare notification payload
         payload = {
@@ -3568,23 +3597,55 @@ def send_push_notification(user_id, notification_type, **kwargs):
                         defaults={'user_id': user_id}
                     )
                     
+                    # Ensure device is active
+                    if not apns_device.active:
+                        apns_device.active = True
+                        apns_device.save()
+                    
                     # Create appropriate title and message based on notification type
-                    title = "StudyCon"
+                    title = "PinIt"
                     message = "You have a new notification"
                     
                     if notification_type == 'event_invitation':
                         event_title = kwargs.get('event_title', 'an event')
-                        message = f"You've been invited to {event_title}"
+                        from_user = kwargs.get('from_user', 'Someone')
+                        message = f"{from_user} invited you to {event_title}"
+                        title = "Event Invitation"
                     elif notification_type == 'event_update':
                         event_title = kwargs.get('event_title', 'an event')
                         message = f"{event_title} has been updated"
+                        title = "Event Updated"
                     elif notification_type == 'event_cancellation':
                         event_title = kwargs.get('event_title', 'an event')
                         message = f"{event_title} has been cancelled"
+                        title = "Event Cancelled"
                     elif notification_type == 'new_attendee':
                         event_title = kwargs.get('event_title', 'your event')
                         attendee_name = kwargs.get('attendee_name', 'Someone')
-                        message = f"{attendee_name} joined your event: {event_title}"
+                        message = f"{attendee_name} joined {event_title}"
+                        title = "New Attendee"
+                    elif notification_type == 'join_request':
+                        event_title = kwargs.get('event_title', 'your event')
+                        requester_name = kwargs.get('requester_name', 'Someone')
+                        message = f"{requester_name} wants to join {event_title}"
+                        title = "Join Request"
+                    elif notification_type == 'request_approved':
+                        event_title = kwargs.get('event_title', 'an event')
+                        message = f"Your request to join {event_title} was approved!"
+                        title = "Request Approved"
+                    elif notification_type == 'new_rating':
+                        from_user = kwargs.get('from_user', 'Someone')
+                        rating = kwargs.get('rating', 5)
+                        message = f"{from_user} rated you {rating} stars"
+                        title = "New Rating"
+                    elif notification_type == 'trust_level_change':
+                        level_title = kwargs.get('level_title', 'a new level')
+                        message = f"Congratulations! You've reached {level_title}"
+                        title = "Level Up!"
+                    elif notification_type == 'rating_reminder':
+                        event_title = kwargs.get('event_title', 'an event')
+                        message = f"Rate attendees from {event_title}"
+                        title = "Rate Event"
                     elif notification_type == 'review_reminder':
                         event_title = kwargs.get('event_title', 'an event')
                         reviewable_count = kwargs.get('reviewable_count', 0)
@@ -3592,24 +3653,94 @@ def send_push_notification(user_id, notification_type, **kwargs):
                             message = f"Rate {reviewable_count} attendees from {event_title}"
                         else:
                             message = f"Rate attendees from {event_title}"
+                        title = "Rate Attendees"
                     
-                    # Send notification
+                    # Send notification with enhanced payload
                     apns_device.send_message(
                         message=message,
+                        title=title,
                         extra=payload,
                         sound="default",
-                        badge=1
+                        badge=1,
+                        thread_id=notification_type  # Group notifications by type
                     )
                     
+                    print(f"✅ Push notification sent to iOS device: {title} - {message}")
+                    
                 except Exception as e:
-                    print(f"APNS send error: {e}")
+                    print(f"❌ APNS send error for user {user_id}: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             elif device.device_type == 'android':
                 # Implementation for FCM (Android) would go here
+                print(f"⚠️  Android push notifications not yet implemented")
                 pass
                 
     except Exception as e:
-        print(f"Error sending push notification: {e}")
+        print(f"❌ Error sending push notification to user {user_id}: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+# Test endpoint for push notifications (for debugging)
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def test_push_notification(request):
+    """
+    Test endpoint to send a push notification to the current user
+    Useful for testing push notification setup
+    """
+    try:
+        notification_type = request.data.get('type', 'event_invitation')
+        
+        # Send test notification
+        send_push_notification(
+            user_id=request.user.id,
+            notification_type=notification_type,
+            event_title='Test Event',
+            from_user='System Test',
+            event_id='test-123'
+        )
+        
+        return Response({
+            'message': 'Test notification sent',
+            'user': request.user.username,
+            'type': notification_type
+        })
+    except Exception as e:
+        print(f"❌ Test push notification error: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Get user's registered devices (for debugging)
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_user_devices(request):
+    """
+    Get all registered devices for the current user
+    """
+    try:
+        devices = Device.objects.filter(user=request.user, is_active=True)
+        
+        device_list = [{
+            'id': str(device.id),
+            'device_type': device.device_type,
+            'token': device.token[:20] + '...' if len(device.token) > 20 else device.token,
+            'created_at': device.created_at.isoformat(),
+            'updated_at': device.updated_at.isoformat(),
+        } for device in devices]
+        
+        return Response({
+            'count': len(device_list),
+            'devices': device_list
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Moderation and Account Management Endpoints
