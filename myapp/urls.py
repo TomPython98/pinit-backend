@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/register-device/', views.register_device, name='register_device'),
     path('api/test-push/', views.test_push_notification, name='test_push_notification'),
     path('api/user-devices/', views.get_user_devices, name='get_user_devices'),
+    path('api/delete-device/<str:device_id>/', views.delete_device, name='delete_device'),
     path('api/debug-apns/', views.debug_apns_config, name='debug_apns_config'),
     
     path('api/profile_completion/<str:username>/', views.get_profile_completion, name='profile_completion'),

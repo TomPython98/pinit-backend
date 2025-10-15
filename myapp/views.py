@@ -3546,6 +3546,19 @@ def register_device(request):
         print(f"❌ Error registering device: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['DELETE'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def delete_device(request, device_id):
+    try:
+        device = Device.objects.get(id=device_id, user=request.user)
+        device.delete()
+        return Response({'message': 'Device deleted', 'device_id': str(device_id)})
+    except Device.DoesNotExist:
+        return Response({'error': 'Device not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 # Function to send push notifications using aioapns
 def send_push_notification(user_id, notification_type, **kwargs):
     """
