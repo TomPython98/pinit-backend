@@ -227,7 +227,9 @@ struct EventEditView: View {
                         DatePicker("Start Time", selection: $eventDate, displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.compact)
                             .tint(.brandPrimary)
-                            .foregroundColor(Color.textPrimary)
+                            .foregroundColor(Color.black)
+                            .accentColor(.brandPrimary)
+                            .environment(\.colorScheme, .light)
                             .onChange(of: eventDate) { oldValue, newValue in
                                 print("🔍 [EventEdit] Start Date Changed:")
                                 print("   📅 Old Date: \(oldValue)")
@@ -246,7 +248,9 @@ struct EventEditView: View {
                         DatePicker("End Time", selection: $eventEndDate, displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.compact)
                             .tint(.brandPrimary)
-                            .foregroundColor(Color.textPrimary)
+                            .foregroundColor(Color.black)
+                            .accentColor(.brandPrimary)
+                            .environment(\.colorScheme, .light)
                             .onChange(of: eventEndDate) { oldValue, newValue in
                                 print("🔍 [EventEdit] End Date Changed:")
                                 print("   📅 Start Date: \(eventDate)")
