@@ -42,6 +42,7 @@ struct ContentView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn = true
     @EnvironmentObject var accountManager: UserAccountManager
     @EnvironmentObject var calendarManager: CalendarManager
+    @EnvironmentObject var chatManager: ChatManager
     @StateObject private var localizationManager = LocalizationManager.shared
     
     // State for next RSVP'd event
@@ -107,6 +108,11 @@ struct ContentView: View {
                         }
                         // Find next RSVP'd event from CalendarManager
                         findNextRSVPEvent()
+                        
+                        // ✅ Refresh unread message counts
+                        if let currentUser = accountManager.currentUser {
+                            chatManager.refreshUnreadCounts(currentUser: currentUser)
+                        }
                     }
                     .onReceive(calendarManager.$events) { _ in
                         // Update when calendar events change
@@ -522,7 +528,8 @@ struct ContentView: View {
                 "friends_social".localized,
                 systemImage: "person.2.fill",
                 background: Color.brandPrimary,
-                description: "Connect with friends"
+                description: "Connect with friends",
+                badgeCount: chatManager.totalUnreadCount
             ) {
                 withAnimation(.spring()) {
                     showFriendsView = true
@@ -646,39 +653,56 @@ struct ContentView: View {
     }
     
     // MARK: - Tool Button with enhanced gradient and shadow
-    func toolButton(_ title: String, systemImage: String, background: Color, description: String, action: @escaping () -> Void) -> some View {
+    func toolButton(_ title: String, systemImage: String, background: Color, description: String, badgeCount: Int = 0, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 22) {
-                // Icon with enhanced gradient and inner shadow
-                Image(systemName: systemImage)
-                    .font(.system(size: 26))
-                    .foregroundColor(.textLight)
-                    .frame(width: 64, height: 64)
-                    .background(
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [background, background.opacity(0.85)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
+                // Icon with enhanced gradient, inner shadow, and badge
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 26))
+                        .foregroundColor(.textLight)
+                        .frame(width: 64, height: 64)
+                        .background(
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [background, background.opacity(0.85)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
                                     )
-                                )
-                                .shadow(color: background.opacity(0.25), radius: 8, x: 0, y: 4)
-                            
-                            // Subtle inner highlight
-                            Circle()
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.6), .clear],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                                .frame(width: 62, height: 62)
-                        }
-                    )
+                                    .shadow(color: background.opacity(0.25), radius: 8, x: 0, y: 4)
+                                
+                                // Subtle inner highlight
+                                Circle()
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.6), .clear],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1
+                                    )
+                                    .frame(width: 62, height: 62)
+                            }
+                        )
+                    
+                    // Badge overlay
+                    if badgeCount > 0 {
+                        Text(badgeCount > 9 ? "9+" : "\(badgeCount)")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(minWidth: 20, minHeight: 20)
+                            .padding(2)
+                            .background(
+                                Circle()
+                                    .fill(Color.red)
+                                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                            )
+                            .offset(x: 8, y: -8)
+                    }
+                }
                 
                 // Title and description with refined typography
                 VStack(spacing: 6) {

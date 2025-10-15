@@ -260,9 +260,18 @@ class ChatManager: ObservableObject {
                     self.chatSessions = sessions
                     self.saveMessages()
                     
-                    // ✅ Update unread counts for the sender (if not currently in that chat)
-                    if self.currentlyOpenChat != receiver {
-                        self.updateUnreadCount(for: receiver, currentUser: sender)
+                    // ✅ Update unread counts for messages from the other person
+                    for wsMessage in messages {
+                        if wsMessage.sender != sender && wsMessage.sender != "📅" {
+                            // This is from the other person, update unread count
+                            if self.currentlyOpenChat != wsMessage.sender {
+                                // Only increment if we're not currently chatting with them
+                                self.updateUnreadCount(for: wsMessage.sender, currentUser: sender)
+                                print("📊 Updated unread count for \(wsMessage.sender) (chat not open)")
+                            } else {
+                                print("💬 Message from \(wsMessage.sender) - chat is open, not counting as unread")
+                            }
+                        }
                     }
                     
                     print("📩 Processed \(newMessagesAdded) new WebSocket messages - UI should update")
@@ -305,6 +314,11 @@ class ChatManager: ObservableObject {
     /// Get unread count for a specific friend
     func getUnreadCount(for friend: String) -> Int {
         return unreadCounts[friend] ?? 0
+    }
+    
+    /// Get total unread count across all friends
+    var totalUnreadCount: Int {
+        return unreadCounts.values.reduce(0, +)
     }
     
     /// Mark messages as read when opening a chat
