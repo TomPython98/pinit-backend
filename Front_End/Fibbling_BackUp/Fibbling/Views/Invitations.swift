@@ -174,6 +174,19 @@ struct InvitationsView: View {
         return invitations.filter { $0.isAutoMatched && $0.isPending }
     }
     
+    private var pendingJoinRequests: [EventJoinRequest] {
+        return joinRequests.filter { $0.status == "pending" }
+    }
+    
+    private var activeHostedEvents: [StudyEvent] {
+        let now = Date()
+        // Show events that haven't ended yet (comparing with end time if available, otherwise time + 2 hours)
+        return hostedEvents.filter { event in
+            let eventEndTime = event.endTime ?? event.time.addingTimeInterval(7200) // 2 hours default
+            return eventEndTime > now
+        }
+    }
+    
     private var navigationTitle: String {
         switch selectedTab {
         case 0: return "Direct Invitations"
@@ -240,14 +253,14 @@ struct InvitationsView: View {
                                 }
                             } else if selectedTab == 2 {
                                 // My Requests Tab
-                                if joinRequests.isEmpty {
+                                if pendingJoinRequests.isEmpty {
                                     emptyStateView(
                                         icon: "paperplane",
-                                        title: "No Join Requests",
-                                        subtitle: "Your join requests will appear here"
+                                        title: "No Pending Requests",
+                                        subtitle: "Your pending join requests will appear here"
                                     )
                                 } else {
-                                    ForEach(joinRequests) { request in
+                                    ForEach(pendingJoinRequests) { request in
                                         ModernJoinRequestCard(
                                             request: request,
                                             onNavigateToEvent: { event in navigateToEvent(event) }
@@ -256,14 +269,14 @@ struct InvitationsView: View {
                                 }
                             } else if selectedTab == 3 {
                                 // Host Management Tab
-                                if hostedEvents.isEmpty {
+                                if activeHostedEvents.isEmpty {
                                     emptyStateView(
                                         icon: "crown",
-                                        title: "No Hosted Events",
+                                        title: "No Active Hosted Events",
                                         subtitle: "Create events to manage RSVP requests"
                                     )
                                 } else {
-                                    ForEach(hostedEvents) { event in
+                                    ForEach(activeHostedEvents) { event in
                                         let eventJoinRequests = hostJoinRequests.filter { $0.eventId.lowercased() == event.id.uuidString.lowercased() }
                                         HostEventCard(
                                             event: event,
