@@ -1547,8 +1547,25 @@ def delete_study_event(request):
 
         # Store attendees and invited friends before deleting the event
         host_username = event.host.username
-        attendees = [u.username for u in event.attendees.all()]
-        invited_friends = [u.username for u in event.invited_friends.all()]
+        event_title = event.title
+        attendees_list = list(event.attendees.all())
+        invited_friends_list = list(event.invited_friends.all())
+        attendees = [u.username for u in attendees_list]
+        invited_friends = [u.username for u in invited_friends_list]
+        
+        # Send cancellation notifications to all attendees and invited friends BEFORE deletion
+        all_notified_users = set(attendees_list) | set(invited_friends_list)
+        for notified_user in all_notified_users:
+            if notified_user.id != user.id:  # Don't notify the host
+                try:
+                    send_push_notification(
+                        user_id=notified_user.id,
+                        notification_type='event_cancellation',
+                        event_title=event_title,
+                        host_name=host_username
+                    )
+                except Exception as notif_error:
+                    logger.warning(f"Failed to send cancellation notification to {notified_user.username}: {notif_error}")
         
         # Delete the event atomically
         from django.db import transaction
@@ -5463,6 +5480,18 @@ def approve_join_request(request):
             
             # Approve the request
             join_request.approve(request.user)
+            
+            # Send push notification to the requester
+            try:
+                send_push_notification(
+                    user_id=join_request.user.id,
+                    notification_type='request_approved',
+                    event_id=str(join_request.event.id),
+                    event_title=join_request.event.title,
+                    host_name=request.user.username
+                )
+            except Exception as notif_error:
+                print(f"⚠️ Failed to send request_approved notification: {notif_error}")
             
             # Broadcast event update
             broadcast_event_updated(
