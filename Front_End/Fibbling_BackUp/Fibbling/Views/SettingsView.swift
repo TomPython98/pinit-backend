@@ -402,6 +402,9 @@ struct SettingsView: View {
                                 supportSettings
                             }
                             
+                            // About PinIt
+                            aboutSection
+                            
                             // Account Actions
                             settingsCard("Account Actions", icon: PinItIcons.delete, color: .pinItError) {
                                 dangerZone
@@ -777,6 +780,53 @@ struct SettingsView: View {
                     .fill(Color.gray.opacity(0.05))
             )
         }
+    }
+    
+    // MARK: - About Section
+    private var aboutSection: some View {
+        VStack(spacing: 20) {
+            // Logo
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 80)
+            
+            // App Name
+            Text("PinIt")
+                .font(.title2.bold())
+                .foregroundColor(.textPrimary)
+            
+            // Tagline
+            Text("Connect. Study. Grow.")
+                .font(.subheadline)
+                .foregroundColor(.textSecondary)
+            
+            Divider()
+                .padding(.vertical, 8)
+            
+            // Version Info
+            HStack {
+                Text("Version")
+                    .foregroundColor(.textSecondary)
+                Spacer()
+                Text("1.0.0")
+                    .foregroundColor(.textPrimary)
+                    .fontWeight(.medium)
+            }
+            
+            // Copyright
+            Text("© 2025 PinIt Social. All rights reserved.")
+                .font(.caption)
+                .foregroundColor(.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 8)
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.bgCard)
+                .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+        )
     }
     
     private var dangerZone: some View {

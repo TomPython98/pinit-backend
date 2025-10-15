@@ -554,9 +554,11 @@ struct FriendsListView: View {
     // MARK: - Empty States
     private var emptyFriendsState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "person.2.slash")
-                .font(.system(size: 60))
-                .foregroundColor(Color.textMuted)
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 80)
+                .opacity(0.4)
             
             Text("No Friends Yet")
                 .font(.headline)
@@ -581,9 +583,11 @@ struct FriendsListView: View {
     
     private var emptyRequestsState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "envelope.open")
-                .font(.system(size: 60))
-                .foregroundColor(Color.textMuted)
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 80)
+                .opacity(0.4)
             
             Text("No Pending Requests")
                 .font(.headline)
@@ -608,9 +612,11 @@ struct FriendsListView: View {
     
     private var emptyDiscoverState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "person.3")
-                .font(.system(size: 60))
-                .foregroundColor(Color.textMuted)
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 80)
+                .opacity(0.4)
             
             Text("No Users Found")
                 .font(.headline)
