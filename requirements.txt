@@ -1,3 +1,6 @@
+# Python version compatibility
+python-version==3.11
+
 # Core Django
 Django==5.1.6
 djangorestframework==3.15.2
