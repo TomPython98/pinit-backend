@@ -455,6 +455,14 @@ def create_study_event(request):
             max_participants = data.get("max_participants", 10)
             auto_matching_enabled = data.get("auto_matching_enabled", False)
             
+            # Parse dates (handle both 'Z' and '+00:00' timezone formats)
+            def parse_datetime(date_str):
+                """Parse datetime string handling iOS format with .milliseconds and Z"""
+                if date_str.endswith('Z'):
+                    # Replace 'Z' with '+00:00' for fromisoformat
+                    date_str = date_str[:-1] + '+00:00'
+                return datetime.fromisoformat(date_str)
+            
             # Create the event
             # Auto-matched events are not forced to be public - they're visible only to matched users
             event = StudyEvent.objects.create(
@@ -463,8 +471,8 @@ def create_study_event(request):
                 host=host,
                 latitude=data.get("latitude"),
                 longitude=data.get("longitude"),
-                time=datetime.fromisoformat(data.get("time")),
-                end_time=datetime.fromisoformat(data.get("end_time")),
+                time=parse_datetime(data.get("time")),
+                end_time=parse_datetime(data.get("end_time")),
                 is_public=data.get("is_public", True),
                 event_type=data.get("event_type", "other"),
                 max_participants=max_participants,
