@@ -89,6 +89,9 @@ class ChatManager: ObservableObject {
             chatSessions.append(ChatSession(participants: chatKey, messages: []))
         }
         
+        // ✅ Fetch chat history from server
+        fetchChatHistory(sender: sender, receiver: receiver)
+        
         // ✅ Initialize WebSocket connection
         webSocketManager = PrivateChatWebSocketManager(sender: sender, receiver: receiver)
         
@@ -101,6 +104,85 @@ class ChatManager: ObservableObject {
         
         // ✅ Connect to WebSocket
         webSocketManager?.connect()
+    }
+    
+    // ✅ Fetch chat history from server
+    private func fetchChatHistory(sender: String, receiver: String) {
+        let baseURL = APIConfig.baseURLs[0]
+        let endpoint = "/get_chat_history/\(sender)/\(receiver)/"
+        
+        guard let url = URL(string: baseURL + endpoint) else {
+            print("❌ Invalid chat history URL")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        // ✅ Add JWT authentication
+        if let token = UserDefaults.standard.string(forKey: "access_token") {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("❌ Failed to fetch chat history: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let data = data else {
+                print("❌ No data received from chat history")
+                return
+            }
+            
+            do {
+                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                
+                if let success = json?["success"] as? Bool, success,
+                   let messages = json?["messages"] as? [[String: Any]] {
+                    
+                    print("📥 Fetched \(messages.count) messages from server")
+                    
+                    let chatKey = [sender, receiver].sorted()
+                    
+                    DispatchQueue.main.async {
+                        var sessions = self.chatSessions
+                        
+                        if let index = sessions.firstIndex(where: { $0.participants == chatKey }) {
+                            // Clear existing messages and load from server
+                            sessions[index].messages.removeAll()
+                            
+                            for msgData in messages {
+                                guard let msgSender = msgData["sender"] as? String,
+                                      let msgText = msgData["message"] as? String,
+                                      let timestampStr = msgData["timestamp"] as? String else {
+                                    continue
+                                }
+                                
+                                // Parse ISO 8601 timestamp
+                                let formatter = ISO8601DateFormatter()
+                                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                                let timestamp = formatter.date(from: timestampStr) ?? Date()
+                                
+                                sessions[index].messages.append(ChatMessage(
+                                    sender: msgSender,
+                                    message: msgText,
+                                    timestamp: timestamp
+                                ))
+                            }
+                            
+                            self.chatSessions = sessions
+                            self.saveMessages()
+                            print("✅ Loaded \(sessions[index].messages.count) messages from server")
+                        }
+                    }
+                }
+            } catch {
+                print("❌ Failed to parse chat history: \(error.localizedDescription)")
+            }
+        }.resume()
     }
 
     func disconnect() {
