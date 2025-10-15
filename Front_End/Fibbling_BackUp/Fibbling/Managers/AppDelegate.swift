@@ -11,6 +11,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     // Base server URL - this should match what's used in the rest of the app
     private let serverBaseURL = APIConfig.serverBaseURL
     
+    // Retry state for deferred device registration
+    private var pendingDeviceToken: String?
+    private var deviceRegisterRetryCount: Int = 0
+    
     func application(_ application: UIApplication, 
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         // Register as notification delegate
@@ -23,9 +27,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        
-        // Send the token to your server
-        sendTokenToServer(token: tokenString)
+        // Defer registration until JWT is available
+        registerDeviceTokenWhenReady(tokenString)
     }
     
     // Called if registration for remote notifications fails
@@ -70,7 +73,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         
         // Get JWT token from UserAccountManager
         guard let jwtToken = UserAccountManager.shared.jwtToken, !jwtToken.isEmpty else {
-            print("⚠️ Cannot register device: No JWT token available")
+            print("⚠️ Cannot register device: No JWT token available (will retry)")
+            // Defer and retry shortly to allow login flow to persist tokens
+            registerDeviceTokenWhenReady(token)
             return
         }
         
@@ -116,9 +121,40 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                     if let data = data, let responseString = String(data: data, encoding: .utf8) {
                         print("❌ Error response: \(responseString)")
                     }
+                    // If unauthorized, retry shortly in case token just rotated
+                    if httpResponse.statusCode == 401 {
+                        self.registerDeviceTokenWhenReady(token)
+                    }
                 }
             }
         }.resume()
+    }
+
+    // Retry helper: waits for JWT/currentUser to become available, with a short backoff
+    private func registerDeviceTokenWhenReady(_ token: String) {
+        pendingDeviceToken = token
+        let hasUser = (UserAccountManager.shared.currentUser?.isEmpty == false)
+        let hasJWT = (UserAccountManager.shared.jwtToken?.isEmpty == false)
+        
+        // If ready, reset retry count and send
+        if hasUser && hasJWT {
+            deviceRegisterRetryCount = 0
+            sendTokenToServer(token: token)
+            return
+        }
+        
+        // Limit retries to avoid infinite loops
+        guard deviceRegisterRetryCount < 10 else {
+            print("⚠️ Gave up registering device after retries; JWT/user not available")
+            return
+        }
+        deviceRegisterRetryCount += 1
+        let delaySeconds = 0.5
+        print("⏳ Deferring device registration (attempt \(deviceRegisterRetryCount))...")
+        DispatchQueue.main.asyncAfter(deadline: .now() + delaySeconds) { [weak self] in
+            guard let self = self, let token = self.pendingDeviceToken else { return }
+            self.registerDeviceTokenWhenReady(token)
+        }
     }
 }
 #endif 

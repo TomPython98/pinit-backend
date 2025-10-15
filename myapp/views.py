@@ -3656,16 +3656,28 @@ def send_push_notification(user_id, notification_type, **kwargs):
                         title = "Rate Attendees"
                     
                     # Send notification with enhanced payload
-                    apns_device.send_message(
-                        message=message,
-                        title=title,
-                        extra=payload,
-                        sound="default",
-                        badge=1,
-                        thread_id=notification_type  # Group notifications by type
-                    )
-                    
-                    print(f"✅ Push notification sent to iOS device: {title} - {message}")
+                    try:
+                        print(f"🔍 Attempting to send APNs notification...")
+                        print(f"🔍 APNs device: {apns_device.registration_id[:20]}...")
+                        print(f"🔍 Message: {message}")
+                        print(f"🔍 Title: {title}")
+                        
+                        apns_device.send_message(
+                            message=message,
+                            title=title,
+                            extra=payload,
+                            sound="default",
+                            badge=1,
+                            thread_id=notification_type  # Group notifications by type
+                        )
+                        
+                        print(f"✅ Push notification sent to iOS device: {title} - {message}")
+                        
+                    except Exception as apns_send_error:
+                        print(f"❌ APNs send_message failed: {apns_send_error}")
+                        print(f"❌ APNs error type: {type(apns_send_error)}")
+                        import traceback
+                        traceback.print_exc()
                     
                 except Exception as e:
                     print(f"❌ APNS send error for user {user_id}: {e}")
