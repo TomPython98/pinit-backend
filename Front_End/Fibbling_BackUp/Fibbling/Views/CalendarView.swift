@@ -215,6 +215,7 @@ struct CustomCalendarView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 120)
+                .colorScheme(.light)
             }
             .padding(.horizontal)
             
