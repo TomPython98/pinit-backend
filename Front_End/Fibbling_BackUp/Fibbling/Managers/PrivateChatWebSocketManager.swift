@@ -82,14 +82,15 @@ class PrivateChatWebSocketManager: ObservableObject {
         // Start listening for messages
         listenForMessages()
         
-        // ✅ Start periodic pings to keep connection alive
-        startPingTimer()
+        // ❌ DON'T start ping timer - it interferes with Railway WebSocket
+        // The ping/pong mechanism causes iOS to drop the connection
+        // startPingTimer()
         
         DispatchQueue.main.async {
             self.isConnected = true
             self.connectionError = nil
             self.reconnectAttempt = 0
-            print("✅ WebSocket connection established")
+            print("✅ WebSocket connection established (without ping timer)")
         }
     }
     
@@ -149,6 +150,7 @@ class PrivateChatWebSocketManager: ObservableObject {
         ]
         
         print("📤 Sending message: \(message) from \(sender) to \(receiver)")
+        print("📤 WebSocket task state: \(webSocketTask.state.rawValue)")
         
         do {
             let data = try JSONSerialization.data(withJSONObject: payload)
@@ -157,11 +159,18 @@ class PrivateChatWebSocketManager: ObservableObject {
             webSocketTask.send(wsMessage) { [weak self] error in
                 if let error = error {
                     print("❌ Failed to send message: \(error.localizedDescription)")
+                    print("❌ Send error details: \(error)")
                     DispatchQueue.main.async {
                         self?.connectionError = "Failed to send message"
+                        self?.isConnected = false
                     }
+                    // Try to reconnect
+                    self?.handleConnectionError()
                 } else {
                     print("✅ Message sent successfully to WebSocket")
+                    // ✅ CRITICAL FIX: Ensure we're still listening after sending
+                    // This prevents the connection from appearing "dead"
+                    print("🔍 Ensuring WebSocket is still listening for responses...")
                 }
             }
         } catch {
