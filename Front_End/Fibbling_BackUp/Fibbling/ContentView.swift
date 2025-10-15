@@ -128,23 +128,21 @@ struct ContentView: View {
                     customTopBar
                 }
                 
-                // Professional interactive tutorial - shows on first login (only for openMap step)
-                if showMapTutorial && tutorialManager.tutorialStep == .openMap {
+                // Simple welcome tutorial - shows once on first login
+                if showMapTutorial {
                     InteractiveTutorial(isShowing: $showMapTutorial)
                         .transition(.opacity)
                         .zIndex(1000)
-                        .environmentObject(tutorialManager)
                 }
             }
         }
         .onAppear {
             // Show tutorial if user hasn't seen it yet (first login after onboarding)
             if !hasSeenMapTutorial {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                     withAnimation {
                         showMapTutorial = true
                         tutorialManager.isActive = true
-                        tutorialManager.tutorialStep = .openMap
                     }
                 }
             }
@@ -542,6 +540,14 @@ struct ContentView: View {
         WeatherAndCalendarView(selectedDate: $selectedDate, showCalendar: .constant(false))
             .frame(maxWidth: .infinity)
             .shadow(color: Color.cardShadow, radius: 12, x: 0, y: 6)
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: MapCardFramePreferenceKey.self,
+                        value: geo.frame(in: .global)
+                    )
+                }
+            )
     }
     
     // MARK: - Tools Grid View with refined cards and enhanced shadows
@@ -625,8 +631,10 @@ struct ContentView: View {
                 showProfileView = true
             }
             
-            quickAccessButton("Map", systemImage: "mappin.circle.fill") {
-                showMapView = true
+            quickAccessButton("Website", systemImage: "globe") {
+                if let url = URL(string: "https://www.pinitsocial.com") {
+                    UIApplication.shared.open(url)
+                }
             }
         }
         .sheet(isPresented: $showMapView) {
@@ -3430,8 +3438,7 @@ struct SocialActivityFeedView: View {
     
     // MARK: - Lifecycle
     private func initializeView() {
-        // Start location services for nearby events
-        locationManager.startLocationUpdates()
+        // Do not auto-start location updates here; ask explicitly after onboarding
         loadTrendingEvents()
         loadRecentActivity()
     }

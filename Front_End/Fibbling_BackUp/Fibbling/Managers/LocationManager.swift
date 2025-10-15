@@ -38,7 +38,8 @@ class LocationManager: NSObject, ObservableObject {
     
     func startLocationUpdates() {
         guard authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways else {
-            requestLocationPermission()
+            // Only show error but don't auto-request; user will request via UI
+            errorMessage = "Location access is required for finding nearby events"
             return
         }
         
@@ -108,7 +109,8 @@ extension LocationManager: CLLocationManagerDelegate {
             case .denied, .restricted:
                 self.errorMessage = "Location access denied. Please enable location services in Settings to find nearby events."
             case .notDetermined:
-                self.requestLocationPermission()
+                // Wait for explicit user action via UI (PostOnboardingPermissionsView)
+                break
             @unknown default:
                 break
             }

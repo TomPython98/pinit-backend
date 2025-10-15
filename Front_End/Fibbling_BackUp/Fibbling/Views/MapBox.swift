@@ -1088,6 +1088,7 @@ struct StudyMapView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var locationManager = LocationManager()
     @StateObject private var tutorialManager = TutorialManager.shared
+    @AppStorage("hasSeenMapTutorial") private var hasSeenMapTutorial = false
     
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816), // Default to Buenos Aires
@@ -1257,11 +1258,6 @@ struct StudyMapView: View {
             ZStack {
                 // Map View
                 StudyMapBoxView(events: filteredEvents, region: $region, refreshVersion: mapRefreshVersion, onSelect: { event in
-                    // Track tutorial progress - user tapped on map pin!
-                    if tutorialManager.isActive {
-                        tutorialManager.mapPinTapped()
-                    }
-                    
                     // Always get the most up-to-date version of the event from studyEvents
                     if let freshEvent = calendarManager.events.first(where: { $0.id == event.id }) {
                         selectedEvent = freshEvent
@@ -1396,10 +1392,8 @@ struct StudyMapView: View {
                     .animation(.easeInOut(duration: 0.3), value: calendarManager.isLoading)
                 }
                 
-                // Map tutorial overlay (for pin and add button steps)
-                if tutorialManager.isActive && 
-                   (tutorialManager.tutorialStep == .tapOnPin || 
-                    tutorialManager.tutorialStep == .tapAddEvent) {
+                // Map tutorial overlay - shows once when user first opens map
+                if tutorialManager.tutorialStep == .map && !hasSeenMapTutorial {
                     MapTutorialOverlay()
                         .transition(.opacity)
                         .zIndex(1000)
@@ -1407,23 +1401,10 @@ struct StudyMapView: View {
             }
             .navigationBarHidden(true)
             .onAppear {
-                // Track that user opened the map (for tutorial)
-                if tutorialManager.isActive && tutorialManager.tutorialStep == .openMap {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        tutorialManager.mapOpened()
-                    }
-                }
-                
-                // Request location permission on first load
-                if locationManager.authorizationStatus == .notDetermined {
-                    showLocationPermission = true
-                } else {
+                // Start location updates if already authorized
+                if locationManager.authorizationStatus == .authorizedWhenInUse || 
+                   locationManager.authorizationStatus == .authorizedAlways {
                     locationManager.startLocationUpdates()
-                }
-                
-                // Also request location permission for the map
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    locationManager.requestLocationPermission()
                 }
                 
                 // ✅ IMMEDIATE: Fetch events right away (no delay!)
@@ -1785,11 +1766,6 @@ struct StudyMapView: View {
     
     var addEventButton: some View {
         Button(action: {
-            // Track tutorial progress - user tapped add event button!
-            if tutorialManager.isActive {
-                tutorialManager.addButtonTapped()
-            }
-            
             withAnimation(.spring()) {
                 newEventCoordinate = CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816) // Default to Buenos Aires
                 showEventCreationSheet = true
@@ -1819,6 +1795,14 @@ struct StudyMapView: View {
             .overlay(
                 Capsule()
                     .stroke(Color.white.opacity(0.5), lineWidth: 2)
+            )
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: AddEventButtonFramePreferenceKey.self,
+                        value: geo.frame(in: .global)
+                    )
+                }
             )
         }
     }

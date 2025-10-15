@@ -676,8 +676,8 @@ struct SettingsView: View {
     private var supportSettings: some View {
         VStack(spacing: 12) {
             settingsButton(icon: "questionmark.circle", title: "Help Center", action: {
-                // Open help center - could be in-app or external
-                if let url = URL(string: "mailto:tom.besinger@icloud.com?subject=PinIt%20Help") {
+                // Open help center website
+                if let url = URL(string: "https://www.pinitsocial.com") {
                     UIApplication.shared.open(url)
                 }
             })
