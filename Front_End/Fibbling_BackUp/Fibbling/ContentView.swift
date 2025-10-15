@@ -52,6 +52,10 @@ struct ContentView: View {
     
     // Animation state
     @State private var isAnimating = false
+    
+    // Tutorial overlay state
+    @AppStorage("hasSeenMapTutorial") private var hasSeenMapTutorial = false
+    @State private var showMapTutorial = false
 
     var body: some View {
         NavigationStack {
@@ -121,6 +125,23 @@ struct ContentView: View {
                 }
                 .safeAreaInset(edge: .top) {
                     customTopBar
+                }
+                
+                // Tutorial overlay - shows on first login after onboarding
+                if showMapTutorial {
+                    MapTutorialOverlay(isShowing: $showMapTutorial)
+                        .transition(.opacity)
+                        .zIndex(1000)
+                }
+            }
+        }
+        .onAppear {
+            // Show tutorial if user hasn't seen it yet (first login after onboarding)
+            if !hasSeenMapTutorial {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation {
+                        showMapTutorial = true
+                    }
                 }
             }
         }

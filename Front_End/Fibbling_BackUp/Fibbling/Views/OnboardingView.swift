@@ -9,17 +9,9 @@ struct OnboardingView: View {
     
     var body: some View {
         ZStack {
-            // Beautiful gradient background
-            LinearGradient(
-                colors: [
-                    Color.brandPrimary.opacity(0.15),
-                    Color.brandSecondary.opacity(0.1),
-                    Color.white
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Clean white background for readability
+            Color.white
+                .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Skip button
@@ -70,7 +62,7 @@ struct OnboardingView: View {
                         systemImage: "sparkles",
                         title: "Ready to Start?",
                         subtitle: "Your next adventure awaits",
-                        description: "Join thousands making real connections near you",
+                        description: "Make real connections and create memories near you",
                         accentColor: .brandPrimary,
                         isLastPage: true,
                         onGetStarted: completeOnboarding
@@ -136,13 +128,7 @@ struct OnboardingPage: View {
                 } else {
                     ZStack {
                         Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [accentColor.opacity(0.2), accentColor.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                            .fill(accentColor.opacity(0.1))
                             .frame(width: 140, height: 140)
                         
                         Image(systemName: systemImage)
