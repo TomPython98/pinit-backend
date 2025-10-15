@@ -1673,12 +1673,6 @@ extension EventDetailView {
                 // Main Action Button (Join/Leave/Hosting)
             joinLeaveButton
             
-                // Secondary Actions Row
-                HStack(spacing: 12) {
-                    // Group Chat Button
-                    groupChatButton
-                }
-                
                 // Third Row
                 HStack(spacing: 12) {
                     // Edit Button (if hosting)
@@ -1791,35 +1785,8 @@ extension EventDetailView {
         }
     }
     
-    private var groupChatButton: some View {
-        NavigationLink {
-            GroupChatView(
-                eventID: localEvent.id,
-                currentUser: accountManager.currentUser ?? "Guest",
-                eventTitle: localEvent.title
-            )
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "bubble.left.and.bubble.right.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.textLight)
-                
-                Text("Group Chat")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.textLight)
-                
-                Spacer()
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.brandPrimary)
-                    .shadow(color: Color.brandPrimary.opacity(0.25), radius: 4, x: 0, y: 2)
-            )
-        }
-    }
-    
     // Removed Show on Map button per user request
+    // Removed Group Chat button per user request
     
     private var editEventButton: some View {
         Button(action: { showEditSheet = true }) {
