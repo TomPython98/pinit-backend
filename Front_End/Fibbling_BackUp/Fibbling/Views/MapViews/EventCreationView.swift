@@ -1480,7 +1480,7 @@ struct FriendPickerView: View {
                     ZStack(alignment: .leading) {
                         if searchQuery.isEmpty {
                             Text("Search friends")
-                                .foregroundColor(Color(.systemGray))
+                                .foregroundColor(Color(.darkGray))
                         }
                         TextField("", text: $searchQuery)
                             .textFieldStyle(PlainTextFieldStyle())
@@ -1489,9 +1489,13 @@ struct FriendPickerView: View {
                     }
                     }
                     .padding()
-                .background(Color(.systemGray6))
+                    .background(Color.white)
                     .cornerRadius(12)
-                        .padding()
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.black.opacity(0.2), lineWidth: 1)
+                    )
+                    .padding()
                 
                 // Friends list
                 List(filteredFriends, id: \.self) { friend in
