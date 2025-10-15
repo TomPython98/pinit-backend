@@ -220,20 +220,27 @@ struct ChatView: View {
             
             HStack(spacing: 12) {
                 // Message input field
-                HStack {
-                    TextField("Message...", text: $message)
+                ZStack(alignment: .leading) {
+                    if message.isEmpty {
+                        Text("Message...")
+                            .foregroundColor(.black.opacity(0.4))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                    }
+                    TextField("", text: $message)
+                        .foregroundColor(.black)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(Color.bgCard)
+                        .focused($isInputFocused)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.bgCard)
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
                                 .stroke(Color.cardStroke, lineWidth: 1)
                         )
-                        )
-                        .focused($isInputFocused)
-                }
+                )
                 .frame(maxWidth: .infinity)
                 
                 // Send button
