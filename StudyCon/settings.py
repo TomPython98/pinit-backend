@@ -48,7 +48,6 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework_simplejwt',  # ✅ JWT Authentication
     'channels',
-    'push_notifications',
 ]
 
 MIDDLEWARE = [

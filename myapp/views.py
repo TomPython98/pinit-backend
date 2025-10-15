@@ -13,7 +13,6 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from push_notifications.models import APNSDevice
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth.password_validation import validate_password
@@ -3534,20 +3533,6 @@ def register_device(request):
             }
         )
         
-        # Also register with django-push-notifications for iOS
-        if device_type == 'ios':
-            try:
-                apns_device, _ = APNSDevice.objects.update_or_create(
-                    registration_id=token,
-                    defaults={
-                        'user': request.user,
-                        'active': True
-                    }
-                )
-                print(f"✅ Registered APNS device for user {request.user.username}")
-            except Exception as apns_error:
-                print(f"⚠️  APNS device registration error: {apns_error}")
-        
         action = "registered" if created else "updated"
         print(f"✅ Device {action} for user {request.user.username}: {device_type} - {token[:20]}...")
         
@@ -3561,10 +3546,10 @@ def register_device(request):
         print(f"❌ Error registering device: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# Function to send push notifications
+# Function to send push notifications using aioapns
 def send_push_notification(user_id, notification_type, **kwargs):
     """
-    Send push notification to a specific user
+    Send push notification to a specific user using aioapns
     
     Parameters:
     - user_id: User ID to send notification to
@@ -3587,97 +3572,71 @@ def send_push_notification(user_id, notification_type, **kwargs):
             **kwargs
         }
         
+        # Create appropriate title and message based on notification type
+        title = "PinIt"
+        message = "You have a new notification"
+        
+        if notification_type == 'event_invitation':
+            event_title = kwargs.get('event_title', 'an event')
+            from_user = kwargs.get('from_user', 'Someone')
+            message = f"{from_user} invited you to {event_title}"
+            title = "Event Invitation"
+        elif notification_type == 'event_update':
+            event_title = kwargs.get('event_title', 'an event')
+            message = f"{event_title} has been updated"
+            title = "Event Updated"
+        elif notification_type == 'event_cancellation':
+            event_title = kwargs.get('event_title', 'an event')
+            message = f"{event_title} has been cancelled"
+            title = "Event Cancelled"
+        elif notification_type == 'new_attendee':
+            event_title = kwargs.get('event_title', 'your event')
+            attendee_name = kwargs.get('attendee_name', 'Someone')
+            message = f"{attendee_name} joined {event_title}"
+            title = "New Attendee"
+        elif notification_type == 'join_request':
+            event_title = kwargs.get('event_title', 'your event')
+            requester_name = kwargs.get('requester_name', 'Someone')
+            message = f"{requester_name} wants to join {event_title}"
+            title = "Join Request"
+        elif notification_type == 'request_approved':
+            event_title = kwargs.get('event_title', 'an event')
+            message = f"Your request to join {event_title} was approved!"
+            title = "Request Approved"
+        elif notification_type == 'new_rating':
+            from_user = kwargs.get('from_user', 'Someone')
+            rating = kwargs.get('rating', 5)
+            message = f"{from_user} rated you {rating} stars"
+            title = "New Rating"
+        elif notification_type == 'trust_level_change':
+            level_title = kwargs.get('level_title', 'a new level')
+            message = f"Congratulations! You've reached {level_title}"
+            title = "Level Up!"
+        elif notification_type == 'rating_reminder':
+            event_title = kwargs.get('event_title', 'an event')
+            message = f"Rate attendees from {event_title}"
+            title = "Rate Event"
+        elif notification_type == 'review_reminder':
+            event_title = kwargs.get('event_title', 'an event')
+            reviewable_count = kwargs.get('reviewable_count', 0)
+            if reviewable_count > 1:
+                message = f"Rate {reviewable_count} attendees from {event_title}"
+            else:
+                message = f"Rate attendees from {event_title}"
+            title = "Rate Attendees"
+        
         # Send to each device based on type
         for device in devices:
             if device.device_type == 'ios':
                 try:
-                    # APNSDevice is already imported at the top
-                    apns_device, created = APNSDevice.objects.get_or_create(
-                        registration_id=device.token,
-                        defaults={'user_id': user_id}
+                    _send_apns_notification(
+                        device_token=device.token,
+                        title=title,
+                        message=message,
+                        payload=payload,
+                        notification_type=notification_type
                     )
-                    
-                    # Ensure device is active
-                    if not apns_device.active:
-                        apns_device.active = True
-                        apns_device.save()
-                    
-                    # Create appropriate title and message based on notification type
-                    title = "PinIt"
-                    message = "You have a new notification"
-                    
-                    if notification_type == 'event_invitation':
-                        event_title = kwargs.get('event_title', 'an event')
-                        from_user = kwargs.get('from_user', 'Someone')
-                        message = f"{from_user} invited you to {event_title}"
-                        title = "Event Invitation"
-                    elif notification_type == 'event_update':
-                        event_title = kwargs.get('event_title', 'an event')
-                        message = f"{event_title} has been updated"
-                        title = "Event Updated"
-                    elif notification_type == 'event_cancellation':
-                        event_title = kwargs.get('event_title', 'an event')
-                        message = f"{event_title} has been cancelled"
-                        title = "Event Cancelled"
-                    elif notification_type == 'new_attendee':
-                        event_title = kwargs.get('event_title', 'your event')
-                        attendee_name = kwargs.get('attendee_name', 'Someone')
-                        message = f"{attendee_name} joined {event_title}"
-                        title = "New Attendee"
-                    elif notification_type == 'join_request':
-                        event_title = kwargs.get('event_title', 'your event')
-                        requester_name = kwargs.get('requester_name', 'Someone')
-                        message = f"{requester_name} wants to join {event_title}"
-                        title = "Join Request"
-                    elif notification_type == 'request_approved':
-                        event_title = kwargs.get('event_title', 'an event')
-                        message = f"Your request to join {event_title} was approved!"
-                        title = "Request Approved"
-                    elif notification_type == 'new_rating':
-                        from_user = kwargs.get('from_user', 'Someone')
-                        rating = kwargs.get('rating', 5)
-                        message = f"{from_user} rated you {rating} stars"
-                        title = "New Rating"
-                    elif notification_type == 'trust_level_change':
-                        level_title = kwargs.get('level_title', 'a new level')
-                        message = f"Congratulations! You've reached {level_title}"
-                        title = "Level Up!"
-                    elif notification_type == 'rating_reminder':
-                        event_title = kwargs.get('event_title', 'an event')
-                        message = f"Rate attendees from {event_title}"
-                        title = "Rate Event"
-                    elif notification_type == 'review_reminder':
-                        event_title = kwargs.get('event_title', 'an event')
-                        reviewable_count = kwargs.get('reviewable_count', 0)
-                        if reviewable_count > 1:
-                            message = f"Rate {reviewable_count} attendees from {event_title}"
-                        else:
-                            message = f"Rate attendees from {event_title}"
-                        title = "Rate Attendees"
-                    
-                    # Send notification with enhanced payload
-                    try:
-                        print(f"🔍 Attempting to send APNs notification...")
-                        print(f"🔍 APNs device: {apns_device.registration_id[:20]}...")
-                        print(f"🔍 Message: {message}")
-                        print(f"🔍 Title: {title}")
-                        
-                        apns_device.send_message(
-                            message=message,
-                            title=title,
-                            extra=payload,
-                            sound="default",
-                            badge=1,
-                            thread_id=notification_type  # Group notifications by type
-                        )
-                        
-                        print(f"✅ Push notification sent to iOS device: {title} - {message}")
-                        
-                    except Exception as apns_send_error:
-                        print(f"❌ APNs send_message failed: {apns_send_error}")
-                        print(f"❌ APNs error type: {type(apns_send_error)}")
-                        import traceback
-                        traceback.print_exc()
+                    print(f"✅ Push notification sent to iOS device: {title} - {message}")
                     
                 except Exception as e:
                     print(f"❌ APNS send error for user {user_id}: {e}")
@@ -3693,6 +3652,102 @@ def send_push_notification(user_id, notification_type, **kwargs):
         print(f"❌ Error sending push notification to user {user_id}: {e}")
         import traceback
         traceback.print_exc()
+
+
+def _send_apns_notification(device_token, title, message, payload, notification_type):
+    """
+    Internal function to send APNs notification using aioapns
+    This uses synchronous execution of async code for compatibility with Django views
+    """
+    import asyncio
+    from aioapns import APNs, NotificationRequest, PushType
+    import os
+    
+    # Get APNs configuration from settings
+    auth_key_path = settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_AUTH_KEY_PATH', '')
+    auth_key_id = settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_AUTH_KEY_ID', '')
+    team_id = settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_TEAM_ID', '')
+    topic = settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_TOPIC', 'com.pinit.app')
+    use_sandbox = settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_USE_SANDBOX', True)
+    
+    # Validate configuration
+    if not auth_key_path or not os.path.exists(auth_key_path):
+        print(f"❌ APNs auth key not found at: {auth_key_path}")
+        return
+    
+    if not auth_key_id or not team_id:
+        print(f"❌ APNs configuration incomplete: auth_key_id={auth_key_id}, team_id={team_id}")
+        return
+    
+    print(f"🔍 Attempting to send APNs notification...")
+    print(f"🔍 APNs device: {device_token[:20]}...")
+    print(f"🔍 Message: {message}")
+    print(f"🔍 Title: {title}")
+    print(f"🔍 Using sandbox: {use_sandbox}")
+    
+    async def send_notification():
+        """Async function to send the notification"""
+        try:
+            # Read the auth key file
+            with open(auth_key_path, 'r') as f:
+                auth_key = f.read()
+            
+            # Create APNs client
+            client = APNs(
+                key=auth_key,
+                key_id=auth_key_id,
+                team_id=team_id,
+                topic=topic,
+                use_sandbox=use_sandbox
+            )
+            
+            # Build the notification payload
+            notification_payload = {
+                'aps': {
+                    'alert': {
+                        'title': title,
+                        'body': message
+                    },
+                    'sound': 'default',
+                    'badge': 1,
+                    'thread-id': notification_type  # Group notifications by type
+                },
+                # Include custom payload
+                **payload
+            }
+            
+            # Create notification request
+            request = NotificationRequest(
+                device_token=device_token,
+                message=notification_payload,
+                push_type=PushType.ALERT
+            )
+            
+            # Send the notification
+            result = await client.send_notification(request)
+            
+            # Close the client
+            await client.close()
+            
+            print(f"✅ APNs notification sent successfully: {result}")
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error in async send_notification: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+    
+    # Run the async function synchronously
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(send_notification())
+        loop.close()
+        return result
+    except Exception as e:
+        print(f"❌ Error running async notification: {e}")
+        raise
 
 
 # Debug endpoint for APNs configuration
