@@ -56,6 +56,7 @@ struct ContentView: View {
     // Tutorial overlay state
     @AppStorage("hasSeenMapTutorial") private var hasSeenMapTutorial = false
     @State private var showMapTutorial = false
+    @StateObject private var tutorialManager = TutorialManager.shared
 
     var body: some View {
         NavigationStack {
@@ -127,11 +128,12 @@ struct ContentView: View {
                     customTopBar
                 }
                 
-                // Tutorial overlay - shows on first login after onboarding
+                // Professional interactive tutorial - shows on first login
                 if showMapTutorial {
-                    MapTutorialOverlay(isShowing: $showMapTutorial)
+                    InteractiveTutorial(isShowing: $showMapTutorial)
                         .transition(.opacity)
                         .zIndex(1000)
+                        .environmentObject(tutorialManager)
                 }
             }
         }
@@ -141,6 +143,8 @@ struct ContentView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     withAnimation {
                         showMapTutorial = true
+                        tutorialManager.isActive = true
+                        tutorialManager.tutorialStep = .tapOnMap
                     }
                 }
             }

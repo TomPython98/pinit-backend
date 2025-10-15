@@ -3,6 +3,7 @@ import SwiftUI
 struct LoginView: View {
     @EnvironmentObject var accountManager: UserAccountManager
     @AppStorage("isLoggedIn") private var isLoggedIn = false
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     
     @State private var username = ""
     @State private var password = ""
@@ -207,6 +208,12 @@ struct LoginView: View {
                     Spacer()
                 }
                 .padding(.bottom, 40)
+            }
+        }
+        .onAppear {
+            // If user just completed onboarding, show register form by default
+            if hasCompletedOnboarding && !isLoggedIn {
+                isRegistering = true
             }
         }
         .alert(isPresented: $showAlert) {

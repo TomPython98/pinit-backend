@@ -1087,6 +1087,7 @@ struct StudyMapView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.dismiss) var dismiss
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var tutorialManager = TutorialManager.shared
     
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816), // Default to Buenos Aires
@@ -1256,6 +1257,9 @@ struct StudyMapView: View {
             ZStack {
                 // Map View
                 StudyMapBoxView(events: filteredEvents, region: $region, refreshVersion: mapRefreshVersion, onSelect: { event in
+                    // Track tutorial progress - user tapped on map pin!
+                    tutorialManager.mapPinTapped()
+                    
                     // Always get the most up-to-date version of the event from studyEvents
                     if let freshEvent = calendarManager.events.first(where: { $0.id == event.id }) {
                         selectedEvent = freshEvent
@@ -1763,6 +1767,9 @@ struct StudyMapView: View {
     
     var addEventButton: some View {
         Button(action: {
+            // Track tutorial progress - user tapped add event button!
+            tutorialManager.addButtonTapped()
+            
             withAnimation(.spring()) {
                 newEventCoordinate = CLLocationCoordinate2D(latitude: -34.6037, longitude: -58.3816) // Default to Buenos Aires
                 showEventCreationSheet = true

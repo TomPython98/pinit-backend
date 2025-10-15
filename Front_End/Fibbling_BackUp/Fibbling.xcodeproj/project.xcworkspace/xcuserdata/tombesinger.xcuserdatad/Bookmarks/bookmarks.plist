@@ -36,13 +36,13 @@
 				<key>focused</key>
 				<string></string>
 				<key>leading</key>
-				<string>                    }
-                }
+				<string>                        // Find next RSVP'd event from CalendarManager
+                        findNextRSVPEvent()
 </string>
 				<key>trailing</key>
-				<string>                .safeAreaInset(edge: .top) {
-                    customTopBar
-                }
+				<string>                        
+                        // ✅ Refresh unread message counts
+                        if let currentUser = accountManager.currentUser {
 </string>
 			</dict>
 			<key>type</key>
