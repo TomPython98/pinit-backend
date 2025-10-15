@@ -27,7 +27,10 @@ struct PinItApp: App {
     var body: some Scene {
         WindowGroup {
             if !hasCompletedOnboarding {
-                OnboardingView()
+                OnboardingView {
+                    hasCompletedOnboarding = true
+                }
+                .environmentObject(accountManager)
             } else if isLoggedIn {
                 ContentView()
                     .environmentObject(accountManager)

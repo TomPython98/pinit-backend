@@ -3,158 +3,233 @@ import SwiftUI
 struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var currentPage = 0
+    @State private var isAnimating = false
     
-    private let pages = [
-        OnboardingPage(
-            title: "Welcome to PinIt",
-            subtitle: "Connect with like-minded people through events",
-            image: "person.3.fill",
-            description: "Discover and create events that match your interests and meet amazing people in your area."
-        ),
-        OnboardingPage(
-            title: "Auto-Match",
-            subtitle: "Smart invitations based on interests",
-            image: "heart.fill",
-            description: "Our system automatically invites users with similar interests to your events. For private events, only matched users can see them - keeping your events discoverable but private."
-        ),
-        OnboardingPage(
-            title: "Create & Join Events",
-            subtitle: "Choose your privacy level",
-            image: "calendar.badge.plus",
-            description: "Create public events for everyone to see, or private events for friends only. Use auto-matching to find people with similar interests while keeping your event private."
-        ),
-        OnboardingPage(
-            title: "Stay Connected",
-            subtitle: "Real-time chat and updates",
-            image: "message.fill",
-            description: "Chat with event attendees, get instant notifications, and stay updated on all your activities."
-        )
-    ]
+    var onComplete: () -> Void
     
     var body: some View {
         ZStack {
-            // Background gradient
+            // Beautiful gradient background
             LinearGradient(
-                gradient: Gradient(colors: [Color.bgSurface, Color.bgCard]),
+                colors: [
+                    Color.brandPrimary.opacity(0.15),
+                    Color.brandSecondary.opacity(0.1),
+                    Color.white
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Page content
-                TabView(selection: $currentPage) {
-                    ForEach(0..<pages.count, id: \.self) { index in
-                        OnboardingPageView(page: pages[index])
-                            .tag(index)
+                // Skip button
+                HStack {
+                    Spacer()
+                    Button("Skip") {
+                        completeOnboarding()
                     }
+                    .foregroundColor(.textSecondary)
+                    .padding()
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut, value: currentPage)
                 
-                // Bottom section
-                VStack(spacing: 24) {
-                    // Page indicators
-                    HStack(spacing: 8) {
-                        ForEach(0..<pages.count, id: \.self) { index in
-                            Circle()
-                                .fill(index == currentPage ? Color.brandPrimary : Color.textMuted.opacity(0.3))
-                                .frame(width: 8, height: 8)
-                                .animation(.easeInOut, value: currentPage)
-                        }
-                    }
+                // Content
+                TabView(selection: $currentPage) {
+                    // Page 1: Welcome
+                    OnboardingPage(
+                        image: "AppLogo",
+                        isLogo: true,
+                        title: "Welcome to PinIt",
+                        subtitle: "Stop Scrolling. Start Living.",
+                        description: "Connect with people near you and make real memories",
+                        accentColor: .brandPrimary
+                    )
+                    .tag(0)
                     
-                    // Navigation buttons
-                    HStack(spacing: 16) {
-                        if currentPage > 0 {
-                            Button("Back") {
-                                withAnimation {
-                                    currentPage -= 1
-                                }
-                            }
-                            .foregroundColor(Color.textSecondary)
-                            .accessibilityLabel("Go to previous page")
-                        }
-                        
-                        Spacer()
-                        
-                        Button(currentPage == pages.count - 1 ? "Get Started" : "Next") {
-                            if currentPage == pages.count - 1 {
-                                completeOnboarding()
-                            } else {
-                                withAnimation {
-                                    currentPage += 1
-                                }
-                            }
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 12)
-                        .background(Color.brandPrimary)
-                        .cornerRadius(25)
-                        .accessibilityLabel(currentPage == pages.count - 1 ? "Complete onboarding" : "Go to next page")
-                    }
-                    .padding(.horizontal, 24)
+                    // Page 2: Discover
+                    OnboardingPage(
+                        systemImage: "map.fill",
+                        title: "Discover Events",
+                        subtitle: "Find what's happening nearby",
+                        description: "Study groups, social meetups, networking events—all on one map",
+                        accentColor: .brandSecondary
+                    )
+                    .tag(1)
+                    
+                    // Page 3: Connect
+                    OnboardingPage(
+                        systemImage: "person.2.fill",
+                        title: "Make Real Friends",
+                        subtitle: "No more doom scrolling",
+                        description: "Meet people in person, build genuine connections, create memories",
+                        accentColor: .brandAccent
+                    )
+                    .tag(2)
+                    
+                    // Page 4: Get Started
+                    OnboardingPage(
+                        systemImage: "sparkles",
+                        title: "Ready to Start?",
+                        subtitle: "Your next adventure awaits",
+                        description: "Join thousands making real connections near you",
+                        accentColor: .brandPrimary,
+                        isLastPage: true,
+                        onGetStarted: completeOnboarding
+                    )
+                    .tag(3)
                 }
-                .padding(.bottom, 50)
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                
+                // Page indicators
+                HStack(spacing: 8) {
+                    ForEach(0..<4) { index in
+                        Circle()
+                            .fill(currentPage == index ? Color.brandPrimary : Color.brandPrimary.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                            .scaleEffect(currentPage == index ? 1.2 : 1.0)
+                            .animation(.spring(response: 0.3), value: currentPage)
+                    }
+                }
+                .padding(.bottom, 40)
+            }
+        }
+        .onAppear {
+            withAnimation(.easeIn(duration: 0.6)) {
+                isAnimating = true
             }
         }
     }
     
     private func completeOnboarding() {
-        withAnimation(.easeInOut(duration: 0.5)) {
+        withAnimation(.spring()) {
             hasCompletedOnboarding = true
+            onComplete()
         }
     }
 }
 
-struct OnboardingPage {
-    let title: String
-    let subtitle: String
-    let image: String
-    let description: String
-}
-
-struct OnboardingPageView: View {
-    let page: OnboardingPage
+// MARK: - Onboarding Page Component
+struct OnboardingPage: View {
+    var systemImage: String = ""
+    var image: String = ""
+    var isLogo: Bool = false
+    var title: String
+    var subtitle: String
+    var description: String
+    var accentColor: Color
+    var isLastPage: Bool = false
+    var onGetStarted: (() -> Void)? = nil
+    
+    @State private var isAnimating = false
     
     var body: some View {
-        VStack(spacing: 40) {
+        VStack(spacing: 32) {
             Spacer()
             
-            // Icon
-            Image(systemName: page.image)
-                .font(.system(size: 80, weight: .light))
-                .foregroundColor(Color.brandPrimary)
-                .padding(.bottom, 20)
+            // Image/Icon
+            Group {
+                if isLogo {
+                    Image(image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 140, height: 140)
+                        .shadow(color: accentColor.opacity(0.3), radius: 20, x: 0, y: 10)
+                } else {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [accentColor.opacity(0.2), accentColor.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 140, height: 140)
+                        
+                        Image(systemName: systemImage)
+                            .font(.system(size: 60))
+                            .foregroundColor(accentColor)
+                    }
+                }
+            }
+            .scaleEffect(isAnimating ? 1.0 : 0.6)
+            .opacity(isAnimating ? 1.0 : 0.0)
+            .animation(.spring(response: 0.6, dampingFraction: 0.7), value: isAnimating)
+            
+            Spacer().frame(height: 20)
             
             // Content
             VStack(spacing: 16) {
-                Text(page.title)
+                Text(title)
                     .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(Color.textPrimary)
+                    .foregroundColor(.textPrimary)
                     .multilineTextAlignment(.center)
+                    .opacity(isAnimating ? 1.0 : 0.0)
+                    .offset(y: isAnimating ? 0 : 20)
+                    .animation(.easeOut(duration: 0.6).delay(0.2), value: isAnimating)
                 
-                Text(page.subtitle)
-                    .font(.title2)
-                    .foregroundColor(Color.textSecondary)
+                Text(subtitle)
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(accentColor)
                     .multilineTextAlignment(.center)
+                    .opacity(isAnimating ? 1.0 : 0.0)
+                    .offset(y: isAnimating ? 0 : 20)
+                    .animation(.easeOut(duration: 0.6).delay(0.3), value: isAnimating)
                 
-                Text(page.description)
+                Text(description)
                     .font(.body)
-                    .foregroundColor(Color.textMuted)
+                    .foregroundColor(.textSecondary)
                     .multilineTextAlignment(.center)
-                    .lineLimit(nil)
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, 40)
+                    .opacity(isAnimating ? 1.0 : 0.0)
+                    .offset(y: isAnimating ? 0 : 20)
+                    .animation(.easeOut(duration: 0.6).delay(0.4), value: isAnimating)
             }
             
             Spacer()
+            
+            // Get Started button (last page only)
+            if isLastPage, let action = onGetStarted {
+                Button(action: action) {
+                    HStack(spacing: 12) {
+                        Text("Get Started")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.title3)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(
+                        LinearGradient(
+                            colors: [.brandPrimary, .brandSecondary],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(16)
+                    .shadow(color: accentColor.opacity(0.4), radius: 12, x: 0, y: 6)
+                }
+                .padding(.horizontal, 40)
+                .opacity(isAnimating ? 1.0 : 0.0)
+                .scaleEffect(isAnimating ? 1.0 : 0.8)
+                .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.5), value: isAnimating)
+            }
+            
+            Spacer().frame(height: 40)
         }
-        .padding(.horizontal, 24)
+        .padding()
+        .onAppear {
+            withAnimation {
+                isAnimating = true
+            }
+        }
+        .onDisappear {
+            isAnimating = false
+        }
     }
 }
 
 #Preview {
-    OnboardingView()
+    OnboardingView(onComplete: {})
 }
