@@ -2,8 +2,6 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 import re
 from channels.db import database_sync_to_async
-from django.contrib.auth.models import User
-from myapp.models import ChatMessage
 
 def sanitize_username(username):
     """Sanitize username for WebSocket group names by removing special characters"""
@@ -35,6 +33,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def save_message_to_db(self, sender_username, receiver_username, message_text):
         """Save chat message to database"""
         try:
+            from django.contrib.auth.models import User
+            from myapp.models import ChatMessage
+            
             sender_user = User.objects.get(username=sender_username)
             receiver_user = User.objects.get(username=receiver_username)
             ChatMessage.objects.create(
