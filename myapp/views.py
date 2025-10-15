@@ -1709,9 +1709,17 @@ def update_study_event(request):
             if "longitude" in data:
                 event.longitude = data["longitude"]
             if "time" in data:
-                event.time = datetime.fromisoformat(data["time"])
+                # Parse datetime string handling iOS format with Z
+                time_str = data["time"]
+                if time_str.endswith('Z'):
+                    time_str = time_str[:-1] + '+00:00'
+                event.time = datetime.fromisoformat(time_str)
             if "end_time" in data:
-                event.end_time = datetime.fromisoformat(data["end_time"])
+                # Parse datetime string handling iOS format with Z
+                end_time_str = data["end_time"]
+                if end_time_str.endswith('Z'):
+                    end_time_str = end_time_str[:-1] + '+00:00'
+                event.end_time = datetime.fromisoformat(end_time_str)
             if "is_public" in data:
                 event.is_public = data["is_public"]
             if "event_type" in data:
