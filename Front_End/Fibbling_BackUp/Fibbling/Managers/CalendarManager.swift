@@ -50,6 +50,7 @@ class CalendarManager: ObservableObject {
     @Published var events: [StudyEvent] = []
     @Published var isLoading: Bool = false
     @Published var lastRefreshTime: Date? = nil
+    @Published var userJoinRequests: [String] = [] // Array of event IDs where user has pending join requests
     
     // Username should be set once the user is logged in.
     var username: String = ""
@@ -58,11 +59,17 @@ class CalendarManager: ObservableObject {
     var pendingNotificationsCount: Int {
         guard !username.isEmpty else { return 0 }
         
+        // Get set of event IDs where user has pending join requests
+        let pendingRequestEventIds = Set(userJoinRequests.map { $0.lowercased() })
+        
         // Count event invitations (events where I'm invited but not attending yet)
+        // EXCLUDE events where user already has a pending join request
         let invitations = events.filter { event in
-            event.invitedFriends.contains(username) &&
-            !event.attendees.contains(username) &&
-            event.host != username
+            let eventIdLower = event.id.uuidString.lowercased()
+            return event.invitedFriends.contains(username) &&
+                   !event.attendees.contains(username) &&
+                   event.host != username &&
+                   !pendingRequestEventIds.contains(eventIdLower)
         }.count
         
         // Count pending join requests to MY events (would need separate API call)

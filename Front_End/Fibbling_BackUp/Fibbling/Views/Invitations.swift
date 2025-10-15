@@ -588,6 +588,12 @@ struct InvitationsView: View {
                         let response = try JSONDecoder().decode(JoinRequestsResponse.self, from: data)
                         self.joinRequests = response.requests
                         print("✅ Join requests loaded: \(response.requests.count) requests")
+                        
+                        // Update CalendarManager with pending request event IDs for badge count
+                        let pendingEventIds = response.requests
+                            .filter { $0.status == "pending" }
+                            .map { $0.event.id }
+                        self.calendarManager.userJoinRequests = pendingEventIds
                     } catch {
                         print("❌ Join requests JSON decode error: \(error)")
                         if let jsonString = String(data: data, encoding: .utf8) {
