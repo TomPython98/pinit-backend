@@ -32,10 +32,11 @@ struct LoginView: View {
                 VStack(spacing: 30) {
                     // App Logo & Title with professional styling
                     VStack(spacing: 15) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 80))
-                            .foregroundColor(.brandPrimary)
-                            .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .shadow(color: Color.cardShadow.opacity(0.3), radius: 10, x: 0, y: 5)
                         
                         Text("PinIt")
                             .font(.system(size: 36, weight: .bold, design: .rounded))
