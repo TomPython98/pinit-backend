@@ -185,110 +185,82 @@ struct MapTutorialOverlay: View {
     }
     
     var body: some View {
-        ZStack {
-            // Professional dark overlay
-            Color.black
-                .opacity(0.85)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-            
-            // Spotlight effects
-            if currentStep == .tapOnPin {
-                mapPinSpotlight
-            } else if currentStep == .tapAddEvent {
-                addButtonSpotlight
-            }
-            
-            // Tutorial content
-            VStack {
-                Spacer()
+        GeometryReader { geometry in
+            ZStack {
+                // Semi-transparent overlay that doesn't block touches
+                Color.clear
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
                 
+                // Pulsing ring indicators (no black overlay, just hints)
                 if currentStep == .tapOnPin {
-                    tutorialTooltip(
-                        icon: "map.fill",
-                        title: "Tap on any pin",
-                        subtitle: "See what events are happening near you",
-                        position: .top
-                    )
+                    // Pulsing circle in center
+                    Circle()
+                        .stroke(Color.brandPrimary, lineWidth: 4)
+                        .frame(width: 220 * pulseScale, height: 220 * pulseScale)
+                        .position(x: geometry.size.width / 2, y: geometry.size.height / 2 - 50)
+                        .shadow(color: Color.brandPrimary.opacity(0.6), radius: 10)
                 } else if currentStep == .tapAddEvent {
-                    tutorialTooltip(
-                        icon: "plus.circle.fill",
-                        title: "Create your own event",
-                        subtitle: "Tap the + button to host an event",
-                        position: .bottom
-                    )
+                    // Pulsing circle on + button
+                    Circle()
+                        .stroke(Color.brandAccent, lineWidth: 4)
+                        .frame(width: 140 * pulseScale, height: 140 * pulseScale)
+                        .position(x: geometry.size.width - 80, y: geometry.size.height - 150)
+                        .shadow(color: Color.brandAccent.opacity(0.6), radius: 10)
                 }
                 
-                Spacer()
-                
-                // Skip button
-                Button(action: skipTutorial) {
-                    Text("Skip Tutorial")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
-                        .padding(.horizontal, 24)
+                // Tutorial tooltips
+                VStack {
+                    if currentStep == .tapOnPin {
+                        tutorialTooltip(
+                            icon: "map.fill",
+                            title: "Tap on any pin",
+                            subtitle: "See what events are happening near you",
+                            position: .top
+                        )
+                        .padding(.top, 60)
+                    } else if currentStep == .tapAddEvent {
+                        Spacer()
+                        tutorialTooltip(
+                            icon: "plus.circle.fill",
+                            title: "Create your own event",
+                            subtitle: "Tap the + button to host an event",
+                            position: .bottom
+                        )
+                        .padding(.bottom, 220)
+                    }
+                    
+                    Spacer()
+                    
+                    // Skip button
+                    Button(action: skipTutorial) {
+                        HStack {
+                            Text("Skip Tutorial")
+                                .font(.subheadline.weight(.semibold))
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
                         .padding(.vertical, 12)
                         .background(
                             Capsule()
-                                .fill(Color.white.opacity(0.1))
+                                .fill(Color.black.opacity(0.6))
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
                         )
+                        .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.bottom, 50)
                 }
-                .padding(.bottom, 50)
             }
         }
+        .allowsHitTesting(false)
         .onAppear {
             startPulseAnimation()
         }
-    }
-    
-    // MARK: - Spotlight for Map Pins
-    private var mapPinSpotlight: some View {
-        GeometryReader { geometry in
-            ZStack {
-                Color.black.opacity(0.85)
-                    .ignoresSafeArea()
-                
-                // Cutout circle in center (where pins are)
-                Circle()
-                    .fill(Color.clear)
-                    .frame(width: 200, height: 200)
-                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2 - 50)
-                    .blendMode(.destinationOut)
-                
-                // Pulsing ring
-                Circle()
-                    .stroke(Color.brandPrimary.opacity(0.6), lineWidth: 4)
-                    .frame(width: 200 * pulseScale, height: 200 * pulseScale)
-                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2 - 50)
-            }
-            .compositingGroup()
-        }
-        .allowsHitTesting(false)
-    }
-    
-    // MARK: - Spotlight for Add Button
-    private var addButtonSpotlight: some View {
-        GeometryReader { geometry in
-            ZStack {
-                Color.black.opacity(0.85)
-                    .ignoresSafeArea()
-                
-                // Cutout circle for + button (bottom right)
-                Circle()
-                    .fill(Color.clear)
-                    .frame(width: 120, height: 120)
-                    .position(x: geometry.size.width - 80, y: geometry.size.height - 150)
-                    .blendMode(.destinationOut)
-                
-                // Pulsing ring
-                Circle()
-                    .stroke(Color.brandAccent.opacity(0.6), lineWidth: 4)
-                    .frame(width: 120 * pulseScale, height: 120 * pulseScale)
-                    .position(x: geometry.size.width - 80, y: geometry.size.height - 150)
-            }
-            .compositingGroup()
-        }
-        .allowsHitTesting(false)
     }
     
     // MARK: - Professional Tooltip
