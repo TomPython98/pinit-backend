@@ -3688,9 +3688,16 @@ def _send_apns_notification(device_token, title, message, payload, notification_
     async def send_notification():
         """Async function to send the notification"""
         try:
-            # Read the auth key file
-            with open(auth_key_path, 'r') as f:
-                auth_key = f.read()
+            # Handle both file path and direct key content
+            # If auth_key_path starts with "-----BEGIN", it's the key content itself
+            if auth_key_path.startswith('-----BEGIN'):
+                auth_key = auth_key_path
+                print(f"🔑 Using APNs auth key from environment variable content")
+            else:
+                # Read the auth key from file
+                with open(auth_key_path, 'r') as f:
+                    auth_key = f.read()
+                print(f"🔑 Using APNs auth key from file: {auth_key_path}")
             
             # Create APNs client
             client = APNs(
