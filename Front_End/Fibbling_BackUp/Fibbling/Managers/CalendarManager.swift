@@ -130,6 +130,7 @@ class CalendarManager: ObservableObject {
                 // Start fetch and WebSocket in parallel for maximum performance
                 self.setupWebSocket() // Connect immediately
                 self.fetchEvents()    // Fetch in parallel
+                self.fetchJoinRequests() // Fetch join requests for accurate badge count
                 self.hasFetchedInitialEvents = true // Mark initial fetch as done
             } else if self.username.isEmpty && !previousUsername.isEmpty {
                 // User logged out
@@ -201,7 +202,11 @@ class CalendarManager: ObservableObject {
                 let timeSinceLastRefresh = lastRefreshTime?.timeIntervalSinceNow ?? -999999
                 if abs(timeSinceLastRefresh) > 300 { // 5 minutes only if WebSocket is down
                     fetchEvents()
+                    fetchJoinRequests() // Also refresh join requests for badge count
                 }
+            } else {
+                // Even if WebSocket is connected, refresh join requests for badge accuracy
+                fetchJoinRequests()
             }
         }
     }
@@ -409,6 +414,64 @@ class CalendarManager: ObservableObject {
         }.resume()
     }
 
+    /// Fetch user's join requests to filter out from pending notifications
+    func fetchJoinRequests() {
+        guard !username.isEmpty,
+              let url = URL(string: "\(baseURL)/get_user_join_requests/\(username)/")
+        else { return }
+        
+        var request = URLRequest(url: url)
+        accountManager?.addAuthHeader(to: &request)
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("❌ [CalendarManager] Join requests fetch error: \(error)")
+                return
+            }
+            
+            guard let data = data else { return }
+            
+            do {
+                // Simple structure to parse join requests
+                struct JoinRequestResponse: Codable {
+                    let success: Bool
+                    let requests: [JoinRequestItem]
+                    let totalCount: Int
+                    
+                    enum CodingKeys: String, CodingKey {
+                        case success, requests
+                        case totalCount = "total_count"
+                    }
+                }
+                
+                struct JoinRequestItem: Codable {
+                    let id: String
+                    let event: EventInfo
+                    let status: String
+                    
+                    struct EventInfo: Codable {
+                        let id: String
+                    }
+                }
+                
+                let response = try JSONDecoder().decode(JoinRequestResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    // Update with pending request event IDs only
+                    self.userJoinRequests = response.requests
+                        .filter { $0.status == "pending" }
+                        .map { $0.event.id }
+                    
+                    print("✅ [CalendarManager] Updated join requests for badge count: \(self.userJoinRequests.count) pending")
+                }
+            } catch {
+                print("❌ [CalendarManager] Join requests decode error: \(error)")
+            }
+        }.resume()
+    }
+    
     /// Fallback fetch using enhanced_search_events (less strict, not per-username)
     private func fetchEventsEnhancedFallback() {
         guard let url = URL(string: "\(baseURL)/enhanced_search_events/") else { return }
