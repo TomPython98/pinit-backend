@@ -685,256 +685,176 @@ struct EventCreationView: View {
     
     // MARK: - Settings Card
     private var settingsCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 20) {
             cardHeader("Event Settings", icon: "gearshape.fill", color: Color.pinItAcademic)
-                .padding(20)
             
-            Divider()
-                .foregroundColor(.cardStroke)
-            
-            VStack(spacing: 24) {
-                // SECTION 1: Event Visibility
+            VStack(spacing: 20) {
+                // SECTION 1: Event Visibility - Smooth Toggle Style
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "eye.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.brandPrimary)
-                        
-                        Text("Event Visibility")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.textPrimary)
-                    }
+                    Text("Who can see this event?")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.textSecondary)
                     
-                    // Visibility Options
-                    VStack(spacing: 10) {
+                    HStack(spacing: 0) {
                         // Public Option
-                        Button(action: { isPublic = true; audienceSelection = .publicEvent }) {
-                            HStack(spacing: 12) {
-                                VStack(spacing: 0) {
-                                    Image(systemName: "globe")
-                                        .font(.system(size: 20, weight: .semibold))
-                                        .foregroundColor(.brandAccent)
-                                }
-                                .frame(width: 44, height: 44)
-                                .background(Color.brandAccent.opacity(0.1))
-                                .cornerRadius(10)
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    HStack {
-                                        Text("Public Event")
-                                            .font(.system(size: 15, weight: .semibold))
-                                            .foregroundColor(.textPrimary)
-                                        Spacer()
-                                        if isPublic {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundColor(.brandPrimary)
-                                                .font(.system(size: 18))
-                                        }
-                                    }
-                                    
-                                    Text("Anyone can discover and join")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.textSecondary)
-                                }
-                                
-                                Spacer()
+                        Button(action: { 
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                isPublic = true
+                                audienceSelection = .publicEvent
                             }
-                            .padding(12)
-                            .background(Color.bgCard)
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "globe")
+                                    .font(.system(size: 22, weight: .medium))
+                                    .foregroundColor(isPublic ? .white : .brandAccent)
+                                
+                                Text("Public")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(isPublic ? .white : .textPrimary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(isPublic ? Color.brandAccent : Color.clear)
                             .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(isPublic ? Color.brandPrimary : Color.cardStroke, lineWidth: isPublic ? 2 : 1)
-                            )
                         }
                         
                         // Private Option
-                        Button(action: { isPublic = false; audienceSelection = .privateEvent }) {
-                            HStack(spacing: 12) {
-                                VStack(spacing: 0) {
-                                    Image(systemName: "lock.fill")
-                                        .font(.system(size: 20, weight: .semibold))
-                                        .foregroundColor(.brandPrimary)
-                                }
-                                .frame(width: 44, height: 44)
-                                .background(Color.brandPrimary.opacity(0.1))
-                                .cornerRadius(10)
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    HStack {
-                                        Text("Private Event")
-                                            .font(.system(size: 15, weight: .semibold))
-                                            .foregroundColor(.textPrimary)
-                                        Spacer()
-                                        if !isPublic {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundColor(.brandPrimary)
-                                                .font(.system(size: 18))
-                                        }
-                                    }
-                                    
-                                    Text("Only invited guests can join")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.textSecondary)
-                                }
-                                
-                                Spacer()
+                        Button(action: { 
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                isPublic = false
+                                audienceSelection = .privateEvent
                             }
-                            .padding(12)
-                            .background(Color.bgCard)
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 22, weight: .medium))
+                                    .foregroundColor(!isPublic ? .white : .brandPrimary)
+                                
+                                Text("Private")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(!isPublic ? .white : .textPrimary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(!isPublic ? Color.brandPrimary : Color.clear)
                             .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(!isPublic ? Color.brandPrimary : Color.cardStroke, lineWidth: !isPublic ? 2 : 1)
-                            )
                         }
                     }
+                    .padding(4)
+                    .background(Color.bgSecondary)
+                    .cornerRadius(14)
+                    
+                    // Helper text
+                    Text(isPublic ? "Anyone can discover and join your event" : "Only people you invite can see and join")
+                        .font(.system(size: 12))
+                        .foregroundColor(.textSecondary)
+                        .padding(.horizontal, 4)
                 }
                 
-                Divider()
-                    .foregroundColor(.cardStroke.opacity(0.5))
-                
-                // SECTION 2: Invite Friends (Always Visible & Prominent)
+                // SECTION 2: Invite Friends - Clean and Simple
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "person.crop.circle.badge.plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.brandPrimary)
-                        
+                    HStack(alignment: .center) {
                         Text("Invite Friends")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.textPrimary)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.textSecondary)
                         
                         Spacer()
                         
                         if !selectedFriends.isEmpty {
-                            HStack(spacing: 4) {
-                                Image(systemName: "person.2.fill")
-                                    .font(.system(size: 12, weight: .semibold))
-                                Text("\(selectedFriends.count)")
-                                    .font(.system(size: 12, weight: .semibold))
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.brandPrimary.opacity(0.1))
-                            .foregroundColor(.brandPrimary)
-                            .cornerRadius(6)
+                            Text("\(selectedFriends.count) invited")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.brandPrimary)
                         }
                     }
                     
-                    // Invite Button - Primary CTA
+                    // Simple, clean button
                     Button(action: { showFriendPicker = true }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 18, weight: .semibold))
+                        HStack(spacing: 12) {
+                            Image(systemName: "person.2.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.brandPrimary)
                             
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Add Friends")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white)
-                                
-                                Text(selectedFriends.isEmpty ? "Invite friends to join" : "Add more friends")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.white.opacity(0.85))
-                            }
+                            Text(selectedFriends.isEmpty ? "Add friends to your event" : "Manage invited friends")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.textPrimary)
                             
                             Spacer()
                             
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.7))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(14)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.brandPrimary, Color.brandAccent]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .cornerRadius(12)
-                        .shadow(color: Color.brandPrimary.opacity(0.3), radius: 4, x: 0, y: 2)
-                    }
-                    
-                    // Friends List Preview
-                    if !selectedFriends.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Invited Friends")
+                            Image(systemName: "chevron.right")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.textSecondary)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(selectedFriends, id: \.self) { friend in
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "person.circle.fill")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(.brandPrimary)
-                                            
-                                            Text(friend)
-                                                .font(.system(size: 13, weight: .medium))
-                                                .foregroundColor(.brandPrimary)
-                                                .lineLimit(1)
-                                            
-                                            Button(action: { removeFriend(friend) }) {
-                                                Image(systemName: "xmark.circle.fill")
-                                                    .font(.system(size: 12))
-                                                    .foregroundColor(.textSecondary.opacity(0.6))
+                        }
+                        .padding(16)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.cardStroke, lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+                    }
+                    
+                    // Friends chips
+                    if !selectedFriends.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(selectedFriends, id: \.self) { friend in
+                                    HStack(spacing: 6) {
+                                        Text(friend)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(.textPrimary)
+                                        
+                                        Button(action: { 
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                removeFriend(friend)
                                             }
+                                        }) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.textSecondary)
                                         }
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(Color.brandPrimary.opacity(0.08))
-                                        .cornerRadius(8)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.brandPrimary.opacity(0.2), lineWidth: 1)
-                                        )
                                     }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.bgSecondary)
+                                    .cornerRadius(20)
                                 }
-                                .padding(.horizontal, 4)
                             }
                         }
                     }
                 }
                 
-                Divider()
-                    .foregroundColor(.cardStroke.opacity(0.5))
-                
-                // SECTION 3: Max Participants
+                // SECTION 3: Max Participants - Compact and Clean
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "person.3.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.brandPrimary)
-                        
-                        Text("Participant Limit")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.textPrimary)
-                    }
+                    Text("Maximum Participants")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.textSecondary)
                     
-                    HStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Maximum People")
-                                .font(.system(size: 12))
-                                .foregroundColor(.textSecondary)
-                            
-                            Text("\(maxParticipants)")
-                                .font(.system(size: 24, weight: .bold))
+                    HStack {
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.3.fill")
+                                .font(.system(size: 16))
                                 .foregroundColor(.brandPrimary)
+                            
+                            Text("\(maxParticipants) people")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.textPrimary)
                         }
                         
                         Spacer()
                         
                         PinItStepper(value: $maxParticipants, range: 2...50, isDarkMode: false)
                     }
-                    .padding(12)
-                    .background(Color.brandPrimary.opacity(0.05))
-                    .cornerRadius(10)
+                    .padding(16)
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.cardStroke, lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
                 }
             }
-            .padding(20)
         }
         .cardStyle()
     }
