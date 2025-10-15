@@ -398,18 +398,34 @@ struct FriendsListView: View {
                     selectedChatUser = IdentifiableString(value: username)
                     print("🔍 Opening chat with: '\(username)'")
                 }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "message.fill")
-                            .font(.caption)
+                    ZStack(alignment: .topTrailing) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "message.fill")
+                                .font(.caption)
                             Text("Chat")
                                 .font(.caption)
                                 .fontWeight(.medium)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.brandPrimary)
+                        .cornerRadius(10)
+                        
+                        // Unread message badge
+                        if let unreadCount = chatManager.unreadCounts[username], unreadCount > 0 {
+                            Text(unreadCount > 9 ? "9+" : "\(unreadCount)")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(minWidth: 18, minHeight: 18)
+                                .padding(2)
+                                .background(
+                                    Circle()
+                                        .fill(Color.red)
+                                )
+                                .offset(x: 8, y: -8)
+                        }
                     }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.brandPrimary)
-                    .cornerRadius(10)
                 }
                 .buttonStyle(PlainButtonStyle()) // Prevent the outer button from interfering
             }

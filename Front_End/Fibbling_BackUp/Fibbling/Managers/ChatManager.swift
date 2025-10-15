@@ -24,13 +24,16 @@ struct ChatSession: Codable {
 
 class ChatManager: ObservableObject {
     @Published var chatSessions: [ChatSession] = [] // ✅ Stores conversations
+    @Published var unreadCounts: [String: Int] = [:] // ✅ Track unread messages per user
 
     private let storageKey = "chatMessages"
+    private let unreadStorageKey = "unreadMessageCounts"
     private var webSocketManager: PrivateChatWebSocketManager?
     private var cancellables = Set<AnyCancellable>()
 
     init() {
         loadMessages()  // ✅ Load messages when app starts
+        loadUnreadCounts() // ✅ Load unread counts
     }
 
     func sendMessage(to receiver: String, sender: String, message: String) {
@@ -225,6 +228,11 @@ class ChatManager: ObservableObject {
                         ))
                         newMessagesAdded += 1
                         print("✅ Added WebSocket message: '\(wsMessage.message)' from \(wsMessage.sender)")
+                        
+                        // ✅ Increment unread count if message is from the other person
+                        if wsMessage.sender != sender {
+                            self.incrementUnreadCount(for: wsMessage.sender, currentUser: sender)
+                        }
                     }
                 }
                 
@@ -265,5 +273,40 @@ class ChatManager: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
         return formatter.string(from: Date())
+    }
+    
+    // MARK: - Unread Message Management
+    
+    /// Get unread count for a specific friend
+    func getUnreadCount(for friend: String) -> Int {
+        return unreadCounts[friend] ?? 0
+    }
+    
+    /// Mark messages as read when opening a chat
+    func markAsRead(for friend: String) {
+        unreadCounts[friend] = 0
+        saveUnreadCounts()
+    }
+    
+    /// Increment unread count for incoming messages
+    func incrementUnreadCount(for friend: String, currentUser: String) {
+        // Only increment if we're not currently in the chat with this friend
+        // This prevents counting messages while the chat is open
+        unreadCounts[friend, default: 0] += 1
+        saveUnreadCounts()
+    }
+    
+    /// Save unread counts to UserDefaults
+    private func saveUnreadCounts() {
+        UserDefaults.standard.set(unreadCounts, forKey: unreadStorageKey)
+    }
+    
+    /// Load unread counts from UserDefaults
+    private func loadUnreadCounts() {
+        if let saved = UserDefaults.standard.dictionary(forKey: unreadStorageKey) as? [String: Int] {
+            DispatchQueue.main.async {
+                self.unreadCounts = saved
+            }
+        }
     }
 }

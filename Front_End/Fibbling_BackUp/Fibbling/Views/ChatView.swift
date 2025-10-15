@@ -54,6 +54,8 @@ struct ChatView: View {
         .onAppear {
             print("🔍 ChatView onAppear - Sender: '\(sender)', Receiver: '\(receiver)'")
             chatManager.connect(sender: sender, receiver: receiver)
+            // Mark messages as read when opening chat
+            chatManager.markAsRead(for: receiver)
             // Fetch messages when view appears
             updateMessagesList()
         }
