@@ -228,11 +228,39 @@ struct EventEditView: View {
                             .datePickerStyle(.compact)
                             .tint(.brandPrimary)
                             .foregroundColor(Color.textPrimary)
+                            .onChange(of: eventDate) { oldValue, newValue in
+                                print("🔍 [EventEdit] Start Date Changed:")
+                                print("   📅 Old Date: \(oldValue)")
+                                print("   📅 New Date: \(newValue)")
+                                print("   📅 End Date: \(eventEndDate)")
+                                print("   ⏰ Valid (start < end): \(newValue < eventEndDate)")
+                                
+                                // If the new start time is after the end time, adjust end time
+                                if newValue >= eventEndDate {
+                                    let newEndDate = newValue.addingTimeInterval(3600) // Add 1 hour
+                                    print("   🔧 Adjusting end date to: \(newEndDate)")
+                                    eventEndDate = newEndDate
+                                }
+                            }
 
                         DatePicker("End Time", selection: $eventEndDate, displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.compact)
                             .tint(.brandPrimary)
                             .foregroundColor(Color.textPrimary)
+                            .onChange(of: eventEndDate) { oldValue, newValue in
+                                print("🔍 [EventEdit] End Date Changed:")
+                                print("   📅 Start Date: \(eventDate)")
+                                print("   📅 Old End: \(oldValue)")
+                                print("   📅 New End: \(newValue)")
+                                print("   ⏰ Valid (start < end): \(eventDate < newValue)")
+                                
+                                // If the new end time is before the start time, adjust start time
+                                if newValue <= eventDate {
+                                    let newStartDate = newValue.addingTimeInterval(-3600) // Subtract 1 hour
+                                    print("   🔧 Adjusting start date to: \(newStartDate)")
+                                    eventDate = newStartDate
+                                }
+                            }
                     }
                 }
             }
