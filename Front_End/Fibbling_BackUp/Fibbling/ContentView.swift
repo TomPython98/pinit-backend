@@ -282,9 +282,10 @@ struct ContentView: View {
             
             // App Logo & Title with enhanced typography
             HStack(spacing: 8) {
-                Image(systemName: "mappin.circle.fill")
-                    .font(.title3)
-                    .foregroundColor(.brandPrimary)
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
                 
                 Text("PinIt")
                     .font(.system(.title3, design: .rounded).weight(.bold))
