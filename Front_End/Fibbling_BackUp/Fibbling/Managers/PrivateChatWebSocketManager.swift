@@ -174,14 +174,11 @@ class PrivateChatWebSocketManager: ObservableObject {
                     self?.handleConnectionError()
                 } else {
                     print("✅ Message sent successfully to WebSocket")
-                    // ✅ WORKAROUND: Railway WebSocket drops connection after send
-                    // Proactively reconnect to maintain persistent connection
-                    print("🔄 Proactively reconnecting due to Railway WebSocket behavior...")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                        guard let self = self else { return }
-                        // Reconnect to ensure we can receive messages
-                        self.connect()
-                    }
+                    // NOTE: Railway WebSocket may drop connection after send
+                    // But we should NOT reconnect immediately as it would:
+                    // 1. Interrupt listening for the echo back from server
+                    // 2. Miss any incoming messages from the other user
+                    // Instead, rely on the existing error handling to reconnect if needed
                 }
             }
         } catch {
