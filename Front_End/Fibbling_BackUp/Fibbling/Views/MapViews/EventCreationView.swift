@@ -700,24 +700,22 @@ struct EventCreationView: View {
                                 audienceSelection = .publicEvent
                             }
                         }) {
-                            HStack(spacing: 8) {
-                                Text("Public")
-                                    .font(.headline.weight(.semibold))
-                                    .foregroundColor(.black)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(audienceSelection == .publicEvent ? Color.brandPrimary : Color.bgCard)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.cardStroke, lineWidth: 1)
-                            )
-                            .shadow(color: audienceSelection == .publicEvent ? Color.brandPrimary.opacity(0.3) : Color.clear, radius: audienceSelection == .publicEvent ? 8 : 0, x: 0, y: 2)
-                            .opacity(audienceSelection == .publicEvent ? 1.0 : 0.7)
+                            Text("Public")
+                                .font(.headline.weight(.semibold))
+                                .foregroundColor(audienceSelection == .publicEvent ? .white : .black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(audienceSelection == .publicEvent ? Color.brandPrimary : Color.bgCard)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.cardStroke, lineWidth: 1)
+                                )
+                                .shadow(color: audienceSelection == .publicEvent ? Color.brandPrimary.opacity(0.3) : Color.clear, radius: audienceSelection == .publicEvent ? 8 : 0, x: 0, y: 2)
                         }
+                        .contentShape(Rectangle())
                         
                         // Private Button
                         Button(action: {
@@ -725,24 +723,22 @@ struct EventCreationView: View {
                                 audienceSelection = .privateEvent
                             }
                         }) {
-                            HStack(spacing: 8) {
-                                Text("Private")
-                                    .font(.headline.weight(.semibold))
-                                    .foregroundColor(.black)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(audienceSelection == .privateEvent ? Color.brandPrimary : Color.bgCard)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.cardStroke, lineWidth: 1)
-                            )
-                            .shadow(color: audienceSelection == .privateEvent ? Color.brandPrimary.opacity(0.3) : Color.clear, radius: audienceSelection == .privateEvent ? 8 : 0, x: 0, y: 2)
-                            .opacity(audienceSelection == .privateEvent ? 1.0 : 0.7)
+                            Text("Private")
+                                .font(.headline.weight(.semibold))
+                                .foregroundColor(audienceSelection == .privateEvent ? .white : .black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(audienceSelection == .privateEvent ? Color.brandPrimary : Color.bgCard)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.cardStroke, lineWidth: 1)
+                                )
+                                .shadow(color: audienceSelection == .privateEvent ? Color.brandPrimary.opacity(0.3) : Color.clear, radius: audienceSelection == .privateEvent ? 8 : 0, x: 0, y: 2)
                         }
+                        .contentShape(Rectangle())
                     }
                     .onChange(of: audienceSelection) { newValue in
                         switch newValue {
