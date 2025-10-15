@@ -797,7 +797,7 @@ struct SettingsView: View {
                 .foregroundColor(.textPrimary)
             
             // Tagline
-            Text("Connect. Study. Grow.")
+            Text("Stop Scrolling. Start Living.")
                 .font(.subheadline)
                 .foregroundColor(.textSecondary)
             
