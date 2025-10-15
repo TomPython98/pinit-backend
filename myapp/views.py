@@ -3740,8 +3740,7 @@ def _send_apns_notification(device_token, title, message, payload, notification_
             # Send the notification
             result = await client.send_notification(request)
             
-            # Close the client
-            await client.close()
+            # Note: aioapns APNs client does not require explicit close
             
             print(f"✅ APNs notification sent successfully: {result}")
             return result
