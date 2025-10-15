@@ -530,7 +530,6 @@ struct EventCreationView: View {
                                 TextField("", text: $locationName)
                                     .foregroundColor(Color.black)
                                     .padding()
-                                    .focused($isFocused)
                                     .onChange(of: locationName) { oldValue, newValue in
                                     // Safety check for valid values
                                     guard !oldValue.isEmpty, !newValue.isEmpty else { return }
@@ -1206,9 +1205,8 @@ struct EventCreationView: View {
         
         print("🎯 [EventCreation] selectLocation called: \(suggestion.name)")
         
-        // Clear focus and keyboard immediately
+        // Just dismiss keyboard - don't manipulate shared focus state to avoid breaking hit testing
         hideKeyboard()
-        isFocused = false
         
         PerformanceTracker.measure("Select Location") {
             withAnimation(.easeInOut(duration: 0.15)) {
