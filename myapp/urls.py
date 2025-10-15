@@ -44,5 +44,8 @@ urlpatterns = [
     path('api/approve_join_request/', views.approve_join_request, name='approve_join_request'),
     path('api/reject_join_request/', views.reject_join_request, name='reject_join_request'),
     path('api/get_user_join_requests/<str:username>/', views.get_user_join_requests, name='get_user_join_requests'),
+    
+    # Chat History Endpoint
+    path('api/get_chat_history/<str:username1>/<str:username2>/', views.get_chat_history, name='get_chat_history'),
 ]
 

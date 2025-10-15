@@ -1,6 +1,9 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 import re
+from channels.db import database_sync_to_async
+from django.contrib.auth.models import User
+from myapp.models import ChatMessage
 
 def sanitize_username(username):
     """Sanitize username for WebSocket group names by removing special characters"""
@@ -28,6 +31,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
         print(f"❌ WebSocket DISCONNECTED: {self.sender} left chat with {self.receiver}")
 
+    @database_sync_to_async
+    def save_message_to_db(self, sender_username, receiver_username, message_text):
+        """Save chat message to database"""
+        try:
+            sender_user = User.objects.get(username=sender_username)
+            receiver_user = User.objects.get(username=receiver_username)
+            ChatMessage.objects.create(
+                sender=sender_user,
+                receiver=receiver_user,
+                message=message_text
+            )
+            print(f"💾 Message saved to database: {sender_username} → {receiver_username}")
+        except User.DoesNotExist as e:
+            print(f"❌ User not found when saving message: {e}")
+        except Exception as e:
+            print(f"❌ Error saving message to database: {e}")
+
     async def receive(self, text_data):
         data = json.loads(text_data)
         sender = data.get("sender")
@@ -36,6 +56,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         if sender and receiver and message:
             print(f"📩 Message Received from {sender} to {receiver}: {message}")
+
+            # ✅ Save message to database
+            await self.save_message_to_db(sender, receiver, message)
 
             # ✅ Send message to group (so only sender & receiver get it)
             await self.channel_layer.group_send(

@@ -380,6 +380,53 @@ def chat_room(request, room_name):
     return render(request, "chat/chat.html", {"room_name": room_name})
 
 
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_chat_history(request, username1, username2):
+    """
+    Get chat history between two users.
+    Returns all messages between username1 and username2, sorted by timestamp.
+    """
+    try:
+        user1 = User.objects.get(username=username1)
+        user2 = User.objects.get(username=username2)
+        
+        # Get all messages between these two users (bidirectional)
+        from myapp.models import ChatMessage
+        messages = ChatMessage.objects.filter(
+            sender__in=[user1, user2],
+            receiver__in=[user1, user2]
+        ).order_by('timestamp')
+        
+        # Format messages for response
+        message_list = []
+        for msg in messages:
+            message_list.append({
+                "sender": msg.sender.username,
+                "receiver": msg.receiver.username,
+                "message": msg.message,
+                "timestamp": msg.timestamp.isoformat()
+            })
+        
+        return Response({
+            "success": True,
+            "messages": message_list,
+            "count": len(message_list)
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response({
+            "success": False,
+            "message": "User not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            "success": False,
+            "message": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
