@@ -25,15 +25,21 @@ struct ChatSession: Codable {
 class ChatManager: ObservableObject {
     @Published var chatSessions: [ChatSession] = [] // ✅ Stores conversations
     @Published var unreadCounts: [String: Int] = [:] // ✅ Track unread messages per user
+    
+    private var lastReadTimestamps: [String: Date] = [:] // ✅ Track when user last read each chat
+    private var currentlyOpenChat: String? = nil // ✅ Track which chat is currently open
 
     private let storageKey = "chatMessages"
     private let unreadStorageKey = "unreadMessageCounts"
+    private let lastReadStorageKey = "lastReadTimestamps"
     private var webSocketManager: PrivateChatWebSocketManager?
     private var cancellables = Set<AnyCancellable>()
 
     init() {
         loadMessages()  // ✅ Load messages when app starts
         loadUnreadCounts() // ✅ Load unread counts
+        loadLastReadTimestamps() // ✅ Load last read timestamps
+        updateAllUnreadCounts() // ✅ Calculate unread counts based on messages
     }
 
     func sendMessage(to receiver: String, sender: String, message: String) {
@@ -87,6 +93,9 @@ class ChatManager: ObservableObject {
             return
         }
         
+        // ✅ Track currently open chat
+        currentlyOpenChat = receiver
+        
         let chatKey = [sender, receiver].sorted()
         if !chatSessions.contains(where: { $0.participants == chatKey }) {
             chatSessions.append(ChatSession(participants: chatKey, messages: []))
@@ -107,6 +116,18 @@ class ChatManager: ObservableObject {
         
         // ✅ Connect to WebSocket
         webSocketManager?.connect()
+    }
+    
+    /// Refresh unread counts for all friends (call this when opening Friends list)
+    func refreshUnreadCounts(currentUser: String) {
+        print("🔄 Refreshing unread counts for all friends...")
+        
+        // Get all friends from chat sessions
+        for session in chatSessions {
+            for participant in session.participants where participant != currentUser {
+                updateUnreadCount(for: participant, currentUser: currentUser)
+            }
+        }
     }
     
     // ✅ Fetch chat history from server
@@ -189,6 +210,9 @@ class ChatManager: ObservableObject {
     }
 
     func disconnect() {
+        // ✅ Clear currently open chat
+        currentlyOpenChat = nil
+        
         // ✅ Disconnect WebSocket
         webSocketManager?.disconnect()
         webSocketManager = nil
@@ -228,11 +252,6 @@ class ChatManager: ObservableObject {
                         ))
                         newMessagesAdded += 1
                         print("✅ Added WebSocket message: '\(wsMessage.message)' from \(wsMessage.sender)")
-                        
-                        // ✅ Increment unread count if message is from the other person
-                        if wsMessage.sender != sender {
-                            self.incrementUnreadCount(for: wsMessage.sender, currentUser: sender)
-                        }
                     }
                 }
                 
@@ -240,6 +259,12 @@ class ChatManager: ObservableObject {
                     // ✅ Replace the entire array to trigger SwiftUI update
                     self.chatSessions = sessions
                     self.saveMessages()
+                    
+                    // ✅ Update unread counts for the sender (if not currently in that chat)
+                    if self.currentlyOpenChat != receiver {
+                        self.updateUnreadCount(for: receiver, currentUser: sender)
+                    }
+                    
                     print("📩 Processed \(newMessagesAdded) new WebSocket messages - UI should update")
                 }
             }
@@ -284,16 +309,60 @@ class ChatManager: ObservableObject {
     
     /// Mark messages as read when opening a chat
     func markAsRead(for friend: String) {
+        // ✅ Update last read timestamp to now
+        lastReadTimestamps[friend] = Date()
+        saveLastReadTimestamps()
+        
+        // ✅ Immediately update unread count for this friend
         unreadCounts[friend] = 0
         saveUnreadCounts()
+        
+        print("✅ Marked \(friend) as read at \(Date())")
     }
     
-    /// Increment unread count for incoming messages
-    func incrementUnreadCount(for friend: String, currentUser: String) {
-        // Only increment if we're not currently in the chat with this friend
-        // This prevents counting messages while the chat is open
-        unreadCounts[friend, default: 0] += 1
-        saveUnreadCounts()
+    /// Update unread count for a specific friend based on messages received after last read
+    func updateUnreadCount(for friend: String, currentUser: String) {
+        let chatKey = [currentUser, friend].sorted()
+        
+        guard let session = chatSessions.first(where: { $0.participants == chatKey }) else {
+            return
+        }
+        
+        // Get last read timestamp (default to very old date if never read)
+        let lastRead = lastReadTimestamps[friend] ?? Date(timeIntervalSince1970: 0)
+        
+        // Count messages from friend that are newer than lastRead
+        let unreadCount = session.messages.filter { message in
+            message.sender == friend && // Message is from the friend
+            message.sender != "📅" && // Not a date separator
+            message.timestamp > lastRead // Newer than last read
+        }.count
+        
+        if unreadCount != unreadCounts[friend] {
+            unreadCounts[friend] = unreadCount
+            saveUnreadCounts()
+            print("📊 Updated unread count for \(friend): \(unreadCount)")
+        }
+    }
+    
+    /// Update all unread counts (called on app launch)
+    private func updateAllUnreadCounts() {
+        // Get all unique friends from chat sessions
+        var allFriends = Set<String>()
+        for session in chatSessions {
+            allFriends.formUnion(session.participants)
+        }
+        
+        // Update count for each friend
+        // Note: We don't know currentUser yet, so we'll update this when connect() is called
+        for friend in allFriends {
+            if let session = chatSessions.first(where: { $0.participants.contains(friend) }) {
+                let otherParticipant = session.participants.first { $0 != friend }
+                if let currentUser = otherParticipant {
+                    updateUnreadCount(for: friend, currentUser: currentUser)
+                }
+            }
+        }
     }
     
     /// Save unread counts to UserDefaults
@@ -307,6 +376,20 @@ class ChatManager: ObservableObject {
             DispatchQueue.main.async {
                 self.unreadCounts = saved
             }
+        }
+    }
+    
+    /// Save last read timestamps to UserDefaults
+    private func saveLastReadTimestamps() {
+        // Convert Date dictionary to TimeInterval dictionary for storage
+        let timeIntervals = lastReadTimestamps.mapValues { $0.timeIntervalSince1970 }
+        UserDefaults.standard.set(timeIntervals, forKey: lastReadStorageKey)
+    }
+    
+    /// Load last read timestamps from UserDefaults
+    private func loadLastReadTimestamps() {
+        if let saved = UserDefaults.standard.dictionary(forKey: lastReadStorageKey) as? [String: Double] {
+            lastReadTimestamps = saved.mapValues { Date(timeIntervalSince1970: $0) }
         }
     }
 }

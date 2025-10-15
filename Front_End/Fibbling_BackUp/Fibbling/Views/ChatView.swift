@@ -103,15 +103,11 @@ struct ChatView: View {
                         .foregroundColor(.white)
                 )
             
-            // Receiver name and status
+            // Receiver name
             VStack(alignment: .leading, spacing: 2) {
                 Text(receiver)
                     .font(.headline)
                     .foregroundColor(Color.textPrimary)
-                
-                Text(receiver == "general" ? "Group Chat" : "Online")
-                    .font(.caption)
-                    .foregroundColor(Color.textSecondary)
             }
             
             Spacer()

@@ -88,11 +88,15 @@ struct FriendsListView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
-            
             Task {
                 fetchAllUsers()
                 accountManager.fetchFriendRequests() // Use UserAccountManager's method
                 fetchCurrentUserFriends()
+                
+                // ✅ Refresh unread counts for all friends
+                if let currentUser = accountManager.currentUser {
+                    chatManager.refreshUnreadCounts(currentUser: currentUser)
+                }
                 
                 // Wait for prefetch to complete before showing content
                 await prefetchVisibleImages()
