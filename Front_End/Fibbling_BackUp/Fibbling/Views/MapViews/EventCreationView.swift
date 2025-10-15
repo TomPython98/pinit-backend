@@ -23,6 +23,9 @@ struct EventCreationView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.dismiss) var dismiss
     
+    // MARK: - Focus Management
+    @FocusState private var isFocused: Bool
+    
     // MARK: - Event State
     @State private var eventTitle = ""
     @State private var eventDescription = ""
@@ -150,6 +153,17 @@ struct EventCreationView: View {
             .sheet(isPresented: $showFriendPicker) {
                 FriendPickerView(selectedFriends: $selectedFriends)
                     .environmentObject(accountManager)
+            }
+            .onChange(of: showFriendPicker) { oldValue, newValue in
+                // When friend picker sheet dismisses, ensure keyboard is dismissed and view is reset
+                if oldValue && !newValue {
+                    hideKeyboard()
+                    isFocused = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        // Ensure focus is cleared after sheet animation completes
+                        self.isFocused = false
+                    }
+                }
             }
             .alert(isPresented: $showValidationAlert) {
                 Alert(
