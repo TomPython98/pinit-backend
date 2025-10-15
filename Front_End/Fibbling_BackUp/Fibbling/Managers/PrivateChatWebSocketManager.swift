@@ -162,7 +162,12 @@ class PrivateChatWebSocketManager: ObservableObject {
         
         do {
             let data = try JSONSerialization.data(withJSONObject: payload)
-            let wsMessage = URLSessionWebSocketTask.Message.data(data)
+            // Send as TEXT frame to match backend ChatConsumer(text_data)
+            guard let jsonString = String(data: data, encoding: .utf8) else {
+                print("❌ Failed to encode JSON to UTF-8 string")
+                return
+            }
+            let wsMessage = URLSessionWebSocketTask.Message.string(jsonString)
             
             webSocketTask.send(wsMessage) { [weak self] error in
                 if let error = error {
