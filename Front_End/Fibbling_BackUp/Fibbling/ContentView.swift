@@ -73,7 +73,7 @@ struct ContentView: View {
                         
                         // Features section with improved typography and spacing
                         VStack(alignment: .leading, spacing: 16) {
-                            sectionHeader("Academic Tools")
+                            sectionHeader("Social Features")
                             
                             toolsGridView
                                 .padding(.horizontal)
@@ -236,10 +236,6 @@ struct ContentView: View {
                 .foregroundColor(.textPrimary)
             
             Spacer()
-            
-            Text("See All")
-                .font(.subheadline.weight(.medium))
-                .foregroundColor(.brandPrimary)
         }
         .padding(.horizontal)
     }

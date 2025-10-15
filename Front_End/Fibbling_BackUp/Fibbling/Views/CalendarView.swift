@@ -34,10 +34,6 @@ struct CustomCalendarView: View {
                 
                 ScrollView {
                     VStack(spacing: 20) {
-                        // Refresh indicator at the top of the content
-                        EventsRefreshView()
-                            .padding(.top, 8)
-                        
                         if calendarViewMode == .month {
                             monthView
                         } else {
@@ -787,11 +783,20 @@ struct EventRow: View {
 // MARK: - Simple Events List Component
 struct SimpleEventsList: View {
     let events: [StudyEvent]
+    @State private var selectedEvent: StudyEvent?
     
     var body: some View {
         LazyVStack(spacing: 8) {
             ForEach(events) { event in
                 SimpleEventRow(event: event)
+                    .onTapGesture {
+                        selectedEvent = event
+                    }
+            }
+        }
+        .sheet(item: $selectedEvent) { event in
+            NavigationStack {
+                EventDetailView(event: event, studyEvents: .constant([]), onRSVP: { _ in })
             }
         }
     }

@@ -5312,29 +5312,6 @@ struct UserProfileView: View {
             }
             
             VStack(spacing: 12) {
-                // Primary Action - Send Message
-                Button(action: {
-                    sendMessage(to: profile.username)
-                }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "message.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.white)
-                        
-                        Text("Send Message")
-                            .font(.headline.weight(.semibold))
-                            .foregroundColor(.white)
-                        
-                        Spacer()
-                    }
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.brandPrimary)
-                            .shadow(color: Color.brandPrimary.opacity(0.25), radius: 8, x: 0, y: 4)
-                    )
-                }
-                
                 // Secondary Actions Row
                 HStack(spacing: 12) {
                     Button(action: {

@@ -317,14 +317,16 @@ struct InvitationsView: View {
                 Alert(title: Text("Invitation Update"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
             .sheet(item: $selectedEventForDetail) { event in
-                EventDetailView(
-                    event: event,
-                    studyEvents: .constant([event]),
-                    onRSVP: { _ in
-                        // Refresh hosted events when RSVP changes
-                        fetchHostedEvents()
-                    }
-                )
+                NavigationStack {
+                    EventDetailView(
+                        event: event,
+                        studyEvents: .constant([event]),
+                        onRSVP: { _ in
+                            // Refresh hosted events when RSVP changes
+                            fetchHostedEvents()
+                        }
+                    )
+                }
             }
         }
     }
