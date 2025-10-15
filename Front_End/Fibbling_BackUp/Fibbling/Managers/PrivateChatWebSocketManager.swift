@@ -174,11 +174,21 @@ class PrivateChatWebSocketManager: ObservableObject {
                     self?.handleConnectionError()
                 } else {
                     print("✅ Message sent successfully to WebSocket")
-                    // NOTE: Railway WebSocket may drop connection after send
-                    // But we should NOT reconnect immediately as it would:
-                    // 1. Interrupt listening for the echo back from server
-                    // 2. Miss any incoming messages from the other user
-                    // Instead, rely on the existing error handling to reconnect if needed
+                    // ✅ Railway WebSocket drops connection immediately after send
+                    // We need to reconnect FAST (within 1 second) to ensure:
+                    // 1. We receive the echo back from server
+                    // 2. We're ready to receive the next message
+                    // Use a short delay to allow the send to complete
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                        guard let self = self, let task = self.webSocketTask else { return }
+                        // Check if connection is still alive by checking state
+                        if task.state == .running {
+                            print("🔍 Connection still running after 1s - good!")
+                        } else {
+                            print("⚠️ Connection dropped after send - reconnecting immediately")
+                            self.connect()
+                        }
+                    }
                 }
             }
         } catch {
@@ -252,10 +262,11 @@ class PrivateChatWebSocketManager: ObservableObject {
             return
         }
         
-        reconnectAttempt += 1
-        let delay = min(5.0 * Double(reconnectAttempt), 30.0) // Exponential backoff, max 30 seconds
-        
-        print("🔄 Reconnecting in \(delay) seconds (attempt \(reconnectAttempt)/\(maxReconnectAttempts))")
+            reconnectAttempt += 1
+            // ✅ Use faster reconnection for Railway - start with 1s, then exponential backoff
+            let delay = min(1.0 * Double(reconnectAttempt), 10.0) // Faster backoff, max 10 seconds
+            
+            print("🔄 Reconnecting in \(delay) seconds (attempt \(reconnectAttempt)/\(maxReconnectAttempts))")
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
