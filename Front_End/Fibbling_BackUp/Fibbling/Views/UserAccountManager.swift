@@ -19,6 +19,11 @@ class UserAccountManager: ObservableObject {
     
     private let accessTokenKey = "access_token" // Backend returns "access_token"
     private let refreshTokenKey = "refresh_token" // Backend returns "refresh_token"
+    
+    // Cache keys for performance optimization
+    private let friendsCacheKey = "cached_friends"
+    private let friendRequestsCacheKey = "cached_friend_requests"
+    private let cacheTimestampKey = "cache_timestamp"
 
     init() {
         // Load cached data FIRST for instant display
@@ -681,10 +686,6 @@ extension UserAccountManager {
     }
     
     // MARK: - Cache Management (Performance Optimization)
-    
-    private let friendsCacheKey = "cached_friends"
-    private let friendRequestsCacheKey = "cached_friend_requests"
-    private let cacheTimestampKey = "cache_timestamp"
     
     /// Load cached friends on app startup for instant display
     private func loadFriendsCache() {
