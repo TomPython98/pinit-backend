@@ -5645,3 +5645,68 @@ def get_user_join_requests(request, username):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+
+@ratelimit(key='ip', rate='100/h', method='GET', block=True)
+@api_view(['GET'])
+def get_event_by_id(request, event_id):
+    """
+    Get a single event by ID for public sharing
+    This endpoint allows unauthenticated access for public events
+    """
+    try:
+        # Convert string ID to UUID
+        try:
+            event_uuid = uuid.UUID(event_id)
+        except ValueError:
+            return JsonResponse({"error": "Invalid event ID format"}, status=400)
+        
+        # Get the event
+        event = StudyEvent.objects.select_related('host', 'host__userprofile').prefetch_related('attendees').get(id=event_uuid)
+        
+        # Check if event is public or if user has access
+        if not event.is_public:
+            # For private events, require authentication
+            if not request.user.is_authenticated:
+                return JsonResponse({"error": "Event is private"}, status=403)
+            
+            # Check if user has access to this private event
+            user_has_access = (
+                event.host == request.user or
+                request.user in event.invited_friends.all() or
+                request.user in event.attendees.all()
+            )
+            
+            if not user_has_access:
+                return JsonResponse({"error": "You don't have access to this event"}, status=403)
+        
+        # Format the event data
+        event_data = {
+            "id": str(event.id),
+            "title": event.title,
+            "description": event.description,
+            "host": event.host.username,
+            "host_is_certified": getattr(event.host.userprofile, 'is_certified', False),
+            "latitude": event.latitude,
+            "longitude": event.longitude,
+            "time": event.time.isoformat(),
+            "end_time": event.end_time.isoformat(),
+            "is_public": event.is_public,
+            "event_type": event.event_type,
+            "category": event.event_type,  # For compatibility
+            "attendee_count": event.attendees.count(),
+            "max_participants": event.max_participants,
+            "location": f"{event.latitude}, {event.longitude}",  # Basic location info
+            "created_at": event.time.isoformat(),  # For compatibility
+            "date": event.time.isoformat()  # For compatibility
+        }
+        
+        return JsonResponse({
+            "success": True,
+            "event": event_data
+        })
+        
+    except StudyEvent.DoesNotExist:
+        return JsonResponse({"error": "Event not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+

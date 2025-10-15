@@ -6,8 +6,8 @@ struct ShareEventView: UIViewControllerRepresentable {
     @Environment(\.dismiss) private var dismiss
     
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let text = "Join me at '\(event.title)' on \(formatDate(event.time))! 🎉"
-        let url = URL(string: "https://pinit.app/event/\(event.id.uuidString)")
+        let text = "Join me at '\(event.title)' on \(formatDate(event.time))! 🎉\n\nRSVP here or download PinItSocial from the App Store for the full experience!"
+        let url = URL(string: "https://pinitsocial.com/event/\(event.id.uuidString)")
         
         var items: [Any] = [text]
         if let url = url {

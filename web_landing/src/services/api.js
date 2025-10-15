@@ -66,6 +66,11 @@ export const eventAPI = {
     return response.data
   },
   
+  getEventById: async (eventId) => {
+    const response = await api.get(`/api/get_event/${eventId}/`)
+    return response.data
+  },
+  
   searchEvents: async (params) => {
     try {
       const response = await api.post('/api/search_events/', params)

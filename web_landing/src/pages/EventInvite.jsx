@@ -20,18 +20,23 @@ const EventInvite = ({ user, onLogin }) => {
   const loadEvent = async () => {
     try {
       setLoading(true)
-      // Try to get event details from search (public events)
-      const response = await eventAPI.searchEvents({ is_public: true })
-      const foundEvent = response.events?.find(e => e.id === eventId)
+      // Use the new direct event endpoint
+      const response = await eventAPI.getEventById(eventId)
       
-      if (foundEvent) {
-        setEvent(foundEvent)
+      if (response.success && response.event) {
+        setEvent(response.event)
       } else {
         setError('Event not found or is private')
       }
     } catch (err) {
       console.error('Error loading event:', err)
-      setError('Failed to load event')
+      if (err.response?.status === 404) {
+        setError('Event not found')
+      } else if (err.response?.status === 403) {
+        setError('This event is private')
+      } else {
+        setError('Failed to load event')
+      }
     } finally {
       setLoading(false)
     }

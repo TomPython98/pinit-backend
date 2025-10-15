@@ -41,6 +41,7 @@ urlpatterns = [
     path('api/update_study_event/', views.update_study_event, name='update_study_event'),
     path('api/delete_study_event/', views.delete_study_event, name='delete_study_event'),
     path('api/get_study_events/<str:username>/', views.get_study_events, name='get_study_events'),
+    path('api/get_event/<str:event_id>/', views.get_event_by_id, name='get_event_by_id'),
     path('api/rsvp_study_event/', views.rsvp_study_event, name='rsvp_study_event'),
     path('api/search_events/', views.search_events, name='search_events'),
     path('api/enhanced_search_events/', views.enhanced_search_events, name='enhanced_search_events'),
