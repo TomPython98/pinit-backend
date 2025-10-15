@@ -270,9 +270,21 @@ LOGGING = {
 
 # Push Notifications Settings (configure via environment)
 # Supports both certificate-based and token-based (APNs Auth Key) authentication
+import tempfile
+
+apns_auth_key_path = os.environ.get('APNS_AUTH_KEY_PATH', '')
+apns_auth_key_content = os.environ.get('APNS_AUTH_KEY_CONTENT', '')
+
+# Handle APNs Auth Key content directly from environment variable
+if apns_auth_key_content and not apns_auth_key_path:
+    # Create temporary file with the .p8 content
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.p8') as f:
+        f.write(apns_auth_key_content)
+        apns_auth_key_path = f.name
+
 PUSH_NOTIFICATIONS_SETTINGS = {
     # Modern APNs Authentication (Token-based) - RECOMMENDED
-    "APNS_AUTH_KEY_PATH": os.environ.get('APNS_AUTH_KEY_PATH', ''),  # Path to .p8 file
+    "APNS_AUTH_KEY_PATH": apns_auth_key_path,  # Path to .p8 file
     "APNS_AUTH_KEY_ID": os.environ.get('APNS_AUTH_KEY_ID', ''),      # 10-character key ID
     "APNS_TEAM_ID": os.environ.get('APNS_TEAM_ID', ''),              # 10-character team ID
     "APNS_TOPIC": os.environ.get('APNS_TOPIC', 'com.pinit.app'),     # Bundle ID

@@ -3683,6 +3683,44 @@ def send_push_notification(user_id, notification_type, **kwargs):
         traceback.print_exc()
 
 
+# Debug endpoint for APNs configuration
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def debug_apns_config(request):
+    """
+    Debug APNs configuration
+    """
+    from django.conf import settings
+    
+    config = {
+        'APNS_AUTH_KEY_PATH': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_AUTH_KEY_PATH', ''),
+        'APNS_AUTH_KEY_ID': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_AUTH_KEY_ID', ''),
+        'APNS_TEAM_ID': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_TEAM_ID', ''),
+        'APNS_TOPIC': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_TOPIC', ''),
+        'APNS_USE_SANDBOX': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_USE_SANDBOX', False),
+    }
+    
+    # Check if key file exists and is readable
+    import os
+    key_path = config['APNS_AUTH_KEY_PATH']
+    if key_path and os.path.exists(key_path):
+        try:
+            with open(key_path, 'r') as f:
+                key_content = f.read()
+                config['key_file_exists'] = True
+                config['key_file_readable'] = True
+                config['key_file_size'] = len(key_content)
+                config['key_starts_with'] = key_content[:50] + '...' if len(key_content) > 50 else key_content
+        except Exception as e:
+            config['key_file_exists'] = True
+            config['key_file_readable'] = False
+            config['key_file_error'] = str(e)
+    else:
+        config['key_file_exists'] = False
+    
+    return Response(config)
+
 # Test endpoint for push notifications (for debugging)
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
