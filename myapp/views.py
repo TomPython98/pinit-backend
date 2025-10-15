@@ -1471,6 +1471,15 @@ def rsvp_study_event(request):
                     is_auto_matched=True
                 ).exists()
                 
+                # Remove user from invited_friends when they send a join request
+                # This prevents the invitation from showing up again in their invitations list
+                if is_invited:
+                    event.invited_friends.remove(user)
+                
+                # Also remove the EventInvitation record for auto-matched or direct invitations
+                # This ensures the invitation doesn't show up again in the UI
+                EventInvitation.objects.filter(event=event, user=user).delete()
+                
                 # Create the join request (all RSVPs go through approval)
                 join_request = EventJoinRequest.objects.create(
                     event=event,

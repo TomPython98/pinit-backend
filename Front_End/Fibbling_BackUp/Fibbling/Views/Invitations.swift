@@ -442,43 +442,65 @@ struct InvitationsView: View {
                     return
                 }
                 
-                // Create a copy of the event to avoid struct mutation issues
-                let event = invitation.event
-                
-                // Create a new attendees array with the current user added
-                var newAttendees = event.attendees
-                if !newAttendees.contains(username) {
-                    newAttendees.append(username)
+                // Parse response to check if it was a direct join or a request
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let action = json["action"] as? String {
+                    
+                    if action == "request_sent" {
+                        // A join request was created (needs host approval)
+                        // Refresh invitations (this one should disappear)
+                        fetchInvitations()
+                        // Refresh join requests (should appear in "My Requests")
+                        fetchJoinRequests()
+                        
+                        alertMessage = "Join request sent! The host will review your request."
+                        showAlert = true
+                    } else if action == "joined" {
+                        // Directly joined (shouldn't happen with current backend, but keep for compatibility)
+                        let event = invitation.event
+                        
+                        var newAttendees = event.attendees
+                        if !newAttendees.contains(username) {
+                            newAttendees.append(username)
+                        }
+                        
+                        let updatedEvent = StudyEvent(
+                            id: event.id,
+                            title: event.title,
+                            coordinate: event.coordinate,
+                            time: event.time,
+                            endTime: event.endTime,
+                            description: event.description,
+                            invitedFriends: event.invitedFriends,
+                            attendees: newAttendees,
+                            isPublic: event.isPublic,
+                            host: event.host,
+                            hostIsCertified: event.hostIsCertified,
+                            eventType: event.eventType
+                        )
+                        
+                        self.calendarManager.addEvent(updatedEvent)
+                        fetchInvitations()
+                        
+                        alertMessage = "You've joined \(updatedEvent.title)"
+                        showAlert = true
+                    } else if action == "request_pending" {
+                        // Already has a pending request
+                        fetchInvitations()
+                        fetchJoinRequests()
+                        
+                        alertMessage = "You already have a pending request for this event"
+                        showAlert = true
+                    }
+                } else {
+                    // Fallback if response format is unexpected
+                    fetchInvitations()
+                    fetchJoinRequests()
+                    
+                    alertMessage = "Action completed"
+                    showAlert = true
                 }
-                
-                // Create a new event with the updated attendees
-                let updatedEvent = StudyEvent(
-                    id: event.id,
-                    title: event.title,
-                    coordinate: event.coordinate,
-                    time: event.time,
-                    endTime: event.endTime,
-                    description: event.description,
-                    invitedFriends: event.invitedFriends,
-                    attendees: newAttendees,
-                    isPublic: event.isPublic,
-                    host: event.host,
-                    hostIsCertified: event.hostIsCertified,
-                    eventType: event.eventType
-                )
-                
-                
-                // Add the event to CalendarManager and force a refresh
-                self.calendarManager.addEvent(updatedEvent)
-                
-                // Refresh invitations & calendar data
-                fetchInvitations()
-                
-                // self.calendarManager.fetchEvents() // REMOVED - WebSocket will handle updates
-                
-                // Show success message
-                alertMessage = "You've accepted the invitation to \(updatedEvent.title)"
-                showAlert = true
             }
         }.resume()
     }
