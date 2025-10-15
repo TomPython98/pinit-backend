@@ -1475,14 +1475,21 @@ struct FriendPickerView: View {
                 // Search bar
             HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.textSecondary)
+                        .foregroundColor(.gray)
                     
-                    TextField("Search friends", text: $searchQuery)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .foregroundColor(.textPrimary)
+                    ZStack(alignment: .leading) {
+                        if searchQuery.isEmpty {
+                            Text("Search friends")
+                                .foregroundColor(Color(.systemGray))
+                        }
+                        TextField("", text: $searchQuery)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .foregroundColor(.black)
+                            .tint(.brandPrimary)
+                    }
                     }
                     .padding()
-                .background(Color.white.opacity(0.8))
+                .background(Color(.systemGray6))
                     .cornerRadius(12)
                         .padding()
                 
