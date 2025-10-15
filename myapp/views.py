@@ -490,6 +490,17 @@ def create_study_event(request):
                     user=friend_user,
                     is_auto_matched=False
                 )
+                # Send push notification to invited friend
+                try:
+                    send_push_notification(
+                        user_id=friend_user.id,
+                        notification_type='event_invitation',
+                        event_id=str(event.id),
+                        event_title=event.title,
+                        from_user=host.username
+                    )
+                except Exception as notif_error:
+                    print(f"⚠️ Failed to send event_invitation to {friend}: {notif_error}")
 
             event.save()
             
