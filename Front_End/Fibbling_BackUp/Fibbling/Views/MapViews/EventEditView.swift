@@ -37,7 +37,6 @@ struct EventEditView: View {
     @State private var isLoading = false
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var isFullDay = false
     
     // Location editing states
     @State private var locationSuggestions: [GooglePlacesService.LocationSuggestion] = []
@@ -221,135 +220,19 @@ struct EventEditView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Image(systemName: "calendar").foregroundColor(.brandPrimary)
-                        Text("When").font(.headline).foregroundColor(Color.textPrimary)
+                        Text("Date & Time").font(.headline).foregroundColor(Color.textPrimary)
                     }
                     
-                    VStack(spacing: 16) {
-                        // Date
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Event Date")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundColor(.black)
-                            
-                            HStack {
-                                Image(systemName: "calendar")
-                                    .foregroundColor(.brandPrimary)
-                                
-                                DatePicker("Select Date", selection: $eventDate, displayedComponents: [.date])
-                                    .labelsHidden()
-                                    .accentColor(.brandPrimary)
-                                    .environment(\.colorScheme, .light)
-                                    .onChange(of: eventDate) { oldValue, newValue in
-                                        // If the new date is after the end date, adjust end date
-                                        if newValue >= eventEndDate {
-                                            let newEndDate = newValue.addingTimeInterval(3600) // Add 1 hour
-                                            eventEndDate = newEndDate
-                                        }
-                                    }
-                                
-                                Spacer()
-                            }
-                            .padding(12)
-                            .background(Color.white)
-                            .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                            )
-                        }
-                        
-                        // Full Day Toggle
-                        Toggle(isOn: $isFullDay) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "sun.horizon.fill")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.brandAccent)
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Full Day Event")
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundColor(.black)
-                                    
-                                    Text("Event lasts all day")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.black.opacity(0.6))
-                                }
-                            }
-                        }
-                        .tint(.brandPrimary)
-                        .padding(16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.bgCard)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(isFullDay ? Color.brandPrimary : Color.clear, lineWidth: 2)
-                                )
-                        )
-                        .onChange(of: isFullDay) { _, newValue in
-                            if newValue {
-                                // Set to full day (midnight to 11:59 PM)
-                                let calendar = Calendar.current
-                                eventDate = calendar.startOfDay(for: eventDate)
-                                if let endOfDay = calendar.date(byAdding: .day, value: 1, to: eventDate)?.addingTimeInterval(-60) {
-                                    eventEndDate = endOfDay
-                                }
-                            }
-                        }
-                        
-                        // Time Range (only if not full day)
-                        if !isFullDay {
-                            HStack(spacing: 16) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Start Time")
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.black)
-                                    
-                                    DatePicker("", selection: $eventDate, displayedComponents: [.hourAndMinute])
-                                        .datePickerStyle(.compact)
-                                        .accentColor(.brandPrimary)
-                                        .environment(\.colorScheme, .light)
-                                        .labelsHidden()
-                                        .onChange(of: eventDate) { oldValue, newValue in
-                                            // If the new start time is after the end time, adjust end time
-                                            if newValue >= eventEndDate {
-                                                let newEndDate = newValue.addingTimeInterval(1800) // Add 30 minutes
-                                                eventEndDate = newEndDate
-                                            }
-                                        }
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("End Time")
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.black)
-                                    
-                                    DatePicker("", selection: $eventEndDate, displayedComponents: [.hourAndMinute])
-                                        .datePickerStyle(.compact)
-                                        .accentColor(.brandPrimary)
-                                        .environment(\.colorScheme, .light)
-                                        .labelsHidden()
-                                        .onChange(of: eventEndDate) { oldValue, newValue in
-                                            // If the new end time is before the start time, adjust start time
-                                            if newValue <= eventDate {
-                                                let newStartDate = newValue.addingTimeInterval(-1800) // Subtract 30 minutes
-                                                eventDate = newStartDate
-                                            }
-                                        }
-                                }
-                            }
-                        }
-                        
-                        // Duration display
-                        HStack {
-                            Image(systemName: isFullDay ? "sun.max.fill" : "clock")
-                                .foregroundColor(.brandAccent)
-                            Text(isFullDay ? "Full Day Event" : "Duration: \(formatDuration(from: eventDate, to: eventEndDate))")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundColor(.black)
-                            Spacer()
-                        }
-                        .padding(.top, 8)
+                    VStack(spacing: 12) {
+                        DatePicker("Start Time", selection: $eventDate, displayedComponents: [.date, .hourAndMinute])
+                            .datePickerStyle(.compact)
+                            .tint(.brandPrimary)
+                            .foregroundColor(Color.textPrimary)
+
+                        DatePicker("End Time", selection: $eventEndDate, displayedComponents: [.date, .hourAndMinute])
+                            .datePickerStyle(.compact)
+                            .tint(.brandPrimary)
+                            .foregroundColor(Color.textPrimary)
                     }
                 }
             }
@@ -789,33 +672,6 @@ struct EventEditView: View {
     
     private func removeTag(_ tag: String) {
         tags.removeAll { $0 == tag }
-    }
-    
-    private func formatDuration(from startDate: Date, to endDate: Date) -> String {
-        // Ensure non-negative duration and handle overnight (end before start => next day)
-        var adjustedEnd = endDate
-        if adjustedEnd < startDate {
-            // Assume the end time is on the next day
-            adjustedEnd = Calendar.current.date(byAdding: .day, value: 1, to: adjustedEnd) ?? adjustedEnd.addingTimeInterval(24 * 60 * 60)
-        }
-        
-        let seconds = max(0, adjustedEnd.timeIntervalSince(startDate))
-        let totalMinutes = Int(seconds / 60)
-        let days = totalMinutes / (24 * 60)
-        let hours = (totalMinutes % (24 * 60)) / 60
-        let minutes = totalMinutes % 60
-        
-        if days > 0 {
-            if hours > 0 || minutes > 0 {
-                return "\(days)d \(hours)h \(minutes)m"
-            } else {
-                return "\(days)d"
-            }
-        } else if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        } else {
-            return "\(minutes)m"
-        }
     }
     
     // MARK: - Event Update

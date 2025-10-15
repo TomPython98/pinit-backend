@@ -685,76 +685,167 @@ struct EventCreationView: View {
     
     // MARK: - Settings Card
     private var settingsCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            cardHeader("Settings", icon: "gearshape.fill", color: Color.pinItAcademic)
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeader("Event Settings", icon: "gearshape.fill", color: Color.pinItAcademic)
+                .padding(20)
             
-            VStack(spacing: 16) {
-                // Audience selector
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Audience")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.textPrimary)
-                    Toggle(isOn: $isPublic) {
-                        HStack(spacing: 8) {
-                            Image(systemName: isPublic ? "globe" : "lock.fill")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(isPublic ? .brandAccent : .brandPrimary)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(isPublic ? "Public Event" : "Private Event")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(.black)
-                                
-                                Text(isPublic ? "Everyone can discover and join" : "Only invited friends can join")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.black.opacity(0.6))
-                            }
-                        }
+            Divider()
+                .foregroundColor(.cardStroke)
+            
+            VStack(spacing: 24) {
+                // SECTION 1: Event Visibility
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "eye.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.brandPrimary)
+                        
+                        Text("Event Visibility")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.textPrimary)
                     }
-                    .tint(.brandPrimary)
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.bgCard)
+                    
+                    // Visibility Options
+                    VStack(spacing: 10) {
+                        // Public Option
+                        Button(action: { isPublic = true; audienceSelection = .publicEvent }) {
+                            HStack(spacing: 12) {
+                                VStack(spacing: 0) {
+                                    Image(systemName: "globe")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.brandAccent)
+                                }
+                                .frame(width: 44, height: 44)
+                                .background(Color.brandAccent.opacity(0.1))
+                                .cornerRadius(10)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack {
+                                        Text("Public Event")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(.textPrimary)
+                                        Spacer()
+                                        if isPublic {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.brandPrimary)
+                                                .font(.system(size: 18))
+                                        }
+                                    }
+                                    
+                                    Text("Anyone can discover and join")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.textSecondary)
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(Color.bgCard)
+                            .cornerRadius(12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(isPublic ? Color.clear : Color.brandPrimary, lineWidth: 2)
+                                    .stroke(isPublic ? Color.brandPrimary : Color.cardStroke, lineWidth: isPublic ? 2 : 1)
                             )
-                    )
-                    .onChange(of: isPublic) { newValue in
-                        if newValue {
-                            audienceSelection = .publicEvent
-                        } else {
-                            audienceSelection = .privateEvent
+                        }
+                        
+                        // Private Option
+                        Button(action: { isPublic = false; audienceSelection = .privateEvent }) {
+                            HStack(spacing: 12) {
+                                VStack(spacing: 0) {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.brandPrimary)
+                                }
+                                .frame(width: 44, height: 44)
+                                .background(Color.brandPrimary.opacity(0.1))
+                                .cornerRadius(10)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack {
+                                        Text("Private Event")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(.textPrimary)
+                                        Spacer()
+                                        if !isPublic {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.brandPrimary)
+                                                .font(.system(size: 18))
+                                        }
+                                    }
+                                    
+                                    Text("Only invited guests can join")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.textSecondary)
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(Color.bgCard)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(!isPublic ? Color.brandPrimary : Color.cardStroke, lineWidth: !isPublic ? 2 : 1)
+                            )
                         }
                     }
                 }
                 
-                // Friend Invitations (always visible)
+                Divider()
+                    .foregroundColor(.cardStroke.opacity(0.5))
+                
+                // SECTION 2: Invite Friends (Always Visible & Prominent)
                 VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.brandPrimary)
+                        
+                        Text("Invite Friends")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.textPrimary)
+                        
+                        Spacer()
+                        
+                        if !selectedFriends.isEmpty {
+                            HStack(spacing: 4) {
+                                Image(systemName: "person.2.fill")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text("\(selectedFriends.count)")
+                                    .font(.system(size: 12, weight: .semibold))
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.brandPrimary.opacity(0.1))
+                            .foregroundColor(.brandPrimary)
+                            .cornerRadius(6)
+                        }
+                    }
+                    
+                    // Invite Button - Primary CTA
                     Button(action: { showFriendPicker = true }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "person.crop.circle.badge.plus")
-                                .font(.system(size: 16, weight: .semibold))
+                        HStack(spacing: 10) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 18, weight: .semibold))
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Invite Friends")
-                                    .font(.system(size: 15, weight: .semibold))
+                                Text("Add Friends")
+                                    .font(.system(size: 14, weight: .semibold))
                                     .foregroundColor(.white)
                                 
-                                Text("Add specific people to your event")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.white.opacity(0.9))
+                                Text(selectedFriends.isEmpty ? "Invite friends to join" : "Add more friends")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.white.opacity(0.85))
                             }
                             
                             Spacer()
                             
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.8))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.7))
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(16)
+                        .padding(14)
                         .background(
                             LinearGradient(
                                 gradient: Gradient(colors: [Color.brandPrimary, Color.brandAccent]),
@@ -766,58 +857,84 @@ struct EventCreationView: View {
                         .shadow(color: Color.brandPrimary.opacity(0.3), radius: 4, x: 0, y: 2)
                     }
                     
+                    // Friends List Preview
                     if !selectedFriends.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(selectedFriends, id: \.self) { friend in
-                                    HStack(spacing: 4) {
-                                        Text(friend)
-                                            .font(.caption.weight(.medium))
-                            .foregroundColor(.brandPrimary)
-                                        
-                                        Button(action: { removeFriend(friend) }) {
-                                            Image(systemName: "xmark")
-                                                .font(.caption2)
-                                                .foregroundColor(.textSecondary)
-                                        }
-                                    }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.brandPrimary.opacity(0.1))
-                                    .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1)
-                                    )
-                                }
-                            }
-                            .padding(.horizontal, 4)
-                        }
-                    } else {
-                        Text("No friends invited yet")
-                                .font(.caption)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Invited Friends")
+                                .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.textSecondary)
-                            .padding(.vertical, 8)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(selectedFriends, id: \.self) { friend in
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "person.circle.fill")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.brandPrimary)
+                                            
+                                            Text(friend)
+                                                .font(.system(size: 13, weight: .medium))
+                                                .foregroundColor(.brandPrimary)
+                                                .lineLimit(1)
+                                            
+                                            Button(action: { removeFriend(friend) }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.system(size: 12))
+                                                    .foregroundColor(.textSecondary.opacity(0.6))
+                                            }
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Color.brandPrimary.opacity(0.08))
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.brandPrimary.opacity(0.2), lineWidth: 1)
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal, 4)
+                            }
+                        }
                     }
                 }
                 
-                // Max Participants
-                                VStack(alignment: .leading, spacing: 8) {
-                    Text("Maximum Participants")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.textPrimary)
-
-                                    HStack {
-                        Text("\(maxParticipants) people")
-                            .font(.subheadline.weight(.medium))
+                Divider()
+                    .foregroundColor(.cardStroke.opacity(0.5))
+                
+                // SECTION 3: Max Participants
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "person.3.fill")
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.brandPrimary)
-
+                        
+                        Text("Participant Limit")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.textPrimary)
+                    }
+                    
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Maximum People")
+                                .font(.system(size: 12))
+                                .foregroundColor(.textSecondary)
+                            
+                            Text("\(maxParticipants)")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.brandPrimary)
+                        }
+                        
                         Spacer()
-
+                        
                         PinItStepper(value: $maxParticipants, range: 2...50, isDarkMode: false)
                     }
+                    .padding(12)
+                    .background(Color.brandPrimary.opacity(0.05))
+                    .cornerRadius(10)
                 }
             }
+            .padding(20)
         }
         .cardStyle()
     }
