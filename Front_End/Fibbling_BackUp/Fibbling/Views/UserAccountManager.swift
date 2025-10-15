@@ -9,6 +9,11 @@ class UserAccountManager: ObservableObject {
     @Published var accessToken: String?
     @Published var refreshToken: String?
     
+    // Computed property for JWT token (alias for accessToken)
+    var jwtToken: String? {
+        return accessToken
+    }
+    
     // MARK: - Configuration
     private let baseURL = APIConfig.primaryBaseURL
     
