@@ -1419,15 +1419,6 @@ struct HostEventCard: View {
                             .foregroundColor(Color.textSecondary)
                     }
                     
-                    HStack(spacing: 6) {
-                        Image(systemName: "location")
-                            .font(.caption)
-                            .foregroundColor(Color.textSecondary)
-                        
-                        Text("Study Event")
-                            .font(.caption)
-                            .foregroundColor(Color.textSecondary)
-                    }
                     
                     Spacer()
                 }
