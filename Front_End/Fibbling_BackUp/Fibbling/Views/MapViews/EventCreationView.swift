@@ -617,7 +617,6 @@ struct EventCreationView: View {
                             .frame(maxHeight: 450)
                             .padding(.top, 8)
                             .transition(.opacity.combined(with: .move(edge: .top)))
-                            .animation(.easeInOut(duration: 0.2), value: showLocationSuggestions)
                         }
                         
                         // Selected Location Detail Card
