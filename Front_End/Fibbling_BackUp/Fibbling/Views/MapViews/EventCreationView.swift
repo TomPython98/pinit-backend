@@ -1479,10 +1479,10 @@ struct FriendPickerView: View {
                     
                     TextField("Search friends", text: $searchQuery)
                         .textFieldStyle(PlainTextFieldStyle())
-                        .foregroundColor(.black) // Ensure text is black for visibility
+                        .foregroundColor(.textPrimary)
                     }
                     .padding()
-                .background(Color.bgSecondary)
+                .background(Color.white.opacity(0.8))
                     .cornerRadius(12)
                         .padding()
                 
@@ -1500,27 +1500,42 @@ struct FriendPickerView: View {
                         if selectedFriends.contains(friend) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.brandPrimary)
+                                .font(.system(size: 24))
+                        } else {
+                            Image(systemName: "circle")
+                                .foregroundColor(.textSecondary.opacity(0.3))
+                                .font(.system(size: 24))
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 8)
                     .contentShape(Rectangle())
-                    .listRowBackground(Color.bgCard)
+                    .listRowBackground(Color.white)
                     .onTapGesture {
                         toggleFriend(friend)
                     }
                 }
                 .scrollContentBackground(.hidden)
-                .background(Color.bgSurface)
+                .background(Color.white)
                 .listStyle(PlainListStyle())
             }
+            .background(Color.white)
             .navigationTitle("Invite Friends")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.white, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { 
+                        dismiss() 
+                    }
+                    .foregroundColor(.black)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { 
+                        dismiss() 
+                    }
+                    .foregroundColor(.black)
                 }
             }
         }
