@@ -167,11 +167,23 @@ struct InvitationsView: View {
     @State private var selectedTab = 0 // 0 = Direct Invites, 1 = Potential Matches, 2 = My Requests, 3 = Host Management
     
     private var directInvitations: [Invitation] {
-        return invitations.filter { !$0.isAutoMatched && $0.isPending }
+        // Filter out events where user has a pending join request
+        let pendingRequestEventIds = Set(joinRequests.filter { $0.status == "pending" }.map { $0.event.id.lowercased() })
+        return invitations.filter { invitation in
+            !invitation.isAutoMatched && 
+            invitation.isPending && 
+            !pendingRequestEventIds.contains(invitation.event.id.uuidString.lowercased())
+        }
     }
     
     private var potentialMatches: [Invitation] {
-        return invitations.filter { $0.isAutoMatched && $0.isPending }
+        // Filter out events where user has a pending join request
+        let pendingRequestEventIds = Set(joinRequests.filter { $0.status == "pending" }.map { $0.event.id.lowercased() })
+        return invitations.filter { invitation in
+            invitation.isAutoMatched && 
+            invitation.isPending && 
+            !pendingRequestEventIds.contains(invitation.event.id.uuidString.lowercased())
+        }
     }
     
     private var pendingJoinRequests: [EventJoinRequest] {
