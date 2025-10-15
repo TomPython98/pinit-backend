@@ -174,6 +174,14 @@ class PrivateChatWebSocketManager: ObservableObject {
                     self?.handleConnectionError()
                 } else {
                     print("✅ Message sent successfully to WebSocket")
+                    // ✅ WORKAROUND: Railway WebSocket drops connection after send
+                    // Proactively reconnect to maintain persistent connection
+                    print("🔄 Proactively reconnecting due to Railway WebSocket behavior...")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        guard let self = self else { return }
+                        // Reconnect to ensure we can receive messages
+                        self.connect()
+                    }
                 }
             }
         } catch {
