@@ -79,18 +79,24 @@ class PrivateChatWebSocketManager: ObservableObject {
         print("🔗 Connecting to private chat WebSocket: \(url.absoluteString)")
         print("🔗 Sender: \(sender), Receiver: \(receiver)")
         
-        // Start listening for messages
+        // Start listening for messages FIRST
         listenForMessages()
         
-        // ❌ DON'T start ping timer - it interferes with Railway WebSocket
-        // The ping/pong mechanism causes iOS to drop the connection
-        // startPingTimer()
-        
-        DispatchQueue.main.async {
-            self.isConnected = true
-            self.connectionError = nil
-            self.reconnectAttempt = 0
-            print("✅ WebSocket connection established (without ping timer)")
+        // ✅ Verify connection is actually working before marking as connected
+        // Send a ping to verify the connection is alive
+        webSocketTask?.sendPing { [weak self] error in
+            if let error = error {
+                print("❌ Initial ping failed: \(error.localizedDescription)")
+                self?.handleConnectionError()
+            } else {
+                print("✅ Initial ping successful - connection verified")
+                DispatchQueue.main.async {
+                    self?.isConnected = true
+                    self?.connectionError = nil
+                    self?.reconnectAttempt = 0
+                    print("✅ WebSocket connection established and verified")
+                }
+            }
         }
     }
     
@@ -138,8 +144,8 @@ class PrivateChatWebSocketManager: ObservableObject {
     
     /// Send a message through WebSocket
     func sendMessage(_ message: String) {
-        guard isConnected, let webSocketTask = webSocketTask else {
-            print("❌ Cannot send message: WebSocket not connected")
+        guard let webSocketTask = webSocketTask else {
+            print("❌ Cannot send message: WebSocket task is nil")
             return
         }
         
@@ -164,13 +170,10 @@ class PrivateChatWebSocketManager: ObservableObject {
                         self?.connectionError = "Failed to send message"
                         self?.isConnected = false
                     }
-                    // Try to reconnect
+                    // Trigger reconnection
                     self?.handleConnectionError()
                 } else {
                     print("✅ Message sent successfully to WebSocket")
-                    // ✅ CRITICAL FIX: Ensure we're still listening after sending
-                    // This prevents the connection from appearing "dead"
-                    print("🔍 Ensuring WebSocket is still listening for responses...")
                 }
             }
         } catch {
