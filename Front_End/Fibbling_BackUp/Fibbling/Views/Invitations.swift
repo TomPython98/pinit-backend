@@ -167,11 +167,11 @@ struct InvitationsView: View {
     @State private var selectedTab = 0 // 0 = Direct Invites, 1 = Potential Matches, 2 = My Requests, 3 = Host Management
     
     private var directInvitations: [Invitation] {
-        return invitations.filter { !$0.isAutoMatched }
+        return invitations.filter { !$0.isAutoMatched && $0.isPending }
     }
     
     private var potentialMatches: [Invitation] {
-        return invitations.filter { $0.isAutoMatched }
+        return invitations.filter { $0.isAutoMatched && $0.isPending }
     }
     
     private var navigationTitle: String {
