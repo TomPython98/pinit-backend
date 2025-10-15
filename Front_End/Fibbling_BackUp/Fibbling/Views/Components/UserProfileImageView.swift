@@ -165,8 +165,11 @@ struct CachedProfileImageView: View {
                 Circle()
                     .fill(Color(.systemGray6))
                     .overlay(
-                        ProgressView()
-                            .scaleEffect(0.6)
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: size * 0.5, height: size * 0.5)
+                            .opacity(0.3)
                     )
             } else {
                 Circle()
