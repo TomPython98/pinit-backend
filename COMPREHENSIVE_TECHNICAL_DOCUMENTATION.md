@@ -5811,6 +5811,40 @@ static let endpoints = [
 4. Notify CalendarManager of changes
 5. Auto-reconnect on connection loss
 
+### Private Chat over WebSocket (Direct Messaging) — Implementation & Production Notes
+
+This documents how private chat works end-to-end, what the backend expects, and the client behavior that stabilized production.
+
+#### Backend Contract (Django Channels)
+- Route: `wss://<backend>/ws/chat/{sender}/{receiver}/` (both params `[^/]+`)
+- Room naming: sorted participants → `private_chat_{a}_{b}` ensures same room regardless of sender order
+- Message format (TEXT frame expected):
+```json
+{"sender":"<username>","receiver":"<username>","message":"<text>"}
+```
+- Broadcast: `receive(text_data)` → `group_send` → `chat_message` → emits TEXT JSON `{ "sender": "...", "message": "..." }` to all room members
+- Channel layer: In-memory by default; use Redis in multi-instance production for cross-instance delivery
+
+#### iOS Client — Working Implementation
+- URL: `wss://pinit-backend-production.up.railway.app/ws/chat/{sender}/{receiver}/`
+- Send as TEXT frames (string JSON), not binary
+- Listen first, then mark connected (no ping verification due to Railway proxy behavior)
+- Reconnection: error-driven with fast bounded backoff (1→2→…≤10s) and `isConnecting` guard to prevent storms
+- Do not proactively reconnect immediately after a successful send; let error handling manage reconnects
+- UI: optimistic append on send; merge echoed/peer messages with relaxed duplicate detection; timestamps from message model
+
+#### Why This Fixed It
+- TEXT frames matched server `text_data` handler and avoided post-send disconnects
+- Removing ping verification prevented Railway proxy aborts
+- `isConnecting` prevented duplicate concurrent connects
+- Error-driven reconnect kept listening intact to receive echoes and peer messages
+
+#### Production Guidance
+- Configure Redis for Django Channels in multi-instance deployments
+- Keep payloads minimal TEXT JSON matching `{sender, receiver, message}`
+- Prefer error-driven reconnect with bounded backoff over aggressive proactive reconnects
+- Maintain optimistic UI and duplicate tolerance for smooth UX
+
 ### iOS Views & Components
 
 **Main Views:**
