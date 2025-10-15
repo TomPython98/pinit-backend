@@ -392,11 +392,6 @@ struct SettingsView: View {
                                 notificationSettings
                             }
                             
-                            // App Settings
-                            settingsCard("App Settings", icon: PinItIcons.settings, color: .pinItAcademic) {
-                                appSettings
-                            }
-                            
                             // Help & Support
                             settingsCard("Help & Support", icon: PinItIcons.help, color: .pinItInfo) {
                                 supportSettings
@@ -674,51 +669,6 @@ struct SettingsView: View {
                         .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                 }
                 .padding(.vertical, 4)
-            }
-        }
-    }
-    
-    private var appSettings: some View {
-        VStack(spacing: 16) {
-            Divider()
-                .padding(.vertical, 8)
-            
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 16) {
-                    Image(systemName: "globe")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Color.pinItTextSecondary)
-                        .frame(width: 24, height: 24)
-                    Text("language".localized)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.pinItTextPrimary)
-                    Spacer()
-                }
-                
-                HStack {
-                    Spacer()
-                    ForEach(LocalizationManager.Language.allCases, id: \.self) { language in
-                        Button(action: {
-                            localizationManager.setLanguage(language)
-                        }) {
-                            HStack(spacing: 8) {
-                                Text(language.flag)
-                                    .font(.system(size: 20))
-                                Text(language.displayName)
-                                    .font(.body.weight(.medium))
-                                    .foregroundColor(localizationManager.currentLanguage == language ? .brandPrimary : .textSecondary)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(localizationManager.currentLanguage == language ? Color.brandPrimary.opacity(0.1) : Color.clear)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-                .padding(.leading, 40)
             }
         }
     }
