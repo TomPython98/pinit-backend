@@ -285,7 +285,7 @@ struct ContentView: View {
                 Image("AppLogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 28, height: 28)
+                    .frame(width: 36, height: 36)
                 
                 Text("PinIt")
                     .font(.system(.title3, design: .rounded).weight(.bold))
