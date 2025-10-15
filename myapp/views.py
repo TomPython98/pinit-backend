@@ -5648,6 +5648,8 @@ def get_user_join_requests(request, username):
 
 @ratelimit(key='ip', rate='100/h', method='GET', block=True)
 @api_view(['GET'])
+@authentication_classes([])
+@permission_classes([])
 def get_event_by_id(request, event_id):
     """
     Get a single event by ID for public sharing
@@ -5666,7 +5668,7 @@ def get_event_by_id(request, event_id):
         # Check if event is public or if user has access
         if not event.is_public:
             # For private events, require authentication
-            if not request.user.is_authenticated:
+            if not hasattr(request, 'user') or not request.user.is_authenticated:
                 return JsonResponse({"error": "Event is private"}, status=403)
             
             # Check if user has access to this private event
