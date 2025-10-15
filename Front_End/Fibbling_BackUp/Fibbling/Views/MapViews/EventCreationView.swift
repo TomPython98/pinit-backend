@@ -687,204 +687,150 @@ struct EventCreationView: View {
             cardHeader("Settings", icon: "gearshape.fill", color: Color.pinItAcademic)
             
             VStack(spacing: 16) {
-                // Audience selector - Custom styled buttons for better readability
-                VStack(alignment: .leading, spacing: 12) {
+                // Audience selector
+                VStack(alignment: .leading, spacing: 10) {
                     Text("Event Visibility")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.subheadline.weight(.medium))
                         .foregroundColor(.textPrimary)
                     
                     HStack(spacing: 12) {
-                        // Public button
-                        Button(action: { audienceSelection = .publicEvent }) {
-                            VStack(spacing: 6) {
-                                Image(systemName: "globe")
-                                    .font(.title3)
+                        // Public Button
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                audienceSelection = .publicEvent
+                            }
+                        }) {
+                            HStack(spacing: 8) {
                                 Text("Public")
-                                    .font(.footnote.weight(.semibold))
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundColor(.black)
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                            .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(audienceSelection == .publicEvent ? Color.brandPrimary : Color.bgCard)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(
-                                        audienceSelection == .publicEvent ? Color.brandPrimary : Color.textSecondary.opacity(0.3),
-                                        lineWidth: 2
-                                    )
+                                    .stroke(Color.cardStroke, lineWidth: 1)
                             )
-                            .foregroundColor(audienceSelection == .publicEvent ? .white : .textPrimary)
+                            .shadow(color: audienceSelection == .publicEvent ? Color.brandPrimary.opacity(0.3) : Color.clear, radius: audienceSelection == .publicEvent ? 8 : 0, x: 0, y: 2)
+                            .opacity(audienceSelection == .publicEvent ? 1.0 : 0.7)
                         }
                         
-                        // Private button
-                        Button(action: { audienceSelection = .privateEvent }) {
-                            VStack(spacing: 6) {
-                                Image(systemName: "lock.fill")
-                                    .font(.title3)
+                        // Private Button
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                audienceSelection = .privateEvent
+                            }
+                        }) {
+                            HStack(spacing: 8) {
                                 Text("Private")
-                                    .font(.footnote.weight(.semibold))
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundColor(.black)
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                            .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(audienceSelection == .privateEvent ? Color.brandPrimary : Color.bgCard)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(
-                                        audienceSelection == .privateEvent ? Color.brandPrimary : Color.textSecondary.opacity(0.3),
-                                        lineWidth: 2
-                                    )
+                                    .stroke(Color.cardStroke, lineWidth: 1)
                             )
-                            .foregroundColor(audienceSelection == .privateEvent ? .white : .textPrimary)
+                            .shadow(color: audienceSelection == .privateEvent ? Color.brandPrimary.opacity(0.3) : Color.clear, radius: audienceSelection == .privateEvent ? 8 : 0, x: 0, y: 2)
+                            .opacity(audienceSelection == .privateEvent ? 1.0 : 0.7)
                         }
                     }
-                    
-                    // Description
+                    .onChange(of: audienceSelection) { newValue in
+                        switch newValue {
+                        case .publicEvent:
+                            isPublic = true
+                        case .privateEvent:
+                            isPublic = false
+                            // Auto-matching is now allowed for private events too
+                        }
+                    }
                     Text(audienceSelection == .publicEvent ? 
-                         "🌍 Everyone can discover and join this event" : 
-                         "🔒 Only invited friends can see this event")
+                         "Everyone can discover and join this event." : 
+                         "Only invited friends and auto-matched users can see this event.")
                         .font(.caption)
                         .foregroundColor(.textSecondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.bgCard)
-                        .cornerRadius(8)
                 }
                 
-                // Prominent Invite Friends Section - Always show, highlight when private
+                // Friend Invitations - Always visible for both public and private
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "person.2.badge.plus.fill")
-                            .font(.title3)
-                            .foregroundColor(.brandPrimary)
-                        
+                    HStack {
                         Text("Invite Friends")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.headline.weight(.semibold))
                             .foregroundColor(.textPrimary)
                         
                         Spacer()
                         
-                        if audienceSelection == .privateEvent {
-                            Image(systemName: "lock.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(.pinItWarning)
+                        Button(action: { showFriendPicker = true }) {
+                            HStack(spacing: 6) {
+                                Text("Add Friends")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(Color.brandPrimary)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
                         }
                     }
-                    .padding(.bottom, 4)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(audienceSelection == .publicEvent ?
+                             "Invite specific friends to this public event to let them know about it" :
+                             "Only these invited friends and auto-matched users can see this private event")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    }
                     
                     if !selectedFriends.isEmpty {
-                        // Show selected friends as styled chips
-                        FlowLayout(spacing: 8) {
-                            ForEach(selectedFriends, id: \.self) { friend in
-                                HStack(spacing: 6) {
-                                    Image(systemName: "person.fill")
-                                        .font(.caption2)
-                                    Text(friend)
-                                        .font(.caption.weight(.medium))
-                                    
-                                    Button(action: { removeFriend(friend) }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.caption2)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(selectedFriends, id: \.self) { friend in
+                                    HStack(spacing: 6) {
+                                        Text(friend)
+                                            .font(.caption.weight(.medium))
+                                            .foregroundColor(.white)
+                                        
+                                        Button(action: { removeFriend(friend) }) {
+                                            Text("×")
+                                                .font(.system(size: 16, weight: .semibold))
+                                                .foregroundColor(.white)
+                                        }
                                     }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.brandPrimary)
+                                    .cornerRadius(10)
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color.brandPrimary.opacity(0.15),
-                                            Color.brandPrimary.opacity(0.08)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .foregroundColor(.brandPrimary)
-                                .cornerRadius(8)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1)
-                                )
                             }
+                            .padding(.horizontal, 4)
                         }
                     } else {
-                        HStack {
-                            Image(systemName: "person.badge.plus")
-                                .foregroundColor(.textSecondary)
+                        VStack(alignment: .leading, spacing: 0) {
                             Text("No friends invited yet")
                                 .font(.caption)
                                 .foregroundColor(.textSecondary)
-                            Spacer()
+                                .padding(.vertical, 12)
                         }
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 12)
-                        .background(Color.bgCard)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.bgSecondary.opacity(0.5))
                         .cornerRadius(8)
                     }
-                    
-                    // Add Friends Button - prominent CTA
-                    Button(action: { showFriendPicker = true }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "person.crop.circle.badge.plus.fill")
-                                .font(.body)
-                            Text(selectedFriends.isEmpty ? "Add Friends" : "Add More Friends")
-                                .font(.subheadline.weight(.semibold))
-                            Spacer()
-                            Image(systemName: "arrow.right")
-                                .font(.caption)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 14)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color.brandPrimary,
-                                    Color.brandPrimary.opacity(0.9)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                        .shadow(color: Color.brandPrimary.opacity(0.3), radius: 8, x: 0, y: 4)
-                    }
                 }
-                .padding(14)
-                .background(
-                    audienceSelection == .privateEvent ?
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.pinItWarning.opacity(0.08),
-                            Color.pinItWarning.opacity(0.04)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ) :
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.brandPrimary.opacity(0.05),
-                            Color.bgCard.opacity(0.5)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .cornerRadius(14)
+                .padding(16)
+                .background(Color.bgCard)
+                .cornerRadius(12)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(
-                            audienceSelection == .privateEvent ?
-                            Color.pinItWarning.opacity(0.2) :
-                            Color.brandPrimary.opacity(0.15),
-                            lineWidth: 1.5
-                        )
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 1.5)
                 )
                 
                 // Max Participants
