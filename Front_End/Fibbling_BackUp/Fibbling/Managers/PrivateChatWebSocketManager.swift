@@ -30,6 +30,7 @@ class PrivateChatWebSocketManager: ObservableObject {
     private var reconnectTimer: Timer?
     private var pingTimer: Timer?
     private let maxReconnectAttempts = 5
+    private var isConnecting = false // ✅ Prevent multiple simultaneous connection attempts
     
     init(sender: String, receiver: String) {
         self.sender = sender
@@ -48,6 +49,12 @@ class PrivateChatWebSocketManager: ObservableObject {
     
     /// Connect to the private chat WebSocket
     func connect() {
+        // ✅ Prevent multiple simultaneous connection attempts
+        guard !isConnecting else {
+            print("⚠️ Already attempting to connect - skipping duplicate connection attempt")
+            return
+        }
+        
         // ✅ Validate parameters before connecting
         guard !sender.isEmpty, !receiver.isEmpty else {
             print("❌ Invalid WebSocket parameters - sender: '\(sender)', receiver: '\(receiver)'")
@@ -56,6 +63,8 @@ class PrivateChatWebSocketManager: ObservableObject {
             }
             return
         }
+        
+        isConnecting = true
         
         // Use API configuration for WebSocket URL
         let wsBaseURL = APIConfig.websocketURL
@@ -85,15 +94,18 @@ class PrivateChatWebSocketManager: ObservableObject {
         // ✅ Verify connection is actually working before marking as connected
         // Send a ping to verify the connection is alive
         webSocketTask?.sendPing { [weak self] error in
+            guard let self = self else { return }
+            self.isConnecting = false // ✅ Connection attempt complete
+            
             if let error = error {
                 print("❌ Initial ping failed: \(error.localizedDescription)")
-                self?.handleConnectionError()
+                self.handleConnectionError()
             } else {
                 print("✅ Initial ping successful - connection verified")
                 DispatchQueue.main.async {
-                    self?.isConnected = true
-                    self?.connectionError = nil
-                    self?.reconnectAttempt = 0
+                    self.isConnected = true
+                    self.connectionError = nil
+                    self.reconnectAttempt = 0
                     print("✅ WebSocket connection established and verified")
                 }
             }
@@ -174,21 +186,9 @@ class PrivateChatWebSocketManager: ObservableObject {
                     self?.handleConnectionError()
                 } else {
                     print("✅ Message sent successfully to WebSocket")
-                    // ✅ Railway WebSocket drops connection immediately after send
-                    // We need to reconnect FAST (within 1 second) to ensure:
-                    // 1. We receive the echo back from server
-                    // 2. We're ready to receive the next message
-                    // Use a short delay to allow the send to complete
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                        guard let self = self, let task = self.webSocketTask else { return }
-                        // Check if connection is still alive by checking state
-                        if task.state == .running {
-                            print("🔍 Connection still running after 1s - good!")
-                        } else {
-                            print("⚠️ Connection dropped after send - reconnecting immediately")
-                            self.connect()
-                        }
-                    }
+                    // NOTE: Railway may drop the connection, but listenForMessages()
+                    // will catch this and trigger reconnection via handleConnectionError()
+                    // Don't manually check/reconnect here to avoid reconnection storms
                 }
             }
         } catch {
