@@ -3687,21 +3687,28 @@ def _send_apns_notification(device_token, title, message, payload, notification_
     
     async def send_notification():
         """Async function to send the notification"""
+        import tempfile
+        temp_key_file = None
+        
         try:
             # Handle both file path and direct key content
             # If auth_key_path starts with "-----BEGIN", it's the key content itself
             if auth_key_path.startswith('-----BEGIN'):
-                auth_key = auth_key_path
-                print(f"🔑 Using APNs auth key from environment variable content")
+                # Write key content to a temporary file
+                # aioapns requires a file path, not key content directly
+                temp_key_file = tempfile.NamedTemporaryFile(mode='w', suffix='.p8', delete=False)
+                temp_key_file.write(auth_key_path)
+                temp_key_file.close()
+                key_file_path = temp_key_file.name
+                print(f"🔑 Using APNs auth key from environment variable content (temp file: {key_file_path})")
             else:
-                # Read the auth key from file
-                with open(auth_key_path, 'r') as f:
-                    auth_key = f.read()
+                # Use the file path directly
+                key_file_path = auth_key_path
                 print(f"🔑 Using APNs auth key from file: {auth_key_path}")
             
-            # Create APNs client
+            # Create APNs client with file path
             client = APNs(
-                key=auth_key,
+                key=key_file_path,
                 key_id=auth_key_id,
                 team_id=team_id,
                 topic=topic,
@@ -3744,6 +3751,13 @@ def _send_apns_notification(device_token, title, message, payload, notification_
             import traceback
             traceback.print_exc()
             raise
+        finally:
+            # Clean up temporary key file if created
+            if temp_key_file is not None:
+                try:
+                    os.unlink(temp_key_file.name)
+                except:
+                    pass
     
     # Run the async function synchronously
     try:
