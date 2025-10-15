@@ -3685,11 +3685,9 @@ def send_push_notification(user_id, notification_type, **kwargs):
 
 # Debug endpoint for APNs configuration
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
 def debug_apns_config(request):
     """
-    Debug APNs configuration
+    Debug APNs configuration (no auth required for debugging)
     """
     from django.conf import settings
     
