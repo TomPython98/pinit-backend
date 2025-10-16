@@ -120,15 +120,21 @@ struct LoginView: View {
                         if isRegistering {
                             customTextField(title: "Confirm Password", text: $confirmPassword, icon: "lock", isSecure: true)
                             
-                            HStack {
-                                Toggle("", isOn: $agreedToTerms)
-                                    .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("I agree to the")
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(spacing: 12) {
+                                    Toggle("", isOn: $agreedToTerms)
+                                        .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
+                                        .scaleEffect(0.9)
+                                    
+                                    Text("I agree to the terms")
                                         .font(.footnote)
                                         .foregroundColor(.textSecondary)
+                                        .multilineTextAlignment(.leading)
                                     
+                                    Spacer()
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 8) {
                                     HStack(spacing: 4) {
                                         Button(action: {
                                             if let url = URL(string: "https://www.pinitsocial.com/terms-of-service") {
@@ -156,8 +162,14 @@ struct LoginView: View {
                                                 .underline()
                                         }
                                     }
+                                    
+                                    Text("By checking the box above, you acknowledge that you have read and agree to be bound by these legal documents.")
+                                        .font(.caption2)
+                                        .foregroundColor(.textSecondary)
+                                        .multilineTextAlignment(.leading)
+                                        .lineLimit(nil)
                                 }
-                                .multilineTextAlignment(.leading)
+                                .padding(.leading, 44) // Align with toggle
                             }
                         }
                         
