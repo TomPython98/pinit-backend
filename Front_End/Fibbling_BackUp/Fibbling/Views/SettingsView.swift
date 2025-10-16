@@ -5,6 +5,9 @@ struct SettingsView: View {
     @EnvironmentObject var accountManager: UserAccountManager
     @AppStorage("isLoggedIn") private var isLoggedIn = true
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
+    @AppStorage("hasRequestedPermissions") private var hasRequestedPermissions = true
+    @AppStorage("hasSeenMapTutorial") private var hasSeenMapTutorial = true
+    @AppStorage("hasSeenSocialTutorial") private var hasSeenSocialTutorial = true
     @Environment(\.dismiss) private var dismiss
     @StateObject private var theme = PinItTheme()
     
@@ -20,6 +23,7 @@ struct SettingsView: View {
     // State variables
     @State private var showLogoutAlert = false
     @State private var showDeleteAlert = false
+    @State private var showResetOnboardingAlert = false
     @State private var bio = ""
     @State private var isEditingBio = false
     @State private var showNotificationPreferences = false
@@ -471,6 +475,14 @@ struct SettingsView: View {
         } message: {
             Text("This action cannot be undone. All your data will be permanently deleted from PinIt.")
         }
+        .alert("Reset Onboarding", isPresented: $showResetOnboardingAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Reset", role: .destructive) {
+                resetOnboarding()
+            }
+        } message: {
+            Text("This will reset the onboarding flow and tutorials. You'll see the welcome screens again when you restart the app.")
+        }
     }
     
     // MARK: - Profile Section
@@ -699,13 +711,9 @@ struct SettingsView: View {
                 showLegalDocuments = true
             })
             
-            #if DEBUG
-            Button(action: {
-                hasCompletedOnboarding = false
-            }) {
-                settingsButton(icon: "arrow.clockwise", title: "Reset Onboarding", action: {})
-            }
-            #endif
+            settingsButton(icon: "arrow.clockwise", title: "Reset Onboarding", subtitle: "Restart the app tutorial", action: {
+                showResetOnboardingAlert = true
+            })
             
             Divider()
                 .padding(.vertical, 8)
@@ -806,6 +814,25 @@ struct SettingsView: View {
                 }
             }
         }.resume()
+    }
+    
+    // MARK: - Reset Onboarding
+    private func resetOnboarding() {
+        // Reset all onboarding and tutorial states
+        hasCompletedOnboarding = false
+        hasRequestedPermissions = false
+        hasSeenMapTutorial = false
+        hasSeenSocialTutorial = false
+        
+        // Reset tutorial manager
+        TutorialManager.shared.reset()
+        
+        // Clear any cached user data (optional - keeps user logged in)
+        // UserDefaults.standard.removeObject(forKey: "cached_friends")
+        // UserDefaults.standard.removeObject(forKey: "cached_friend_requests")
+        // UserDefaults.standard.removeObject(forKey: "cache_timestamp")
+        
+        print("✅ Onboarding reset complete - app will show onboarding on next launch")
     }
     
     // MARK: - Legal Documents Sheet

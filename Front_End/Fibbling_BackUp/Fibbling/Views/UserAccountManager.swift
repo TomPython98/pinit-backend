@@ -212,8 +212,8 @@ class UserAccountManager: ObservableObject {
                 let message = json?["message"] as? String ?? "Unknown error."
                 
                 // Extract JWT tokens if registration successful
-                let accessToken = json?["access"] as? String
-                let refreshToken = json?["refresh"] as? String
+                let accessToken = json?["access_token"] as? String
+                let refreshToken = json?["refresh_token"] as? String
                 
                 AppLogger.logAuth("Registration result: \(success ? "success" : "failed")")
 
