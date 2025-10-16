@@ -124,10 +124,40 @@ struct LoginView: View {
                                 Toggle("", isOn: $agreedToTerms)
                                     .toggleStyle(SwitchToggleStyle(tint: Color.pinItPrimary))
                                 
-                                Text("I agree to Terms & Privacy Policy")
-                                    .font(.footnote)
-                                    .foregroundColor(.textSecondary)
-                                    .multilineTextAlignment(.leading)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("I agree to the")
+                                        .font(.footnote)
+                                        .foregroundColor(.textSecondary)
+                                    
+                                    HStack(spacing: 4) {
+                                        Button(action: {
+                                            if let url = URL(string: "https://www.pinitsocial.com/terms-of-service") {
+                                                UIApplication.shared.open(url)
+                                            }
+                                        }) {
+                                            Text("Terms of Service")
+                                                .font(.footnote)
+                                                .foregroundColor(.pinItPrimary)
+                                                .underline()
+                                        }
+                                        
+                                        Text("and")
+                                            .font(.footnote)
+                                            .foregroundColor(.textSecondary)
+                                        
+                                        Button(action: {
+                                            if let url = URL(string: "https://www.pinitsocial.com/privacy-policy") {
+                                                UIApplication.shared.open(url)
+                                            }
+                                        }) {
+                                            Text("Privacy Policy")
+                                                .font(.footnote)
+                                                .foregroundColor(.pinItPrimary)
+                                                .underline()
+                                        }
+                                    }
+                                }
+                                .multilineTextAlignment(.leading)
                             }
                         }
                         
