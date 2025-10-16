@@ -57,7 +57,13 @@ class UserImage(models.Model):
             models.Index(fields=['is_primary', 'uploaded_at']),
             models.Index(fields=['uploaded_at']),
         ]
-        # Removed broken unique_together constraint - now handled by migration constraint
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(is_primary=True),
+                name='unique_primary_image_per_user'
+            )
+        ]
     
     @property
     def url(self):
@@ -419,6 +425,23 @@ class StudyEvent(models.Model):
     def set_interest_tags(self, tags_list):
         """Set the list of interest tags"""
         self.interest_tags = tags_list
+    
+    def clean(self):
+        """Validate event data"""
+        from django.core.exceptions import ValidationError
+        
+        # Ensure end_time is after start time
+        if self.end_time and self.time and self.end_time <= self.time:
+            raise ValidationError("End time must be after start time")
+        
+        # Ensure event is in the future
+        if self.time and self.time <= timezone.now():
+            raise ValidationError("Event time must be in the future")
+    
+    def save(self, *args, **kwargs):
+        """Override save to run validation"""
+        self.clean()
+        super().save(*args, **kwargs)
     
     def get_all_invitees(self):
         """Get all invited users including direct and auto-matched"""

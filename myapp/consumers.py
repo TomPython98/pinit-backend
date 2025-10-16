@@ -127,8 +127,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
             
         except json.JSONDecodeError:
             print(f"❌ Invalid JSON in WebSocket message")
+            # Send error back to client
+            await self.send(text_data=json.dumps({
+                "type": "error",
+                "message": "Invalid message format"
+            }))
         except Exception as e:
             print(f"❌ Error processing WebSocket message: {e}")
+            import traceback
+            traceback.print_exc()
+            # Send error back to client
+            await self.send(text_data=json.dumps({
+                "type": "error", 
+                "message": "Message processing failed"
+            }))
 
     async def chat_message(self, event):
         sender = event["sender"]

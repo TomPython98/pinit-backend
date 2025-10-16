@@ -233,9 +233,19 @@ def health_check(request):
 @csrf_exempt
 def get_all_users(request):
     if request.method == "GET":
-        # ✅ SECURITY: Add pagination to prevent user enumeration attacks
-        users = list(User.objects.values_list("username", flat=True)[:50])  # Limit to 50 users
-        return JsonResponse(users, safe=False)
+        # ✅ SECURITY: Add proper pagination to prevent user enumeration attacks
+        page = int(request.GET.get('page', 1))
+        page_size = min(int(request.GET.get('page_size', 20)), 50)  # Max 50 per page
+        
+        offset = (page - 1) * page_size
+        users = list(User.objects.values_list("username", flat=True)[offset:offset + page_size])
+        
+        return JsonResponse({
+            "users": users,
+            "page": page,
+            "page_size": page_size,
+            "has_more": len(users) == page_size
+        }, safe=False)
     
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
@@ -5681,8 +5691,8 @@ def get_user_join_requests(request, username):
 
 @ratelimit(key='ip', rate='100/h', method='GET', block=True)
 @api_view(['GET'])
-@authentication_classes([])
-@permission_classes([])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_event_by_id(request, event_id):
     """
     Get a single event by ID for public sharing
