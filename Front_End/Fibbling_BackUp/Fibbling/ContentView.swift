@@ -569,6 +569,8 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showFriendsView) {
                 FriendsListView()
+                    .environmentObject(accountManager)
+                    .environmentObject(chatManager)
             }
             
             toolButton(
@@ -623,7 +625,7 @@ struct ContentView: View {
                 showNotesView = true
             }
             
-            quickAccessButton("Friends", systemImage: "bubble.left.and.bubble.right.fill") {
+            quickAccessButton("Friends", systemImage: "bubble.left.and.bubble.right.fill", badgeCount: chatManager.totalUnreadCount) {
                 showFriendsView = true
             }
             
@@ -650,27 +652,44 @@ struct ContentView: View {
     }
     
     // Quick access button with enhanced styling and shadow
-    func quickAccessButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    func quickAccessButton(_ title: String, systemImage: String, badgeCount: Int = 0, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 14) {
                 // Icon with refined gradient and shadow
-                Image(systemName: systemImage)
-                    .font(.system(size: 20))
-                    .foregroundColor(.textLight)
-                    .frame(width: 48, height: 48)
-                    .background(
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.gradientStart, .gradientMiddle, .gradientEnd],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 20))
+                        .foregroundColor(.textLight)
+                        .frame(width: 48, height: 48)
+                        .background(
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.gradientStart, .gradientMiddle, .gradientEnd],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
                                     )
-                                )
-                                .shadow(color: Color.coloredShadow, radius: 8, x: 0, y: 4)
-                        }
-                    )
+                                    .shadow(color: Color.coloredShadow, radius: 8, x: 0, y: 4)
+                            }
+                        )
+                    
+                    // Badge overlay
+                    if badgeCount > 0 {
+                        Text(badgeCount > 9 ? "9+" : "\(badgeCount)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(minWidth: 16, minHeight: 16)
+                            .padding(2)
+                            .background(
+                                Circle()
+                                    .fill(Color.red)
+                                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                            )
+                            .offset(x: 6, y: -6)
+                    }
+                }
                 
                 Text(title)
                     .font(.footnote.weight(.medium))
@@ -837,12 +856,14 @@ struct ScaleButtonStyle: ButtonStyle {
 
 struct CommunityHubView: View {
     @EnvironmentObject var accountManager: UserAccountManager
+    @EnvironmentObject var chatManager: ChatManager
     
     var body: some View {
         ZStack {
             // Social Activity Feed & Trending Events
             SocialActivityFeedView()
                 .environmentObject(accountManager)
+                .environmentObject(chatManager)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
                         .fill(Color.bgCard)
@@ -2996,6 +3017,7 @@ struct EnhancedToggleStyle: ToggleStyle {
 // MARK: - Social Activity Feed & Trending Events
 struct SocialActivityFeedView: View {
     @EnvironmentObject var accountManager: UserAccountManager
+    @EnvironmentObject var chatManager: ChatManager
     @StateObject private var locationManager = LocationManager()
     @State private var trendingEvents: [StudyEvent] = []
     @State private var recentActivity: [SocialActivity] = []
@@ -3053,7 +3075,7 @@ struct SocialActivityFeedView: View {
             NavigationStack {
                 FriendsListView()
                     .environmentObject(accountManager)
-                    .environmentObject(ChatManager())
+                    .environmentObject(chatManager)
             }
         }
         .sheet(isPresented: $showMapView) {
@@ -3240,7 +3262,8 @@ struct SocialActivityFeedView: View {
                     icon: "person.2.fill",
                     title: "Find Friends",
                     subtitle: "Connect with others",
-                    color: .brandSecondary
+                    color: .brandSecondary,
+                    badgeCount: chatManager.totalUnreadCount
                 ) {
                     showFriendsView = true
                 }
@@ -3619,17 +3642,44 @@ struct QuickActionCard: View {
     let title: String
     let subtitle: String
     let color: Color
+    let badgeCount: Int
     let action: () -> Void
+    
+    init(icon: String, title: String, subtitle: String, color: Color, badgeCount: Int = 0, action: @escaping () -> Void) {
+        self.icon = icon
+        self.title = title
+        self.subtitle = subtitle
+        self.color = color
+        self.badgeCount = badgeCount
+        self.action = action
+    }
     
     var body: some View {
         Button(action: action) {
             VStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(color)
-                    .frame(width: 40, height: 40)
-                    .background(color.opacity(0.1))
-                    .cornerRadius(20)
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: icon)
+                        .font(.title2)
+                        .foregroundColor(color)
+                        .frame(width: 40, height: 40)
+                        .background(color.opacity(0.1))
+                        .cornerRadius(20)
+                    
+                    // Badge overlay
+                    if badgeCount > 0 {
+                        Text(badgeCount > 9 ? "9+" : "\(badgeCount)")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(minWidth: 14, minHeight: 14)
+                            .padding(2)
+                            .background(
+                                Circle()
+                                    .fill(Color.red)
+                                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                            )
+                            .offset(x: 4, y: -4)
+                    }
+                }
                 
                 VStack(spacing: 4) {
                     Text(title)
