@@ -28,8 +28,6 @@ struct SettingsView: View {
     @State private var isEditingBio = false
     @State private var showNotificationPreferences = false
     @State private var showPrivacySettings = false
-    @State private var showLegalDocuments = false
-    @State private var selectedLegalDocument: LegalDocumentType = .privacyPolicy
     @State private var showChangePassword = false
     
     enum LegalDocumentType: String, CaseIterable {
@@ -442,11 +440,6 @@ struct SettingsView: View {
         .sheet(isPresented: $showNotificationPreferences) {
             NotificationPreferencesView()
         }
-        .sheet(isPresented: $showLegalDocuments) {
-            legalDocumentsSheet
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
         .sheet(isPresented: $showChangePassword) {
             NavigationStack {
                 ChangePasswordView()
@@ -702,13 +695,15 @@ struct SettingsView: View {
             })
             
             settingsButton(icon: "hand.raised", title: "Privacy Policy", action: {
-                selectedLegalDocument = .privacyPolicy
-                showLegalDocuments = true
+                if let url = URL(string: "https://www.pinitsocial.com/privacy-policy") {
+                    UIApplication.shared.open(url)
+                }
             })
             
             settingsButton(icon: "doc.text", title: "Terms of Service", action: {
-                selectedLegalDocument = .termsOfService
-                showLegalDocuments = true
+                if let url = URL(string: "https://www.pinitsocial.com/terms-of-service") {
+                    UIApplication.shared.open(url)
+                }
             })
             
             settingsButton(icon: "arrow.clockwise", title: "Reset Onboarding", subtitle: "Restart the app tutorial", action: {
