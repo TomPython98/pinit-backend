@@ -4,6 +4,7 @@ djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
 django-cors-headers==4.3.1
 django-ratelimit==4.1.0
+bleach==6.1.0  # ✅ SECURITY: Input sanitization to prevent XSS
 
 # Push Notifications (APNs) - Python 3.13 compatible
 aioapns==3.2

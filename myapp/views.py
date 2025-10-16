@@ -507,10 +507,15 @@ def create_study_event(request):
                 return datetime.fromisoformat(date_str)
             
             # Create the event
+            # ✅ SECURITY: Sanitize text inputs to prevent XSS
+            import bleach
+            title = bleach.clean(data.get("title") or "Untitled Event", strip=True)
+            description = bleach.clean(data.get("description", ""), strip=True)
+            
             # Auto-matched events are not forced to be public - they're visible only to matched users
             event = StudyEvent.objects.create(
-                title=data.get("title") or "Untitled Event",  # Ensure title is never None
-                description=data.get("description", ""),
+                title=title,  # Sanitized title
+                description=description,  # Sanitized description
                 host=host,
                 latitude=data.get("latitude"),
                 longitude=data.get("longitude"),
@@ -2172,7 +2177,7 @@ from .models import StudyEvent, EventComment, EventLike, EventShare
 import json
 import uuid
 
-# Simplified and debug-focused version of add_event_comment
+# ✅ SECURITY: Duplicate functions removed for cleaner codebase
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
@@ -2710,6 +2715,11 @@ def add_event_comment(request):
             text = data.get("text")
             parent_id = data.get("parent_id")
             image_urls = data.get("image_urls", [])  # List of image URLs if any
+
+            # ✅ SECURITY: Sanitize text input to prevent XSS
+            import bleach
+            if text:
+                text = bleach.clean(text, strip=True)
 
             # Validate input
             if not username or not event_id or not text:
@@ -3879,73 +3889,9 @@ def _send_apns_notification(device_token, title, message, payload, notification_
         raise
 
 
-# Debug endpoint for APNs configuration
-@api_view(['GET'])
-def debug_apns_config(request):
-    """
-    Debug APNs configuration (no auth required for debugging)
-    """
-    from django.conf import settings
-    
-    config = {
-        'APNS_AUTH_KEY_PATH': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_AUTH_KEY_PATH', ''),
-        'APNS_AUTH_KEY_ID': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_AUTH_KEY_ID', ''),
-        'APNS_TEAM_ID': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_TEAM_ID', ''),
-        'APNS_TOPIC': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_TOPIC', ''),
-        'APNS_USE_SANDBOX': settings.PUSH_NOTIFICATIONS_SETTINGS.get('APNS_USE_SANDBOX', False),
-    }
-    
-    # Check if key file exists and is readable
-    import os
-    key_path = config['APNS_AUTH_KEY_PATH']
-    if key_path and os.path.exists(key_path):
-        try:
-            with open(key_path, 'r') as f:
-                key_content = f.read()
-                config['key_file_exists'] = True
-                config['key_file_readable'] = True
-                config['key_file_size'] = len(key_content)
-                config['key_starts_with'] = key_content[:50] + '...' if len(key_content) > 50 else key_content
-        except Exception as e:
-            config['key_file_exists'] = True
-            config['key_file_readable'] = False
-            config['key_file_error'] = str(e)
-    else:
-        config['key_file_exists'] = False
-    
-    return Response(config)
+# ✅ SECURITY: Debug endpoint removed for production security
 
-# Test endpoint for push notifications (for debugging)
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
-def test_push_notification(request):
-    """
-    Test endpoint to send a push notification to the current user
-    Useful for testing push notification setup
-    """
-    try:
-        notification_type = request.data.get('type', 'event_invitation')
-        
-        # Send test notification
-        send_push_notification(
-            user_id=request.user.id,
-            notification_type=notification_type,
-            event_title='Test Event',
-            from_user='System Test',
-            event_id='test-123'
-        )
-        
-        return Response({
-            'message': 'Test notification sent',
-            'user': request.user.username,
-            'type': notification_type
-        })
-    except Exception as e:
-        print(f"❌ Test push notification error: {e}")
-        import traceback
-        traceback.print_exc()
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+# ✅ SECURITY: Test push notification endpoint removed for production security
 
 
 # Get user's registered devices (for debugging)
