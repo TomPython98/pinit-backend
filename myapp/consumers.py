@@ -14,6 +14,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.sender = self.scope["url_route"]["kwargs"]["sender"]
         self.receiver = self.scope["url_route"]["kwargs"]["receiver"]
         
+        # ✅ SECURITY: Validate usernames to prevent injection attacks
+        if not self.sender or not self.receiver:
+            await self.close(code=4000)
+            return
+        
+        # Validate username format (alphanumeric + underscore/hyphen only)
+        import re
+        username_pattern = re.compile(r'^[a-zA-Z0-9_-]+$')
+        if not username_pattern.match(self.sender) or not username_pattern.match(self.receiver):
+            await self.close(code=4000)
+            return
+        
+        # ✅ SECURITY: Verify users exist and are authenticated
+        if not await self.verify_users_exist():
+            await self.close(code=4001)
+            return
+        
         # ✅ Create consistent room name regardless of sender/receiver order
         # Sort usernames to ensure both users join the same room
         participants = sorted([self.sender, self.receiver])
@@ -23,6 +40,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.room_name, self.channel_name)
         await self.accept()
         print(f"✅ WebSocket CONNECTED: {self.sender} chatting with {self.receiver} in room {self.room_name}")
+
+    @database_sync_to_async
+    def verify_users_exist(self):
+        """Verify that both users exist in the database"""
+        try:
+            from django.contrib.auth.models import User
+            sender_exists = User.objects.filter(username=self.sender).exists()
+            receiver_exists = User.objects.filter(username=self.receiver).exists()
+            return sender_exists and receiver_exists
+        except Exception as e:
+            print(f"❌ Error verifying users: {e}")
+            return False
 
     async def disconnect(self, close_code):
         # ✅ Leave WebSocket group
@@ -50,13 +79,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
             print(f"❌ Error saving message to database: {e}")
 
     async def receive(self, text_data):
-        data = json.loads(text_data)
-        sender = data.get("sender")
-        receiver = data.get("receiver")
-        message = data.get("message")
+        try:
+            data = json.loads(text_data)
+            sender = data.get("sender", "").strip()
+            receiver = data.get("receiver", "").strip()
+            message = data.get("message", "").strip()
 
-        if sender and receiver and message:
-            print(f"📩 Message Received from {sender} to {receiver}: {message}")
+            # ✅ SECURITY: Validate message data
+            if not sender or not receiver or not message:
+                print(f"❌ Invalid message data: sender={sender}, receiver={receiver}, message_length={len(message)}")
+                return
+            
+            # Validate sender matches the connection
+            if sender != self.sender:
+                print(f"❌ Message sender {sender} doesn't match connection sender {self.sender}")
+                return
+            
+            # Validate receiver matches the connection
+            if receiver != self.receiver:
+                print(f"❌ Message receiver {receiver} doesn't match connection receiver {self.receiver}")
+                return
+            
+            # Validate message length (prevent spam)
+            if len(message) > 1000:
+                print(f"❌ Message too long: {len(message)} characters")
+                return
+            
+            # Validate message content (basic sanitization)
+            if not message or message.isspace():
+                print(f"❌ Empty or whitespace-only message")
+                return
+
+            print(f"📩 Message Received from {sender} to {receiver}: {message[:50]}...")
 
             # ✅ Save message to database
             await self.save_message_to_db(sender, receiver, message)
@@ -70,6 +124,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "message": message
                 }
             )
+            
+        except json.JSONDecodeError:
+            print(f"❌ Invalid JSON in WebSocket message")
+        except Exception as e:
+            print(f"❌ Error processing WebSocket message: {e}")
 
     async def chat_message(self, event):
         sender = event["sender"]

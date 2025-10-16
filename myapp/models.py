@@ -51,6 +51,12 @@ class UserImage(models.Model):
     
     class Meta:
         ordering = ['-is_primary', '-uploaded_at']
+        indexes = [
+            models.Index(fields=['user', 'is_primary']),
+            models.Index(fields=['user', 'image_type']),
+            models.Index(fields=['is_primary', 'uploaded_at']),
+            models.Index(fields=['uploaded_at']),
+        ]
         # Removed broken unique_together constraint - now handled by migration constraint
     
     @property
@@ -276,10 +282,18 @@ class FriendRequest(models.Model):
 
 # Chat Message Model
 class ChatMessage(models.Model):
-    sender = models.ForeignKey(User, related_name="sent_messages", on_delete=models.CASCADE)
-    receiver = models.ForeignKey(User, related_name="received_messages", on_delete=models.CASCADE)
+    sender = models.ForeignKey(User, related_name="sent_messages", on_delete=models.CASCADE, db_index=True)
+    receiver = models.ForeignKey(User, related_name="received_messages", on_delete=models.CASCADE, db_index=True)
     message = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['sender', 'receiver', 'timestamp']),
+            models.Index(fields=['receiver', 'timestamp']),
+            models.Index(fields=['timestamp']),
+        ]
+        ordering = ['-timestamp']
 
     def __str__(self):
         return f"{self.sender} → {self.receiver}: {self.message}"
@@ -287,13 +301,17 @@ class ChatMessage(models.Model):
 
 # New model for tracking auto-matched invitations
 class EventInvitation(models.Model):
-    event = models.ForeignKey('StudyEvent', on_delete=models.CASCADE, related_name='invitation_records')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_invitations')
-    is_auto_matched = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    event = models.ForeignKey('StudyEvent', on_delete=models.CASCADE, related_name='invitation_records', db_index=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_invitations', db_index=True)
+    is_auto_matched = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     
     class Meta:
         unique_together = ('event', 'user')
+        indexes = [
+            models.Index(fields=['event', 'is_auto_matched']),
+            models.Index(fields=['user', 'created_at']),
+        ]
         
     def __str__(self):
         return f"{self.user.username} invited to {self.event.title} (auto-matched: {self.is_auto_matched})"
@@ -308,17 +326,22 @@ class EventJoinRequest(models.Model):
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event = models.ForeignKey('StudyEvent', on_delete=models.CASCADE, related_name='join_requests')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_join_requests')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    event = models.ForeignKey('StudyEvent', on_delete=models.CASCADE, related_name='join_requests', db_index=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_join_requests', db_index=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
     message = models.TextField(blank=True, null=True, help_text="Optional message from the requester")
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     processed_at = models.DateTimeField(null=True, blank=True)
     processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_requests')
     
     class Meta:
         unique_together = ('event', 'user')
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['event', 'status']),
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['status', 'created_at']),
+        ]
         
     def __str__(self):
         return f"{self.user.username} requests to join {self.event.title} ({self.status})"

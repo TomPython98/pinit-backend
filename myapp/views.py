@@ -44,12 +44,26 @@ def register_user(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get("username")
-            password = data.get("password")
+            username = data.get("username", "").strip()
+            password = data.get("password", "").strip()
 
-            # ✅ Ensure we no longer check for email
+            # ✅ Enhanced input validation
             if not username or not password:
                 return JsonResponse({"success": False, "message": "Username and Password required."}, status=400)
+            
+            # Validate username format
+            if len(username) < 3 or len(username) > 30:
+                return JsonResponse({"success": False, "message": "Username must be between 3 and 30 characters."}, status=400)
+            
+            if not username.replace('_', '').replace('-', '').isalnum():
+                return JsonResponse({"success": False, "message": "Username can only contain letters, numbers, hyphens, and underscores."}, status=400)
+            
+            # Validate password strength
+            if len(password) < 8:
+                return JsonResponse({"success": False, "message": "Password must be at least 8 characters long."}, status=400)
+            
+            if len(password) > 128:
+                return JsonResponse({"success": False, "message": "Password is too long (maximum 128 characters)."}, status=400)
 
             if User.objects.filter(username=username).exists():
                 return JsonResponse({"success": False, "message": "Username already exists."}, status=400)
@@ -79,8 +93,8 @@ def login_user(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get("username")
-            password = data.get("password")
+            username = data.get("username", "").strip()
+            password = data.get("password", "").strip()
             
             # Get client IP for security tracking
             ip = request.META.get('REMOTE_ADDR', 'unknown')
@@ -98,8 +112,17 @@ def login_user(request):
                     "message": "Too many failed attempts. Try again in 15 minutes."
                 }, status=429)
 
+            # ✅ Enhanced input validation
             if not username or not password:
                 return JsonResponse({"success": False, "message": "Username and password are required."}, status=400)
+            
+            # Validate username format
+            if len(username) > 30:
+                return JsonResponse({"success": False, "message": "Invalid username format."}, status=400)
+            
+            # Validate password length
+            if len(password) > 128:
+                return JsonResponse({"success": False, "message": "Invalid password format."}, status=400)
 
             user = authenticate(username=username, password=password)
 
@@ -170,16 +193,26 @@ def send_friend_request(request):
 @permission_classes([IsAuthenticated])
 def logout_user(request):
     if request.method == "POST":
-        # ✅ SECURITY: Blacklist the refresh token
+        # ✅ SECURITY: Properly blacklist the refresh token
         try:
             from rest_framework_simplejwt.tokens import RefreshToken
+            from rest_framework_simplejwt.exceptions import TokenError
+            from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+            
             # Get the refresh token from the request
             auth_header = request.META.get('HTTP_AUTHORIZATION', '')
             if auth_header.startswith('Bearer '):
                 token = auth_header.split(' ')[1]
-                # Note: In a real implementation, you'd want to blacklist the token
-                # For now, we'll just return success
-                security_logger.info(f"User {request.user.username} logged out")
+                
+                # Create RefreshToken instance and blacklist it
+                try:
+                    refresh_token = RefreshToken(token)
+                    refresh_token.blacklist()
+                    security_logger.info(f"User {request.user.username} logged out - token blacklisted")
+                except TokenError as e:
+                    security_logger.warning(f"Invalid token during logout: {str(e)}")
+                    # Still return success to avoid revealing token validity
+                    
         except Exception as e:
             security_logger.warning(f"Logout token handling failed: {str(e)}")
             
