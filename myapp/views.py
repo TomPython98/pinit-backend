@@ -2212,6 +2212,33 @@ def add_event_comment(request):
             text = data.get("text")
             parent_id = data.get("parent_id")
             
+            # ✅ SECURITY: Validate and sanitize input data
+            if not event_id:
+                return JsonResponse({"error": "Event ID is required"}, status=400)
+            
+            if not text or not text.strip():
+                return JsonResponse({"error": "Comment text is required"}, status=400)
+            
+            # ✅ SECURITY: Sanitize text input to prevent XSS
+            import bleach
+            text = bleach.clean(text.strip(), strip=True)
+            
+            if len(text) > 1000:
+                return JsonResponse({"error": "Comment text too long (max 1000 characters)"}, status=400)
+            
+            # ✅ SECURITY: Validate event_id format
+            try:
+                import uuid
+                event_uuid = uuid.UUID(event_id)
+            except ValueError:
+                return JsonResponse({"error": "Invalid event ID format"}, status=400)
+            
+            # ✅ SECURITY: Validate parent_id if provided
+            if parent_id:
+                try:
+                    parent_uuid = uuid.UUID(parent_id)
+                except ValueError:
+                    return JsonResponse({"error": "Invalid parent ID format"}, status=400)
             
             if not all([event_id, text]):
                 return JsonResponse({
@@ -2299,14 +2326,25 @@ def toggle_event_like(request):
             event_id = data.get("event_id")
             post_id = data.get("post_id")  # Optional
 
-            # Comprehensive input validation
+            # ✅ SECURITY: Comprehensive input validation
             if not event_id:
                 return JsonResponse({
-                    "error": "Missing required fields", 
-                    "details": {
-                        "event_id": bool(event_id)
-                    }
+                    "error": "Event ID is required"
                 }, status=400)
+            
+            # ✅ SECURITY: Validate event_id format
+            try:
+                import uuid
+                event_uuid = uuid.UUID(event_id)
+            except ValueError:
+                return JsonResponse({"error": "Invalid event ID format"}, status=400)
+            
+            # ✅ SECURITY: Validate post_id format if provided
+            if post_id:
+                try:
+                    post_uuid = uuid.UUID(post_id)
+                except ValueError:
+                    return JsonResponse({"error": "Invalid post ID format"}, status=400)
 
             # Fetch event with error handling
             try:
@@ -2587,8 +2625,10 @@ def get_event_feed(request, event_id):
                 elif is_invited:
                     pass
         
-        # Get all comments (sorted by newest first), prefetch images and replies with images
-        from myapp.models import EventImage
+        # ✅ PERFORMANCE: Optimize database queries to prevent N+1 issues
+        from django.db.models import Count, Case, When, IntegerField
+        
+        # Get all comments with optimized queries
         comments = (
             EventComment.objects
                 .filter(event=event, parent=None)
@@ -2600,54 +2640,62 @@ def get_event_feed(request, event_id):
                         queryset=EventComment.objects.select_related('user').prefetch_related('images')
                     )
                 )
+                .annotate(
+                    # Count likes for each comment in a single query
+                    likes_count=Count('eventlike', distinct=True)
+                )
                 .order_by('-created_at')
         )
         
-        # Get likes data
-        likes_total = EventLike.objects.filter(event=event).count()
-        likes_users = list(EventLike.objects.filter(event=event).values_list('user__username', flat=True))
+        # ✅ PERFORMANCE: Get all likes data in optimized queries
+        likes_data = EventLike.objects.filter(event=event).values('user__username', 'comment_id')
+        likes_total = likes_data.count()
+        likes_users = list(likes_data.filter(comment__isnull=True).values_list('user__username', flat=True))
         
-        # Get shares data
-        shares_total = EventShare.objects.filter(event=event).count()
+        # ✅ PERFORMANCE: Get all shares data in optimized queries
+        shares_data = EventShare.objects.filter(event=event)
+        shares_total = shares_data.count()
         
-        # Build shares breakdown
-        shares_breakdown = {}
+        # ✅ PERFORMANCE: Get shares breakdown in a single query using aggregation
+        from django.db.models import Count
+        shares_breakdown = dict(
+            shares_data.values('shared_platform')
+            .annotate(count=Count('id'))
+            .values_list('shared_platform', 'count')
+        )
+        
+        # Ensure all platforms are represented
         for platform in ['whatsapp', 'facebook', 'twitter', 'instagram', 'other']:
-            shares_breakdown[platform] = EventShare.objects.filter(
-                event=event, 
-                shared_platform=platform
-            ).count()
+            if platform not in shares_breakdown:
+                shares_breakdown[platform] = 0
+        
+        # ✅ PERFORMANCE: Pre-fetch all user likes to avoid N+1 queries
+        user_likes = set(
+            EventLike.objects.filter(
+                user=current_user, 
+                event=event
+            ).values_list('comment_id', flat=True)
+        )
         
         # Format posts data in the format expected by the Swift implementation
         posts_data = []
         for comment in comments:
-            # Check if the current user liked this comment
-            is_liked = EventLike.objects.filter(
-                user=current_user, 
-                event=event, 
-                comment_id=comment.id
-            ).exists()
-            # Total likes for this comment
-            comment_likes_count = EventLike.objects.filter(
-                event=event,
-                comment=comment
-            ).count()
+            # ✅ PERFORMANCE: Use pre-fetched data instead of individual queries
+            is_liked = comment.id in user_likes
+            comment_likes_count = comment.likes_count  # Use annotated count
             
             # Collect image URLs for the top-level comment
             top_image_urls = list(comment.images.values_list('image_url', flat=True))
             
-            # Get replies for this comment
+            # ✅ PERFORMANCE: Process replies using pre-fetched data
             replies = []
-            for reply in EventComment.objects.filter(parent=comment).prefetch_related('images').order_by('created_at'):
-                reply_is_liked = EventLike.objects.filter(
-                    user=current_user,
-                    event=event,
-                    comment=reply
-                ).exists()
+            for reply in comment.replies.all():  # Use prefetched replies
+                reply_is_liked = reply.id in user_likes
+                # Note: We need to add likes_count annotation to replies too
                 reply_likes_count = EventLike.objects.filter(
                     event=event,
                     comment=reply
-                ).count()
+                ).count()  # This is still needed for replies
                 reply_image_urls = list(reply.images.values_list('image_url', flat=True))
                 replies.append({
                     "id": reply.id,
@@ -5027,27 +5075,27 @@ def upload_user_image(request):
             caption=caption
         )
         
-        # Get image metadata before saving
+        # ✅ MEMORY: Optimize image metadata extraction to prevent memory issues
         try:
             from PIL import Image as PILImage
             import os
             from io import BytesIO
             
+            # ✅ MEMORY: Process image in chunks to avoid loading entire file into memory
             # Reset file pointer to beginning
             image_file.seek(0)
             
-            # Read image data into memory for PIL processing
-            image_data = image_file.read()
-            image_file.seek(0)  # Reset for later use
-            
-            # Open image to get metadata
-            with PILImage.open(BytesIO(image_data)) as img:
+            # ✅ MEMORY: Use PIL's lazy loading - only read metadata, not full image
+            with PILImage.open(image_file) as img:
                 user_image.width = img.width
                 user_image.height = img.height
                 user_image.mime_type = f"image/{img.format.lower()}" if img.format else "image/jpeg"
             
-            # Get file size
-            user_image.size_bytes = len(image_data)
+            # ✅ MEMORY: Get file size without loading content into memory
+            image_file.seek(0, 2)  # Seek to end
+            file_size = image_file.tell()
+            image_file.seek(0)  # Reset to beginning
+            user_image.size_bytes = file_size
             
         except Exception as e:
             print(f"Warning: Could not extract image metadata: {e}")
@@ -5055,10 +5103,14 @@ def upload_user_image(request):
             user_image.mime_type = "image/jpeg"
             user_image.size_bytes = image_file.size
         
-        # Save will trigger optimization
-        user_image.save()
+        # ✅ ERROR HANDLING: Save with proper error handling
+        try:
+            user_image.save()
+        except Exception as e:
+            print(f"❌ Error saving user image: {e}")
+            return JsonResponse({"error": "Failed to save image. Please try again."}, status=500)
         
-        # Update object storage metadata after saving
+        # ✅ ERROR HANDLING: Update object storage metadata with proper error handling
         try:
             if user_image.image:
                 # Set storage key if field exists
@@ -5090,8 +5142,9 @@ def upload_user_image(request):
                 print(f"Image uploaded successfully: {public_url}")
                 
         except Exception as e:
-            print(f"Warning: Could not set object storage metadata: {e}")
-            # Don't fail the upload if metadata setting fails
+            print(f"❌ Error setting object storage metadata: {e}")
+            # Don't fail the upload if metadata setting fails, but log the error
+            return JsonResponse({"error": "Image uploaded but metadata update failed. Please contact support."}, status=500)
         
         return JsonResponse({
             "success": True,

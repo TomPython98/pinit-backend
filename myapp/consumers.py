@@ -88,26 +88,51 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # ✅ SECURITY: Validate message data
             if not sender or not receiver or not message:
                 print(f"❌ Invalid message data: sender={sender}, receiver={receiver}, message_length={len(message)}")
+                # ✅ ERROR HANDLING: Send error back to client
+                await self.send(text_data=json.dumps({
+                    "type": "error",
+                    "message": "Missing sender, receiver, or message"
+                }))
                 return
             
             # Validate sender matches the connection
             if sender != self.sender:
                 print(f"❌ Message sender {sender} doesn't match connection sender {self.sender}")
+                # ✅ ERROR HANDLING: Send error back to client
+                await self.send(text_data=json.dumps({
+                    "type": "error",
+                    "message": "Message sender mismatch"
+                }))
                 return
             
             # Validate receiver matches the connection
             if receiver != self.receiver:
                 print(f"❌ Message receiver {receiver} doesn't match connection receiver {self.receiver}")
+                # ✅ ERROR HANDLING: Send error back to client
+                await self.send(text_data=json.dumps({
+                    "type": "error",
+                    "message": "Message receiver mismatch"
+                }))
                 return
             
             # Validate message length (prevent spam)
             if len(message) > 1000:
                 print(f"❌ Message too long: {len(message)} characters")
+                # ✅ ERROR HANDLING: Send error back to client
+                await self.send(text_data=json.dumps({
+                    "type": "error",
+                    "message": "Message too long (max 1000 characters)"
+                }))
                 return
             
             # Validate message content (basic sanitization)
             if not message or message.isspace():
                 print(f"❌ Empty or whitespace-only message")
+                # ✅ ERROR HANDLING: Send error back to client
+                await self.send(text_data=json.dumps({
+                    "type": "error",
+                    "message": "Empty message"
+                }))
                 return
 
             print(f"📩 Message Received from {sender} to {receiver}: {message[:50]}...")
@@ -174,27 +199,71 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         print(f"❌ DISCONNECTED from group chat: {self.room_group_name}")
 
     async def receive(self, text_data=None, bytes_data=None):
-        # Handle both text and binary messages
-        var_data = None
-        if text_data is not None:
-            var_data = json.loads(text_data)
-        elif bytes_data is not None:
-            var_data = json.loads(bytes_data.decode('utf-8'))
-        if var_data is None:
-            return
+        try:
+            # ✅ ERROR HANDLING: Handle both text and binary messages with proper validation
+            var_data = None
+            if text_data is not None:
+                var_data = json.loads(text_data)
+            elif bytes_data is not None:
+                var_data = json.loads(bytes_data.decode('utf-8'))
+            
+            if var_data is None:
+                await self.send(text_data=json.dumps({
+                    "type": "error",
+                    "message": "Invalid message format"
+                }))
+                return
 
-        sender = var_data.get("sender", "Unknown")
-        message = var_data.get("message", "")
+            sender = var_data.get("sender", "").strip()
+            message = var_data.get("message", "").strip()
 
-        # Broadcast the message to the group
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                "type": "groupchat.message",
-                "sender": sender,
-                "message": message,
-            }
-        )
+            # ✅ VALIDATION: Validate message data
+            if not sender or not message:
+                await self.send(text_data=json.dumps({
+                    "type": "error",
+                    "message": "Missing sender or message"
+                }))
+                return
+            
+            if len(message) > 1000:
+                await self.send(text_data=json.dumps({
+                    "type": "error",
+                    "message": "Message too long (max 1000 characters)"
+                }))
+                return
+            
+            if message.isspace():
+                await self.send(text_data=json.dumps({
+                    "type": "error",
+                    "message": "Empty message"
+                }))
+                return
+
+            # ✅ SECURITY: Sanitize sender name
+            import re
+            sender = re.sub(r'[^a-zA-Z0-9_-]', '_', sender)
+
+            # Broadcast the message to the group
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "groupchat.message",
+                    "sender": sender,
+                    "message": message,
+                }
+            )
+            
+        except json.JSONDecodeError:
+            await self.send(text_data=json.dumps({
+                "type": "error",
+                "message": "Invalid JSON format"
+            }))
+        except Exception as e:
+            print(f"❌ Error processing group chat message: {e}")
+            await self.send(text_data=json.dumps({
+                "type": "error",
+                "message": "Message processing failed"
+            }))
 
     async def groupchat_message(self, event):
         sender = event["sender"]

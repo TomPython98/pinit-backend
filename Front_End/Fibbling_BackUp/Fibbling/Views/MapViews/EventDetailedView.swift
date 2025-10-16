@@ -1984,11 +1984,11 @@ extension EventDetailView {
             }
         } else {
             // User wants to RSVP - send join request to host
-            sendJoinRequest()
+            Task { await sendJoinRequest() }
         }
     }
     
-    private func sendJoinRequest() {
+    private func sendJoinRequest() async {
         guard let username = accountManager.currentUser else { return }
         
         let url = URL(string: "\(APIConfig.primaryBaseURL)/rsvp_study_event/")!
@@ -1996,8 +1996,8 @@ extension EventDetailView {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // Add JWT authentication header
-        accountManager.addAuthHeader(to: &request)
+        // Add JWT authentication header with automatic refresh
+        await accountManager.addAuthHeaderWithRefresh(to: &request)
         
         let requestData: [String: Any] = [
             "event_id": localEvent.id.uuidString,

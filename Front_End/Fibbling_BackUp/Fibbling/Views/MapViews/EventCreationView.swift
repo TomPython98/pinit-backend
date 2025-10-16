@@ -960,7 +960,7 @@ struct EventCreationView: View {
     
     // MARK: - Create Button
     private var createButton: some View {
-        Button(action: createEvent) {
+        Button(action: { Task { await createEvent() } }) {
             HStack(spacing: 12) {
                 if isLoading {
                     ProgressView()
@@ -1326,7 +1326,7 @@ struct EventCreationView: View {
     }
     
     // MARK: - Event Creation
-    private func createEvent() {
+    private func createEvent() async {
         print("🚀 [EventCreation] createEvent called - type: \(selectedEventType.rawValue)")
         print("🔍 [EventCreation] Current Form State:")
         print("   📝 Title: '\(eventTitle)'")
@@ -1356,8 +1356,8 @@ struct EventCreationView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // ✅ Add JWT authentication header
-        accountManager.addAuthHeader(to: &request)
+        // ✅ Add JWT authentication header with automatic refresh
+        await accountManager.addAuthHeaderWithRefresh(to: &request)
         
         // Format dates for backend
         let isoFormatter = ISO8601DateFormatter()
