@@ -392,16 +392,20 @@ def accept_friend_request(request):
             except FriendRequest.DoesNotExist:
                 return JsonResponse({"success": False, "message": "Friend request not found"}, status=404)
 
-            # Create or get user profiles
-            from_profile, created = UserProfile.objects.get_or_create(user=from_user)
-            to_profile, created = UserProfile.objects.get_or_create(user=to_user)
+            # ✅ RACE CONDITION FIX: Wrap friend acceptance in atomic transaction
+            from django.db import transaction
+            
+            with transaction.atomic():
+                # Create or get user profiles
+                from_profile, created = UserProfile.objects.get_or_create(user=from_user)
+                to_profile, created = UserProfile.objects.get_or_create(user=to_user)
 
-            # Add each other as friends (bidirectional)
-            from_profile.friends.add(to_profile)
-            to_profile.friends.add(from_profile)
+                # Add each other as friends (bidirectional)
+                from_profile.friends.add(to_profile)
+                to_profile.friends.add(from_profile)
 
-            # Delete the friend request
-            friend_request.delete()
+                # Delete the friend request
+                friend_request.delete()
 
 
             return JsonResponse({
@@ -512,42 +516,52 @@ def create_study_event(request):
             title = bleach.clean(data.get("title") or "Untitled Event", strip=True)
             description = bleach.clean(data.get("description", ""), strip=True)
             
-            # Auto-matched events are not forced to be public - they're visible only to matched users
-            event = StudyEvent.objects.create(
-                title=title,  # Sanitized title
-                description=description,  # Sanitized description
-                host=host,
-                latitude=data.get("latitude"),
-                longitude=data.get("longitude"),
-                time=parse_datetime(data.get("time")),
-                end_time=parse_datetime(data.get("end_time")),
-                is_public=data.get("is_public", True),
-                event_type=data.get("event_type", "other"),
-                max_participants=max_participants,
-                auto_matching_enabled=auto_matching_enabled,
-            )
+            # ✅ RACE CONDITION FIX: Wrap event creation and invitations in atomic transaction
+            from django.db import transaction
             
-            # Set interest tags
-            if hasattr(event, 'set_interest_tags'):
-                event.set_interest_tags(interest_tags)
+            with transaction.atomic():
+                # Auto-matched events are not forced to be public - they're visible only to matched users
+                event = StudyEvent.objects.create(
+                    title=title,  # Sanitized title
+                    description=description,  # Sanitized description
+                    host=host,
+                    latitude=data.get("latitude"),
+                    longitude=data.get("longitude"),
+                    time=parse_datetime(data.get("time")),
+                    end_time=parse_datetime(data.get("end_time")),
+                    is_public=data.get("is_public", True),
+                    event_type=data.get("event_type", "other"),
+                    max_participants=max_participants,
+                    auto_matching_enabled=auto_matching_enabled,
+                )
+                
+                # Set interest tags
+                if hasattr(event, 'set_interest_tags'):
+                    event.set_interest_tags(interest_tags)
+                
+                # IMPORTANT: Add the host to attendees automatically
+                event.attendees.add(host)
+                
+                # Add invited friends atomically
+                invited_friends = data.get("invited_friends", [])
+                for friend in invited_friends:
+                    friend_user = User.objects.get(username=friend)
+                    # Add to M2M field
+                    event.invited_friends.add(friend_user)
+                    # Create direct invitation record
+                    EventInvitation.objects.create(
+                        event=event,
+                        user=friend_user,
+                        is_auto_matched=False
+                    )
+                
+                event.save()
             
-            # IMPORTANT: Add the host to attendees automatically
-            event.attendees.add(host)
-            
-            # Add invited friends
+            # Send push notifications outside the transaction (non-critical operations)
             invited_friends = data.get("invited_friends", [])
             for friend in invited_friends:
-                friend_user = User.objects.get(username=friend)
-                # Add to M2M field
-                event.invited_friends.add(friend_user)
-                # Create direct invitation record
-                EventInvitation.objects.create(
-                    event=event,
-                    user=friend_user,
-                    is_auto_matched=False
-                )
-                # Send push notification to invited friend
                 try:
+                    friend_user = User.objects.get(username=friend)
                     send_push_notification(
                         user_id=friend_user.id,
                         notification_type='event_invitation',
@@ -557,8 +571,6 @@ def create_study_event(request):
                     )
                 except Exception as notif_error:
                     print(f"⚠️ Failed to send event_invitation to {friend}: {notif_error}")
-
-            event.save()
             
             # IMPORTANT: Log the created event ID for verification
             
@@ -1519,21 +1531,25 @@ def rsvp_study_event(request):
                     is_auto_matched=True
                 ).exists()
                 
-                # Remove user from invited_friends when they send a join request
-                # This prevents the invitation from showing up again in their invitations list
-                if is_invited:
-                    event.invited_friends.remove(user)
+                # ✅ RACE CONDITION FIX: Wrap join request creation in atomic transaction
+                from django.db import transaction
                 
-                # Also remove the EventInvitation record for auto-matched or direct invitations
-                # This ensures the invitation doesn't show up again in the UI
-                EventInvitation.objects.filter(event=event, user=user).delete()
-                
-                # Create the join request (all RSVPs go through approval)
-                join_request = EventJoinRequest.objects.create(
-                    event=event,
-                    user=user,
-                    message=data.get("message", "")
-                )
+                with transaction.atomic():
+                    # Remove user from invited_friends when they send a join request
+                    # This prevents the invitation from showing up again in their invitations list
+                    if is_invited:
+                        event.invited_friends.remove(user)
+                    
+                    # Also remove the EventInvitation record for auto-matched or direct invitations
+                    # This ensures the invitation doesn't show up again in the UI
+                    EventInvitation.objects.filter(event=event, user=user).delete()
+                    
+                    # Create the join request (all RSVPs go through approval)
+                    join_request = EventJoinRequest.objects.create(
+                        event=event,
+                        user=user,
+                        message=data.get("message", "")
+                    )
                 
                 # Send notification to event host
                 try:
@@ -2183,255 +2199,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
 import uuid
-import traceback
-from django.contrib.auth.models import User
-from .models import StudyEvent, EventComment
+# ✅ DUPLICATE FUNCTIONS REMOVED: 
+# - First add_event_comment function (was at line ~2194) - removed
+# - First toggle_event_like function (was at line ~2315) - removed
+# Keeping the more comprehensive versions that include proper validation and error handling
 
-@ratelimit(key='user', rate='30/h', method='POST', block=True)
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
-def add_event_comment(request):
-    """
-    Simplified comment endpoint with extensive error tracking
-    """
-    if request.method == "POST":
-        # Log the raw request body for debugging
-        raw_body = request.body.decode('utf-8')
-        
-        try:
-            # Parse JSON with error handling
-            try:
-                data = json.loads(raw_body)
-            except json.JSONDecodeError as e:
-                return JsonResponse({"error": f"Invalid JSON: {str(e)}"}, status=400)
-                
-            # Extract and validate required fields
-            user = request.user  # Use authenticated user
-            event_id = data.get("event_id")
-            text = data.get("text")
-            parent_id = data.get("parent_id")
-            
-            # ✅ SECURITY: Validate and sanitize input data
-            if not event_id:
-                return JsonResponse({"error": "Event ID is required"}, status=400)
-            
-            if not text or not text.strip():
-                return JsonResponse({"error": "Comment text is required"}, status=400)
-            
-            # ✅ SECURITY: Sanitize text input to prevent XSS
-            import bleach
-            text = bleach.clean(text.strip(), strip=True)
-            
-            if len(text) > 1000:
-                return JsonResponse({"error": "Comment text too long (max 1000 characters)"}, status=400)
-            
-            # ✅ SECURITY: Validate event_id format
-            try:
-                import uuid
-                event_uuid = uuid.UUID(event_id)
-            except ValueError:
-                return JsonResponse({"error": "Invalid event ID format"}, status=400)
-            
-            # ✅ SECURITY: Validate parent_id if provided
-            if parent_id:
-                try:
-                    parent_uuid = uuid.UUID(parent_id)
-                except ValueError:
-                    return JsonResponse({"error": "Invalid parent ID format"}, status=400)
-            
-            if not all([event_id, text]):
-                return JsonResponse({
-                    "error": "Missing required fields",
-                    "fields": {
-                        "event_id": bool(event_id),
-                        "text": bool(text)
-                    }
-                }, status=400)
-            
-            # User is already authenticated via JWT
-            
-            # Parse event UUID
-            try:
-                event_uuid = uuid.UUID(event_id)
-            except ValueError:
-                return JsonResponse({"error": f"Invalid event ID format: {event_id}"}, status=400)
-            
-            # Find event
-            try:
-                event = StudyEvent.objects.get(id=event_uuid)
-            except StudyEvent.DoesNotExist:
-                return JsonResponse({"error": f"Event with ID {event_id} not found"}, status=404)
-            
-            # Handle parent comment if provided
-            parent = None
-            if parent_id:
-                try:
-                    parent = EventComment.objects.get(id=parent_id)
-                except EventComment.DoesNotExist:
-                    return JsonResponse({"error": f"Parent comment {parent_id} not found"}, status=404)
-                except ValueError:
-                    return JsonResponse({"error": f"Invalid parent ID format: {parent_id}"}, status=400)
-            
-            # Create the comment
-            try:
-                comment = EventComment.objects.create(
-                    event=event,
-                    user=user,
-                    text=text,
-                    parent=parent
-                )
-            except Exception as e:
-                traceback.print_exc()
-                return JsonResponse({"error": f"Error creating comment: {str(e)}"}, status=500)
-            
-            # Return the successful response
-            return JsonResponse({
-                "success": True,
-                "post": {
-                    "id": comment.id,
-                    "text": comment.text,
-                    "username": user.username,
-                    "created_at": comment.created_at.isoformat(),
-                    "imageURLs": None,
-                    "likes": 0,
-                    "isLikedByCurrentUser": False,
-                    "replies": []
-                }
-            })
-        
-        except Exception as e:
-            # Catch-all for any other errors
-            traceback.print_exc()
-            return JsonResponse({"error": f"Server error: {str(e)}"}, status=500)
-    
-    # Handle non-POST requests
-    return JsonResponse({"error": f"Method {request.method} not allowed"}, status=405)
 
-@ratelimit(key='user', rate='50/h', method='POST', block=True)
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
-def toggle_event_like(request):
-    """
-    Like or unlike an event or post with comprehensive error handling and logging
-    """
-    if request.method == "POST":
-        # Enhanced logging of raw request
-        raw_body = request.body.decode('utf-8')
-        
-        try:
-            data = json.loads(raw_body)
-            user = request.user  # Use authenticated user
-            event_id = data.get("event_id")
-            post_id = data.get("post_id")  # Optional
-
-            # ✅ SECURITY: Comprehensive input validation
-            if not event_id:
-                return JsonResponse({
-                    "error": "Event ID is required"
-                }, status=400)
-            
-            # ✅ SECURITY: Validate event_id format
-            try:
-                import uuid
-                event_uuid = uuid.UUID(event_id)
-            except ValueError:
-                return JsonResponse({"error": "Invalid event ID format"}, status=400)
-            
-            # ✅ SECURITY: Validate post_id format if provided
-            if post_id:
-                try:
-                    post_uuid = uuid.UUID(post_id)
-                except ValueError:
-                    return JsonResponse({"error": "Invalid post ID format"}, status=400)
-
-            # Fetch event with error handling
-            try:
-                event = StudyEvent.objects.get(id=uuid.UUID(event_id))
-            except StudyEvent.DoesNotExist:
-                return JsonResponse({"error": "Event not found"}, status=404)
-            except ValueError:
-                return JsonResponse({"error": "Invalid event ID format"}, status=400)
-
-            # Like/Unlike Logic
-            if post_id:
-                # Post/Comment Like Logic
-                try:
-                    comment = EventComment.objects.get(id=post_id)
-                    like_query = EventLike.objects.filter(
-                        user=user, 
-                        event=event,
-                        comment=comment
-                    )
-                    
-                    if like_query.exists():
-                        # Unlike
-                        like_query.delete()
-                        liked = False
-                    else:
-                        # Like
-                        EventLike.objects.create(
-                            user=user, 
-                            event=event,
-                            comment=comment
-                        )
-                        liked = True
-                        
-                    # Comprehensive likes calculation
-                    total_likes = EventLike.objects.filter(
-                        event=event,
-                        comment=comment
-                    ).count()
-                    
-                    
-                except EventComment.DoesNotExist:
-                    return JsonResponse({"error": "Comment not found"}, status=404)
-                
-            else:
-                # Event Like Logic
-                like_query = EventLike.objects.filter(
-                    user=user, 
-                    event=event,
-                    comment__isnull=True
-                )
-
-                if like_query.exists():
-                    # Unlike
-                    like_query.delete()
-                    liked = False
-                else:
-                    # Like
-                    EventLike.objects.create(
-                        user=user, 
-                        event=event
-                    )
-                    liked = True
-                
-                # Event-level likes calculation
-                total_likes = EventLike.objects.filter(
-                    event=event,
-                    comment__isnull=True
-                ).count()
-                
-
-            # Detailed response with likes information
-            return JsonResponse({
-                "success": True,
-                "liked": liked,  # Boolean indicating if user now likes
-                "total_likes": total_likes,  # Total number of likes
-                "event_id": str(event_id),  # Echo back event ID for frontend reference
-                "username": username  # Echo back username
-            })
-
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({"error": str(e)}, status=500)
-    
-    return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @ratelimit(key='user', rate='30/h', method='POST', block=True)
 @api_view(['POST'])
